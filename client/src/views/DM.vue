@@ -692,6 +692,11 @@ onMounted(async () => {
 
   socket.emit("join-dm", { roomId, userId });
   await loadMessages();
+  if (route.query.call === "1") {
+    await nextTick();
+    startCall();
+    router.replace({ path: `/dm/${roomId}` });
+  }
 
   await nextTick();
   if (list.value) list.value.addEventListener("scroll", onScroll);

@@ -27,7 +27,11 @@
       </div>
       <div v-if="dms.length === 0" class="empty">DM yok</div>
 
-      <div class="dm-profile" @click="goProfile">
+      <div
+        class="dm-profile"
+        @click="goProfile"
+        @contextmenu.prevent="openUserMenu"
+      >
         <div class="dm-avatar">
           <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
           <span v-else>{{ (userStore.user?.username || "U").slice(0,1).toUpperCase() }}</span>
@@ -38,11 +42,12 @@
           ></span>
         </div>
         <div class="dm-meta">
-          <div class="dm-name">{{ userStore.user?.username }}</div>
+          <div class="dm-name">{{ displayName }}</div>
           <div class="status-row">
             <span class="status-pill" :class="isOnline ? 'online' : 'offline'">
               {{ isOnline ? "Online" : "Offline" }}
             </span>
+            <span v-if="userNote" class="status-note">{{ userNote }}</span>
           </div>
         </div>
         <div class="profile-actions">
@@ -73,6 +78,31 @@
             </svg>
           </button>
         </div>
+      </div>
+
+      <div
+        v-if="userMenuOpen"
+        class="user-menu"
+        :style="{ left: `${userMenuPos.x}px`, top: `${userMenuPos.y}px` }"
+        @click.stop
+      >
+        <button class="user-menu-item" @click="markAllRead">Okunmus Olarak Isaretle</button>
+        <button class="user-menu-item" @click="menuGoProfile">Profil</button>
+        <button class="user-menu-item" @click="menuCall">Ara</button>
+        <button class="user-menu-item" @click="menuSetNote">Not Ekle</button>
+        <button class="user-menu-item" @click="menuSetNickname">Arkadas Takma Adi Ekle</button>
+        <button class="user-menu-item" @click="menuCloseDm">DM'yi Kapat</button>
+        <div class="user-menu-divider"></div>
+        <button class="user-menu-item" @click="menuInvite">Sunucuya Davet Et</button>
+        <button class="user-menu-item" @click="menuRemoveFriend">Arkadasi Cikar</button>
+        <button class="user-menu-item" :class="{ active: isIgnored }" @click="toggleIgnore">Yok Say</button>
+        <button class="user-menu-item danger" :class="{ active: isBlocked }" @click="toggleBlock">
+          {{ isBlocked ? "Engeli Kaldir" : "Engelle" }}
+        </button>
+        <div class="user-menu-divider"></div>
+        <button class="user-menu-item" :class="{ active: isChannelMuted }" @click="toggleChannelMute">
+          {{ isChannelMuted ? "@YigitOz kanalini susturmayi kaldir" : "@YigitOz kanalini sustur" }}
+        </button>
       </div>
 
     </section>
@@ -145,6 +175,13 @@ const dms = ref([]);
 const onlineUsers = ref([]);
 const micMuted = ref(false);
 const headphoneMuted = ref(false);
+const userMenuOpen = ref(false);
+const userMenuPos = ref({ x: 0, y: 0 });
+const userNote = ref("");
+const userNickname = ref("");
+const isIgnored = ref(false);
+const isBlocked = ref(false);
+const isChannelMuted = ref(false);
 
 const loadAudioPrefs = () => {
   micMuted.value = localStorage.getItem("visicos_mic_muted") === "1";
@@ -198,10 +235,168 @@ const toggleHeadphones = () => {
 };
 
 const goDm = (id) => {
+  localStorage.setItem("visicos_last_dm", id);
   router.push(`/dm/${id}`);
 };
 
 const goProfile = () => router.push("/profile");
+const menuGoProfile = () => {
+  closeUserMenu();
+  goProfile();
+};
+
+const prefKey = (suffix) => {
+  if (!userId) return `visicos_user_${suffix}_unknown`;
+  return `visicos_user_${suffix}_${userId}`;
+};
+
+const loadUserPrefs = () => {
+  userNote.value = localStorage.getItem(prefKey("note")) || "";
+  userNickname.value = localStorage.getItem(prefKey("nickname")) || "";
+  isIgnored.value = localStorage.getItem(prefKey("ignored")) === "1";
+  isBlocked.value = localStorage.getItem(prefKey("blocked")) === "1";
+  isChannelMuted.value = localStorage.getItem(prefKey("channel_muted")) === "1";
+};
+
+const getMenuDm = () => {
+  const lastId = localStorage.getItem("visicos_last_dm");
+  return dms.value.find((dm) => dm._id === lastId) || dms.value[0] || null;
+};
+
+const markAllRead = () => {
+  dms.value = dms.value.map((dm) => ({ ...dm, unreadCount: 0 }));
+  closeUserMenu();
+};
+
+const menuCall = () => {
+  const dm = getMenuDm();
+  if (!dm) {
+    window.alert("Aranacak kisi bulunamadi.");
+    return;
+  }
+  closeUserMenu();
+  router.push({ path: `/dm/${dm._id}`, query: { call: "1" } });
+};
+
+const menuSetNote = () => {
+  const next = window.prompt("Not Ekle", userNote.value || "");
+  if (next === null) return;
+  userNote.value = next.trim();
+  if (userNote.value) localStorage.setItem(prefKey("note"), userNote.value);
+  else localStorage.removeItem(prefKey("note"));
+  closeUserMenu();
+};
+
+const menuSetNickname = () => {
+  const next = window.prompt("Arkadas Takma Adi Ekle", userNickname.value || "");
+  if (next === null) return;
+  userNickname.value = next.trim();
+  if (userNickname.value) localStorage.setItem(prefKey("nickname"), userNickname.value);
+  else localStorage.removeItem(prefKey("nickname"));
+  closeUserMenu();
+};
+
+const menuCloseDm = async () => {
+  const dm = getMenuDm();
+  if (!dm) {
+    window.alert("Kapatilacak DM bulunamadi.");
+    return;
+  }
+  try {
+    await axios.post("/api/dm/close", { roomId: dm._id, userId });
+    dms.value = dms.value.filter((item) => item._id !== dm._id);
+  } catch (err) {
+    window.alert("DM kapatilamadi.");
+  } finally {
+    closeUserMenu();
+  }
+};
+
+const menuInvite = async () => {
+  const dm = getMenuDm();
+  if (!dm) {
+    window.alert("Davet edilecek DM bulunamadi.");
+    return;
+  }
+  try {
+    const res = await axios.post("/api/dm/invite", { roomId: dm._id, userId });
+    const link = res.data?.link || "";
+    if (link && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(link);
+      window.alert("Davet linki kopyalandi.");
+    } else {
+      window.alert(link || "Davet linki olusturulamadi.");
+    }
+  } catch (err) {
+    window.alert("Davet olusturulamadi.");
+  } finally {
+    closeUserMenu();
+  }
+};
+
+const menuRemoveFriend = async () => {
+  const dm = getMenuDm();
+  if (!dm) {
+    window.alert("Arkadas bulunamadi.");
+    return;
+  }
+  const other = getOtherUser(dm);
+  if (!other?._id) {
+    window.alert("Arkadas bulunamadi.");
+    return;
+  }
+  try {
+    await axios.post("/api/friends/remove", {
+      userId,
+      targetId: other._id,
+      roomId: dm._id
+    });
+    dms.value = dms.value.filter((item) => item._id !== dm._id);
+  } catch (err) {
+    window.alert("Arkadas kaldirilamadi.");
+  } finally {
+    closeUserMenu();
+  }
+};
+
+const toggleIgnore = () => {
+  isIgnored.value = !isIgnored.value;
+  localStorage.setItem(prefKey("ignored"), isIgnored.value ? "1" : "0");
+  closeUserMenu();
+};
+
+const toggleBlock = () => {
+  isBlocked.value = !isBlocked.value;
+  localStorage.setItem(prefKey("blocked"), isBlocked.value ? "1" : "0");
+  closeUserMenu();
+};
+
+const toggleChannelMute = () => {
+  isChannelMuted.value = !isChannelMuted.value;
+  localStorage.setItem(prefKey("channel_muted"), isChannelMuted.value ? "1" : "0");
+  closeUserMenu();
+};
+
+const onMenuKeydown = (event) => {
+  if (event.key === "Escape") closeUserMenu();
+};
+
+const openUserMenu = (event) => {
+  const menuWidth = 220;
+  const menuHeight = 360;
+  const padding = 12;
+  const maxX = window.innerWidth - menuWidth - padding;
+  const maxY = window.innerHeight - menuHeight - padding;
+  userMenuPos.value = {
+    x: Math.max(padding, Math.min(event.clientX, maxX)),
+    y: Math.max(padding, Math.min(event.clientY, maxY))
+  };
+  userMenuOpen.value = true;
+};
+
+const closeUserMenu = () => {
+  userMenuOpen.value = false;
+};
 
 const fullAvatar = (url) => {
   if (!url) return "";
@@ -220,6 +415,10 @@ const activeUsers = computed(() => {
   return list;
 });
 
+const displayName = computed(() => {
+  return userNickname.value || userStore.user?.username || "";
+});
+
 const isOnline = computed(() => {
   if (!userId) return false;
   return onlineUsers.value.includes(userId);
@@ -232,6 +431,7 @@ onMounted(() => {
   }
 
   loadAudioPrefs();
+  loadUserPrefs();
 
   loadRequests();
   loadDms();
@@ -247,12 +447,17 @@ onMounted(() => {
   socket.on("online-users", (users) => {
     onlineUsers.value = users;
   });
+
+  window.addEventListener("click", closeUserMenu);
+  window.addEventListener("keydown", onMenuKeydown);
 });
 
 onBeforeUnmount(() => {
   socket.off("new-message");
   socket.off("messages-read");
   socket.off("online-users");
+  window.removeEventListener("click", closeUserMenu);
+  window.removeEventListener("keydown", onMenuKeydown);
 });
 </script>
 
@@ -264,6 +469,7 @@ onBeforeUnmount(() => {
   background: var(--bg);
   color: var(--text);
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  --user-panel-height: 84px;
 }
 
 .servers {
@@ -318,9 +524,10 @@ onBeforeUnmount(() => {
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   position: relative;
-  padding-bottom: 90px;
+  padding-bottom: calc(var(--user-panel-height) + 10px);
 }
 
 .dm-header {
@@ -488,6 +695,7 @@ onBeforeUnmount(() => {
 .dm-profile {
   position: sticky;
   bottom: 0;
+  min-height: var(--user-panel-height);
   background: var(--bg-elev);
   border-top: 1px solid var(--border);
   padding: 12px 14px;
@@ -496,6 +704,8 @@ onBeforeUnmount(() => {
   gap: 10px;
   align-items: center;
   cursor: pointer;
+  z-index: 5;
+  box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.35);
 }
 
 .status-dot {
@@ -510,6 +720,9 @@ onBeforeUnmount(() => {
 
 .status-row {
   margin-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .status-pill {
@@ -532,6 +745,12 @@ onBeforeUnmount(() => {
 
 .status-pill.offline {
   color: var(--text-muted);
+}
+
+.status-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.2;
 }
 
 .profile-actions {
@@ -561,6 +780,52 @@ onBeforeUnmount(() => {
   width: 16px;
   height: 16px;
   fill: currentColor;
+}
+
+.user-menu {
+  position: fixed;
+  min-width: 220px;
+  background: #1d1d1f;
+  border: 1px solid #2a2a2e;
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 50;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.user-menu-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.user-menu-item:hover {
+  background: #2a2a2f;
+}
+
+.user-menu-item.active::after {
+  content: "✓";
+  float: right;
+  color: var(--text-muted);
+}
+
+.user-menu-item.danger {
+  color: #ff6b6b;
+}
+
+.user-menu-divider {
+  height: 1px;
+  background: #2a2a2e;
+  margin: 4px 6px;
 }
 
 
