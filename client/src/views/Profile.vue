@@ -89,15 +89,15 @@ const save = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0b0b0b;
-  color: #f6f0d5;
+  background: var(--bg);
+  color: var(--text);
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
 }
 
 .card {
   width: 420px;
-  background: #0f0f0f;
-  border: 1px solid #1b0b0b;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 18px;
   box-shadow: 0 18px 30px rgba(0,0,0,0.4);
@@ -112,8 +112,8 @@ const save = async () => {
   width: 96px;
   height: 96px;
   border-radius: 18px;
-  border: 1px solid #2b1313;
-  background: #141414;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev-2);
   position: relative;
   overflow: hidden;
   cursor: pointer;
@@ -126,12 +126,12 @@ const save = async () => {
   object-fit: cover;
   display: grid;
   place-items: center;
-  color: #f7c948;
+  color: var(--accent);
   font-weight: 800;
 }
 
 .avatar-fallback {
-  background: linear-gradient(145deg, #2b1313, #3a0f0f);
+  background: linear-gradient(145deg, var(--border-strong), #3a0f0f);
 }
 
 .avatar-overlay {
@@ -140,7 +140,7 @@ const save = async () => {
   display: grid;
   place-items: center;
   background: rgba(0,0,0,0.55);
-  color: #f6f0d5;
+  color: var(--text);
   opacity: 0;
   transition: opacity 0.15s ease;
   font-size: 12px;
@@ -159,21 +159,21 @@ const save = async () => {
 }
 
 .label {
-  color: #c7bfa4;
+  color: var(--text-muted);
   font-size: 12px;
 }
 
 input {
-  background: #0d0d0d;
-  border: 1px solid #2b1313;
+  background: var(--input-bg);
+  border: 1px solid var(--border-strong);
   border-radius: 10px;
   padding: 10px 12px;
-  color: #f6f0d5;
+  color: var(--text);
 }
 
 .sub {
   font-size: 12px;
-  color: #c7bfa4;
+  color: var(--text-muted);
 }
 
 .actions {
@@ -183,8 +183,8 @@ input {
 }
 
 button {
-  background: linear-gradient(145deg, #c31432, #f7c948);
-  color: #1a0d0d;
+  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
+  color: var(--accent-dark);
   border: none;
   border-radius: 10px;
   padding: 10px 16px;

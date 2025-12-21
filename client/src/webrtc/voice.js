@@ -3,6 +3,8 @@ import socket from "../socket";
 let pc = null;
 let localStream = null;
 let currentRoomId = null;
+let globalMute = false;
+let globalDeafen = false;
 
 const log = (...args) => {
   const room = currentRoomId ? ` room=${currentRoomId}` : "";
@@ -24,7 +26,19 @@ const ensureRemoteAudioElement = () => {
     audio.playsInline = true;
     document.body.appendChild(audio);
   }
+  audio.muted = globalDeafen;
   return audio;
+};
+
+const applyGlobalState = () => {
+  if (localStream) {
+    localStream.getAudioTracks().forEach((track) => {
+      track.enabled = !globalMute;
+    });
+  }
+
+  const audio = document.getElementById("remote-audio");
+  if (audio) audio.muted = globalDeafen;
 };
 
 export const initVoice = async (roomId, { onStateChange, onRemoteTrack } = {}) => {
@@ -37,6 +51,7 @@ export const initVoice = async (roomId, { onStateChange, onRemoteTrack } = {}) =
         audio: true,
         video: false
       });
+      applyGlobalState();
       log("getUserMedia ok", {
         audioTracks: localStream.getAudioTracks().length,
         videoTracks: localStream.getVideoTracks().length
@@ -120,6 +135,7 @@ export const initVoice = async (roomId, { onStateChange, onRemoteTrack } = {}) =
   log("local senders", { senders: senders.length, hasAudio });
   if (!hasAudio && localStream) {
     localStream.getTracks().forEach((track) => {
+      track.enabled = !globalMute;
       log("add local track", { id: track.id, kind: track.kind });
       pc.addTrack(track, localStream);
     });
@@ -130,6 +146,18 @@ export const initVoice = async (roomId, { onStateChange, onRemoteTrack } = {}) =
 };
 
 export const getPC = () => pc;
+
+export const setGlobalMute = (value) => {
+  globalMute = !!value;
+  log("global mute", globalMute);
+  applyGlobalState();
+};
+
+export const setGlobalDeafen = (value) => {
+  globalDeafen = !!value;
+  log("global deafen", globalDeafen);
+  applyGlobalState();
+};
 
 export const closeVoice = () => {
   log("closeVoice start");

@@ -27,16 +27,38 @@
       </div>
       <div v-if="dms.length === 0" class="empty">DM yok</div>
 
-      <div class="dm-profile" @click="goProfile">
-        <div class="dm-avatar">
-          <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
-          <span v-else>{{ (userStore.user?.username || "U").slice(0,1).toUpperCase() }}</span>
+      <div class="dm-footer">
+        <div class="dm-profile" @click="goProfile">
+          <div class="dm-avatar">
+            <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
+            <span v-else>{{ (userStore.user?.username || "U").slice(0,1).toUpperCase() }}</span>
+          </div>
+          <div class="dm-meta">
+            <div class="dm-name">{{ userStore.user?.username }}</div>
+            <div class="dm-last">{{ userStore.user?.email }}</div>
+          </div>
+          <span class="link-text">Profil</span>
         </div>
-        <div class="dm-meta">
-          <div class="dm-name">{{ userStore.user?.username }}</div>
-          <div class="dm-last">{{ userStore.user?.email }}</div>
+
+        <div class="voice-controls">
+          <button
+            class="voice-btn"
+            :class="{ off: micMuted }"
+            @click="toggleMic"
+          >
+            <span class="voice-icon" aria-hidden="true">M</span>
+            Mic {{ micMuted ? "Kapali" : "Acik" }}
+          </button>
+          <button
+            class="voice-btn"
+            :class="{ off: headphoneMuted }"
+            @click="toggleHeadphones"
+          >
+            <span class="voice-icon" aria-hidden="true">H</span>
+            Kulaklik {{ headphoneMuted ? "Kapali" : "Acik" }}
+          </button>
+          <button class="voice-btn settings" @click="goProfile">Ayarlar</button>
         </div>
-        <span class="link-text">Profil</span>
       </div>
     </section>
 
@@ -91,6 +113,7 @@ import axios from "axios";
 import { useRouter } from "vue-router";
 import { useUserStore } from "../store/user";
 import socket from "../socket";
+import { setGlobalMute, setGlobalDeafen } from "../webrtc/voice";
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -105,6 +128,15 @@ const username = ref("");
 const requests = ref([]);
 const dms = ref([]);
 const onlineUsers = ref([]);
+const micMuted = ref(false);
+const headphoneMuted = ref(false);
+
+const loadAudioPrefs = () => {
+  micMuted.value = localStorage.getItem("visicos_mic_muted") === "1";
+  headphoneMuted.value = localStorage.getItem("visicos_headphone_muted") === "1";
+  setGlobalMute(micMuted.value);
+  setGlobalDeafen(headphoneMuted.value);
+};
 
 const loadRequests = async () => {
   const res = await axios.get(`/api/friends/requests/${userId}`);
@@ -139,6 +171,18 @@ const accept = async (requestId) => {
   router.push(`/dm/${res.data.dmRoomId}`);
 };
 
+const toggleMic = () => {
+  micMuted.value = !micMuted.value;
+  localStorage.setItem("visicos_mic_muted", micMuted.value ? "1" : "0");
+  setGlobalMute(micMuted.value);
+};
+
+const toggleHeadphones = () => {
+  headphoneMuted.value = !headphoneMuted.value;
+  localStorage.setItem("visicos_headphone_muted", headphoneMuted.value ? "1" : "0");
+  setGlobalDeafen(headphoneMuted.value);
+};
+
 const goDm = (id) => {
   router.push(`/dm/${id}`);
 };
@@ -168,6 +212,8 @@ onMounted(() => {
     return;
   }
 
+  loadAudioPrefs();
+
   loadRequests();
   loadDms();
 
@@ -196,14 +242,14 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: 80px 260px 1fr 260px;
   height: 100vh;
-  background: #0b0b0b;
-  color: #f6f0d5;
+  background: var(--bg);
+  color: var(--text);
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
 }
 
 .servers {
-  background: #0f0f0f;
-  border-right: 1px solid #1b0b0b;
+  background: var(--bg-elev);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -215,7 +261,7 @@ onBeforeUnmount(() => {
   width: 48px;
   height: 48px;
   border-radius: 14px;
-  background: linear-gradient(145deg, #c31432, #f7c948);
+  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
   display: grid;
   place-items: center;
   font-weight: 800;
@@ -228,29 +274,29 @@ onBeforeUnmount(() => {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: #1a0d0d;
+  background: var(--accent-dark);
   display: grid;
   place-items: center;
-  color: #f7c948;
+  color: var(--accent);
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .server-pill:hover {
-  background: #2b1313;
+  background: var(--border-strong);
   transform: translateY(-2px);
 }
 
 .server-pill.add {
   background: #1f1f1f;
-  color: #f7c948;
-  border: 1px dashed #3d1a1a;
+  color: var(--accent);
+  border: 1px dashed var(--border-soft);
 }
 
 .dm-list {
-  background: #0e0e0e;
-  border-right: 1px solid #1b0b0b;
+  background: var(--bg-elev);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -262,7 +308,7 @@ onBeforeUnmount(() => {
   padding: 16px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  border-bottom: 1px solid #1b0b0b;
+  border-bottom: 1px solid var(--border);
 }
 
 .dm-row {
@@ -272,7 +318,7 @@ onBeforeUnmount(() => {
   align-items: center;
   padding: 12px 14px;
   cursor: pointer;
-  border-bottom: 1px solid #1a0d0d;
+  border-bottom: 1px solid var(--accent-dark);
   transition: background 0.12s ease;
 }
 
@@ -284,11 +330,11 @@ onBeforeUnmount(() => {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: #221111;
+  background: var(--chip);
   display: grid;
   place-items: center;
   font-weight: 700;
-  color: #f7c948;
+  color: var(--accent);
   overflow: hidden;
 }
 
@@ -314,15 +360,15 @@ onBeforeUnmount(() => {
 
 .dm-last {
   font-size: 12px;
-  color: #c7bfa4;
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .badge {
-  background: #c31432;
-  color: #fff7d6;
+  background: var(--accent-strong);
+  color: var(--text-strong);
   border-radius: 12px;
   padding: 2px 8px;
   font-size: 12px;
@@ -340,8 +386,8 @@ onBeforeUnmount(() => {
 }
 
 .panel {
-  background: #121212;
-  border: 1px solid #1b0b0b;
+  background: var(--panel);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 12px 30px rgba(0,0,0,0.25);
@@ -353,14 +399,14 @@ onBeforeUnmount(() => {
 }
 
 .link-text {
-  color: #f7c948;
+  color: var(--accent);
   font-weight: 600;
   font-size: 12px;
 }
 
 .link-btn {
-  background: linear-gradient(145deg, #c31432, #f7c948);
-  color: #1a0d0d;
+  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
+  color: var(--accent-dark);
   border: none;
   border-radius: 10px;
   padding: 8px 12px;
@@ -375,16 +421,16 @@ onBeforeUnmount(() => {
 
 .add-row input {
   flex: 1;
-  background: #0d0d0d;
-  border: 1px solid #2b1313;
+  background: var(--input-bg);
+  border: 1px solid var(--border-strong);
   border-radius: 10px;
   padding: 10px 12px;
-  color: #f6f0d5;
+  color: var(--text);
 }
 
 .add-row button {
-  background: linear-gradient(145deg, #c31432, #f7c948);
-  color: #1a0d0d;
+  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
+  color: var(--accent-dark);
   border: none;
   border-radius: 10px;
   padding: 0 16px;
@@ -405,7 +451,7 @@ onBeforeUnmount(() => {
 }
 
 .request-row button {
-  background: #c31432;
+  background: var(--accent-strong);
   color: #fdf5d9;
   border: none;
   border-radius: 8px;
@@ -414,17 +460,23 @@ onBeforeUnmount(() => {
 }
 
 .empty {
-  color: #c7bfa4;
+  color: var(--text-muted);
   font-size: 13px;
   padding: 10px 0;
 }
 
-.dm-profile {
+.dm-footer {
   position: sticky;
   bottom: 0;
-  background: #0f0f0f;
-  border-top: 1px solid #1b0b0b;
+  background: var(--bg-elev);
+  border-top: 1px solid var(--border);
   padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dm-profile {
   display: grid;
   grid-template-columns: 44px 1fr auto;
   gap: 10px;
@@ -432,11 +484,62 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
+.voice-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+}
+
+.voice-btn {
+  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
+  color: var(--accent-dark);
+  border: none;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.voice-btn.off {
+  background: var(--input-bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+}
+
+.voice-btn.settings {
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+
+.voice-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--accent-dark);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.voice-btn.off .voice-icon {
+  background: var(--input-bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border-strong);
+}
+
 .activity {
   padding: 20px;
-  border-left: 1px solid #1b0b0b;
+  border-left: 1px solid var(--border);
   overflow-y: auto;
-  background: #0f0f0f;
+  background: var(--bg-elev);
 }
 
 .activity-row {
@@ -445,7 +548,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 1px solid #1a0d0d;
+  border-bottom: 1px solid var(--accent-dark);
 }
 
 .activity-row:last-child {
