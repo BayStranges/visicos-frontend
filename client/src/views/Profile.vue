@@ -173,7 +173,7 @@
 
       <div v-else-if="activeTab === 'Cihazlar'" class="panel-card devices-card">
         <div class="devices-intro">
-          Discord hesap oturumunun etkin oldugu tum cihazlar burada. Bilinmeyen bir cihaz gorursen sifreni degistir.
+          Visicos hesap oturumunun etkin oldugu tum cihazlar burada. Bilinmeyen bir cihaz gorursen sifreni degistir.
         </div>
 
         <div class="devices-section">
@@ -266,9 +266,18 @@
       </div>
 
       <div v-else-if="activeTab === 'Kayitli Oyunlar'" class="panel-card games-card">
-        <div class="games-detect">
+        <div v-if="runningGames.length === 0" class="games-detect">
           <div class="games-detect-title">Oyun tespit edilemedi</div>
           <div class="games-detect-desc">Ne oynuyorsun?!</div>
+        </div>
+        <div v-else class="games-detect running">
+          <div class="games-detect-title">Su anda oynuyorsun</div>
+          <div class="games-detect-desc">Bilgisayarda acik oyunlar listeleniyor.</div>
+          <div class="running-games">
+            <span v-for="game in runningGames" :key="game.id" class="running-pill">
+              {{ game.name }}
+            </span>
+          </div>
         </div>
         <div class="games-detect-foot">
           Oyunun gorunmuyor musun? <button class="link-btn" @click="openGameModal">Ekle!</button>
@@ -710,6 +719,7 @@ const overlayNameDisplay = ref("Her zaman");
 const overlayUserDisplay = ref("Her zaman");
 const overlayMaxUsers = ref(10);
 const overlayLive = ref(null);
+const runningGames = ref([]);
 const overlayPreviewFallback = [
   { id: 1, name: "m1rcaxdetanirlar", initials: "M1", color: "#5865f2", speaking: true, muted: false },
   { id: 2, name: "Acetaminophen", initials: "AC", color: "#16a34a", speaking: false, muted: true },
@@ -717,6 +727,20 @@ const overlayPreviewFallback = [
   { id: 4, name: "Scynder", initials: "SC", color: "#f59e0b", speaking: false, muted: false }
 ];
 const registeredGames = ref([]);
+let gamePollTimer;
+
+const gameProcessMap = [
+  { exe: "VALORANT-Win64-Shipping.exe", name: "VALORANT", verified: true },
+  { exe: "cs2.exe", name: "Counter-Strike 2", verified: true },
+  { exe: "csgo.exe", name: "Counter-Strike", verified: true },
+  { exe: "GTA5.exe", name: "GTA V", verified: true },
+  { exe: "TslGame.exe", name: "PUBG", verified: true },
+  { exe: "FortniteClient-Win64-Shipping.exe", name: "Fortnite", verified: true },
+  { exe: "LeagueClient.exe", name: "League of Legends", verified: true },
+  { exe: "r5apex.exe", name: "Apex Legends", verified: true },
+  { exe: "dota2.exe", name: "Dota 2", verified: true },
+  { exe: "javaw.exe", name: "Minecraft", verified: false }
+];
 
 const initials = computed(() =>
   (user?.username || "U").slice(0, 2).toUpperCase()
@@ -808,6 +832,8 @@ onMounted(() => {
   window.addEventListener("storage", loadOverlayLive);
   window.addEventListener("visicos-overlay-update", loadOverlayLive);
   loadRegisteredGames();
+  fetchRunningGames();
+  gamePollTimer = setInterval(fetchRunningGames, 10000);
 });
 
 onBeforeUnmount(() => {
@@ -815,6 +841,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("storage", loadOverlayLive);
   window.removeEventListener("visicos-overlay-update", loadOverlayLive);
   cleanupKeybindListener();
+  if (gamePollTimer) clearInterval(gamePollTimer);
 });
 
 watch(
@@ -1126,6 +1153,48 @@ const loadRegisteredGames = () => {
     registeredGames.value = JSON.parse(raw);
   } catch (err) {
     registeredGames.value = [];
+  }
+};
+
+const fetchRunningGames = async () => {
+  const api = window.electronAPI;
+  if (!api?.getRunningProcesses) {
+    runningGames.value = [];
+    return;
+  }
+
+  try {
+    const processes = await api.getRunningProcesses();
+    const processSet = new Set(processes.map((p) => p.toLowerCase()));
+    const detected = gameProcessMap.filter((g) => processSet.has(g.exe.toLowerCase()));
+    runningGames.value = detected.map((g) => ({
+      id: g.exe,
+      name: g.name,
+      verified: g.verified
+    }));
+
+    const runningIds = new Set(runningGames.value.map((g) => g.name));
+    registeredGames.value.forEach((g) => {
+      g.detected = runningIds.has(g.name);
+      if (g.detected) g.lastPlayed = "simdi";
+    });
+
+    runningGames.value.forEach((g) => {
+      const exists = registeredGames.value.find((x) => x.name === g.name);
+      if (!exists) {
+        registeredGames.value.unshift({
+          id: g.id,
+          name: g.name,
+          cover: g.name.slice(0, 1).toUpperCase(),
+          verified: g.verified,
+          lastPlayed: "simdi",
+          visible: true,
+          detected: true
+        });
+      }
+    });
+  } catch (err) {
+    runningGames.value = [];
   }
 };
 
@@ -1600,6 +1669,11 @@ const toggleGameDetected = (game) => {
   padding: 16px;
 }
 
+.games-detect.running {
+  border-color: #2ecc71;
+  box-shadow: 0 0 0 1px rgba(46, 204, 113, 0.2);
+}
+
 .games-detect-title {
   font-size: 13px;
   font-weight: 700;
@@ -1614,6 +1688,22 @@ const toggleGameDetected = (game) => {
 .games-detect-foot {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.running-games {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.running-pill {
+  background: #1f1f22;
+  border: 1px solid #2d2e33;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: #9be7a1;
 }
 
 .link-btn {

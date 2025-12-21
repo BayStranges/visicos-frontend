@@ -6,9 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:android": "npm run build && npx cap open android",
+    "cap:ios": "npm run build && npx cap open ios"
   },
   "dependencies": {
+    "@capacitor/android": "^5.7.6",
+    "@capacitor/core": "^5.7.6",
+    "@capacitor/ios": "^5.7.6",
     "axios": "^1.13.2",
     "pinia": "^3.0.4",
     "socket.io-client": "^4.8.1",
@@ -16,6 +22,7 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@capacitor/cli": "^5.7.6",
     "@vitejs/plugin-vue": "^6.0.1",
     "vite": "^7.2.4"
   }

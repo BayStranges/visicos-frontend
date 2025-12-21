@@ -43,7 +43,7 @@ router.isReady().then(() => {
       else if (/Mac/i.test(ua)) os = "Mac";
       else if (/Android/i.test(ua)) os = "Android";
       else if (/iPhone|iPad/i.test(ua)) os = "iOS";
-      const app = /Electron|Discord/i.test(ua) ? "Discord Client" : "Web";
+      const app = /Electron|Discord/i.test(ua) ? "Vsikos Client" : "Web";
       return `${os} - ${app}`;
     };
 
