@@ -46,18 +46,25 @@
             :class="{ off: micMuted }"
             @click="toggleMic"
           >
-            <span class="voice-icon" aria-hidden="true">M</span>
-            Mic {{ micMuted ? "Kapali" : "Acik" }}
+            <svg class="voice-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
+              <path d="M5 12a1 1 0 0 1 2 0 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V21a1 1 0 1 1-2 0v-2.08A7 7 0 0 1 5 12Z" />
+            </svg>
           </button>
           <button
             class="voice-btn"
             :class="{ off: headphoneMuted }"
             @click="toggleHeadphones"
           >
-            <span class="voice-icon" aria-hidden="true">H</span>
-            Kulaklik {{ headphoneMuted ? "Kapali" : "Acik" }}
+            <svg class="voice-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3a9 9 0 0 0-9 9v5a3 3 0 0 0 3 3h1v-7H6a1 1 0 0 0-1 1v-2a7 7 0 1 1 14 0v2a1 1 0 0 0-1-1h-1v7h1a3 3 0 0 0 3-3v-5a9 9 0 0 0-9-9Z" />
+            </svg>
           </button>
-          <button class="voice-btn settings" @click="goProfile">Ayarlar</button>
+          <button class="voice-btn settings" @click="goProfile">
+            <svg class="voice-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.5 3.5a6.7 6.7 0 0 0-.09-1l2.05-1.6-2-3.46-2.5 1a7.8 7.8 0 0 0-1.73-1l-.38-2.7H9.15l-.38 2.7c-.6.22-1.18.56-1.73 1l-2.5-1-2 3.46 2.05 1.6a6.7 6.7 0 0 0 0 2l-2.05 1.6 2 3.46 2.5-1c.55.44 1.13.78 1.73 1l.38 2.7h5.7l.38-2.7c.6-.22 1.18-.56 1.73-1l2.5 1 2-3.46-2.05-1.6c.06-.33.09-.66.09-1Z" />
+            </svg>
+          </button>
         </div>
       </div>
     </section>
@@ -517,22 +524,10 @@ onBeforeUnmount(() => {
 }
 
 .voice-icon {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: var(--accent-dark);
-  color: var(--accent);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.voice-btn.off .voice-icon {
-  background: var(--input-bg);
-  color: var(--text-muted);
-  border: 1px solid var(--border-strong);
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  display: inline-block;
 }
 
 .activity {
