@@ -9,8 +9,39 @@
     <!-- MIDDLE: DMs list -->
     <section class="dm-list">
       <div class="dm-header">Mesajlar</div>
+      <div class="dm-tools">
+        <input
+          v-model="dmQuery"
+          class="dm-search"
+          placeholder="Search DMs"
+          @click.stop
+        />
+        <div class="dm-filters">
+          <button
+            class="filter-btn"
+            :class="{ active: dmFilter === 'all' }"
+            @click.stop="setFilter('all')"
+          >
+            All
+          </button>
+          <button
+            class="filter-btn"
+            :class="{ active: dmFilter === 'online' }"
+            @click.stop="setFilter('online')"
+          >
+            Online
+          </button>
+          <button
+            class="filter-btn"
+            :class="{ active: dmFilter === 'offline' }"
+            @click.stop="setFilter('offline')"
+          >
+            Offline
+          </button>
+        </div>
+      </div>
       <div
-        v-for="dm in dms"
+        v-for="dm in filteredDms"
         :key="dm._id"
         class="dm-row"
         @click="goDm(dm._id)"
@@ -24,12 +55,24 @@
           <div class="dm-title">
             <div class="dm-name">{{ getOtherUser(dm)?.username || "Kullan??c??" }}</div>
             <span v-if="isDmMuted(dm)" class="mute-badge">mute</span>
+            <span v-if="isPinned(dm)" class="pin-badge">pin</span>
           </div>
           <div class="dm-last">{{ dm.lastMessage?.content || "Hen??z mesaj yok" }}</div>
         </div>
+        <div class="dm-actions">
+          <button class="dm-action-btn" @click.stop="goDm(dm._id)" title="Message">
+            Msg
+          </button>
+          <button class="dm-action-btn" @click.stop="startCallFor(dm)" title="Call">
+            Call
+          </button>
+          <button class="dm-action-btn" @click.stop="togglePin(dm)" title="Pin">
+            Pin
+          </button>
+        </div>
         <div v-if="dm.unreadCount > 0 && !isDmMuted(dm)" class="badge">{{ dm.unreadCount }}</div>
       </div>
-      <div v-if="dms.length === 0" class="empty">DM yok</div>
+      <div v-if="filteredDms.length === 0" class="empty">DM yok</div>
 
       <div
         class="dm-profile"
@@ -50,6 +93,9 @@
             <span class="status-pill" :class="isOnline ? 'online' : 'offline'">
               {{ isOnline ? "Online" : "Offline" }}
             </span>
+            <button class="custom-status" @click.stop="setCustomStatus">
+              {{ customStatus || "Set status" }}
+            </button>
           </div>
         </div>
         <div class="profile-actions">
@@ -88,6 +134,9 @@
         :style="{ left: `${userMenuPos.x}px`, top: `${userMenuPos.y}px` }"
         @click.stop
       >
+        <button class="user-menu-item" @click="togglePin(selectedDm)">
+          {{ isPinned(selectedDm) ? "Unpin DM" : "Pin DM" }}
+        </button>
         <button class="user-menu-item" @click="markAllRead">Okunmus Olarak Isaretle</button>
         <button class="user-menu-item" @click="menuGoProfile">Profil</button>
         <button class="user-menu-item" @click="menuCall">Ara</button>
@@ -117,6 +166,22 @@
 
     <!-- RIGHT: Friends / add / requests -->
     <section class="friends">
+      <div class="panel">
+        <div class="panel-title">Notifications</div>
+        <div v-if="notificationDms.length === 0" class="empty">No new messages</div>
+        <div v-for="dm in notificationDms" :key="dm._id" class="notification-row">
+          <div class="dm-avatar sm">
+            <img v-if="getOtherUser(dm)?.avatar" :src="fullAvatar(getOtherUser(dm)?.avatar)" />
+            <span v-else>{{ getOtherUser(dm)?.username?.[0] || "?" }}</span>
+          </div>
+          <div class="notification-meta">
+            <div class="dm-name">{{ getOtherUser(dm)?.username }}</div>
+            <div class="dm-last">{{ dm.unreadCount }} unread</div>
+          </div>
+          <button class="link-btn" @click="goDm(dm._id)">Open</button>
+        </div>
+      </div>
+
       <div class="panel">
         <div class="panel-title">Arkadaş Ekle</div>
         <div class="add-row">
@@ -181,6 +246,9 @@ const username = ref("");
 const requests = ref([]);
 const dms = ref([]);
 const onlineUsers = ref([]);
+const dmQuery = ref("");
+const dmFilter = ref("all");
+const pinnedIds = ref([]);
 const micMuted = ref(false);
 const headphoneMuted = ref(false);
 const userMenuOpen = ref(false);
@@ -196,6 +264,7 @@ const selectedUsername = ref("kisi");
 const muteUntil = ref(0);
 const muteClock = ref(Date.now());
 let muteInterval;
+const customStatus = ref("");
 
 const loadAudioPrefs = () => {
   micMuted.value = localStorage.getItem("visicos_mic_muted") === "1";
@@ -213,8 +282,43 @@ const loadDms = async () => {
   dms.value = res.data;
 };
 
+const loadPinned = () => {
+  const raw = localStorage.getItem(`visicos_pins_${userId}`) || "[]";
+  try {
+    pinnedIds.value = JSON.parse(raw);
+  } catch (err) {
+    pinnedIds.value = [];
+  }
+};
+
+const savePinned = () => {
+  localStorage.setItem(`visicos_pins_${userId}`, JSON.stringify(pinnedIds.value));
+};
+
+const togglePin = (dm) => {
+  if (!dm?._id) return;
+  const idx = pinnedIds.value.indexOf(dm._id);
+  if (idx >= 0) {
+    pinnedIds.value.splice(idx, 1);
+  } else {
+    pinnedIds.value.unshift(dm._id);
+  }
+  savePinned();
+};
+
+const isPinned = (dm) => {
+  if (!dm?._id) return false;
+  return pinnedIds.value.includes(dm._id);
+};
+
 const getOtherUser = (dm) => {
   return dm.users.find(u => u._id !== userId);
+};
+
+const isDmOnline = (dm) => {
+  const other = dm ? getOtherUser(dm) : null;
+  if (!other?._id) return false;
+  return onlineUsers.value.includes(other._id);
 };
 
 const sendRequest = async () => {
@@ -253,10 +357,34 @@ const goDm = (id) => {
   router.push(`/dm/${id}`);
 };
 
+const startCallFor = (dm) => {
+  if (!dm?._id) return;
+  router.push({ path: `/dm/${dm._id}`, query: { call: "1" } });
+};
+
 const goProfile = () => router.push("/profile");
 const menuGoProfile = () => {
   closeUserMenu();
   goProfile();
+};
+
+const setCustomStatus = () => {
+  const next = window.prompt("Set status", customStatus.value || "");
+  if (next === null) return;
+  customStatus.value = next.trim();
+  if (customStatus.value) {
+    localStorage.setItem(`visicos_status_${userId}`, customStatus.value);
+  } else {
+    localStorage.removeItem(`visicos_status_${userId}`);
+  }
+};
+
+const loadCustomStatus = () => {
+  customStatus.value = localStorage.getItem(`visicos_status_${userId}`) || "";
+};
+
+const setFilter = (value) => {
+  dmFilter.value = value;
 };
 
 const prefKey = (suffix, targetId) => {
@@ -486,6 +614,28 @@ const activeUsers = computed(() => {
   return list;
 });
 
+const filteredDms = computed(() => {
+  const query = dmQuery.value.trim().toLowerCase();
+  const filtered = dms.value.filter((dm) => {
+    const name = getOtherUser(dm)?.username || "";
+    const matchesQuery = !query || name.toLowerCase().includes(query);
+    const matchesFilter =
+      dmFilter.value === "all" ||
+      (dmFilter.value === "online" && isDmOnline(dm)) ||
+      (dmFilter.value === "offline" && !isDmOnline(dm));
+    return matchesQuery && matchesFilter;
+  });
+  const pinned = filtered
+    .filter((dm) => isPinned(dm))
+    .sort((a, b) => pinnedIds.value.indexOf(a._id) - pinnedIds.value.indexOf(b._id));
+  const unpinned = filtered.filter((dm) => !isPinned(dm));
+  return [...pinned, ...unpinned];
+});
+
+const notificationDms = computed(() => {
+  return dms.value.filter((dm) => dm.unreadCount > 0 && !isDmMuted(dm));
+});
+
 const isOnline = computed(() => {
   if (!userId) return false;
   return onlineUsers.value.includes(userId);
@@ -498,6 +648,8 @@ onMounted(() => {
   }
 
   loadAudioPrefs();
+  loadPinned();
+  loadCustomStatus();
 
   loadRequests();
   loadDms();
@@ -607,9 +759,47 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--border);
 }
 
+.dm-tools {
+  padding: 12px 14px;
+  display: grid;
+  gap: 10px;
+  border-bottom: 1px solid var(--border);
+  background: #151515;
+}
+
+.dm-search {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 8px 10px;
+  color: var(--text);
+}
+
+.dm-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-btn {
+  background: #1f1f1f;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.filter-btn.active {
+  color: var(--text-strong);
+  border-color: var(--accent-strong);
+  background: #241214;
+}
+
 .dm-row {
   display: grid;
-  grid-template-columns: 44px 1fr auto;
+  grid-template-columns: 44px 1fr auto auto;
   gap: 10px;
   align-items: center;
   padding: 12px 14px;
@@ -762,6 +952,25 @@ onBeforeUnmount(() => {
   padding: 10px 0;
 }
 
+.notification-row {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #161b25;
+}
+
+.notification-row:last-child {
+  border-bottom: none;
+}
+
+.notification-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .dm-profile {
   position: sticky;
   bottom: 0;
@@ -800,6 +1009,43 @@ onBeforeUnmount(() => {
   border-radius: 999px;
 }
 
+.pin-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #c7bfa4;
+  background: #2a1e1e;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.dm-actions {
+  display: inline-flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.dm-row:hover .dm-actions {
+  opacity: 1;
+}
+
+.dm-action-btn {
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: none;
+  background: #1f1f22;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.dm-action-btn:hover {
+  background: #2a2a2e;
+  color: var(--text-strong);
+}
+
 .status-dot {
   position: absolute;
   right: 2px;
@@ -817,6 +1063,19 @@ onBeforeUnmount(() => {
   gap: 2px;
 }
 
+.custom-status {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 10px;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.custom-status:hover {
+  color: var(--text-strong);
+}
 .status-pill {
   display: inline-block;
   font-size: 10px;
@@ -973,6 +1232,12 @@ onBeforeUnmount(() => {
   }
   .dm-list {
     max-height: 40vh;
+  }
+  .dm-row {
+    grid-template-columns: 44px 1fr auto;
+  }
+  .dm-actions {
+    display: none;
   }
   .activity {
     display: none;

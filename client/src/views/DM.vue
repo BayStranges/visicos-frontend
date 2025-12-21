@@ -16,8 +16,11 @@
         </div>
         <div class="ph-meta">
           <div class="ph-name">{{ otherUser }}</div>
-          <div class="status" :class="isOnline ? 'online' : 'offline'">
-            {{ typingUser ? 'yazıyor...' : isOnline ? 'online' : 'offline' }}
+          <div class="status" :class="isOnline - 'online' : 'offline'">
+            {{ typingUser - 'yazıyor...' : isOnline - 'online' : 'offline' }}
+          </div>
+          <div v-if="lastCallLabel" class="call-history">
+            Last call: {{ lastCallLabel }}
           </div>
         </div>
       </div>
@@ -27,7 +30,7 @@
         <button class="call-btn" @click="startCall" :disabled="inCall">🔊 Sesli Ara</button>
         <button class="call-btn danger" @click="hangUp" v-if="inCall">📴</button>
         <button class="call-btn" @click="toggleMute" v-if="inCall">
-          {{ muted ? "🎤" : "🔇" }}
+          {{ muted - "🎤" : "🔇" }}
         </button>
       </div>
     </div>
@@ -52,8 +55,8 @@
         <button class="call-btn danger" @click="rejectCall">Reddet</button>
       </div>
       <div class="call-controls" v-else>
-        <button class="call-icon" @click="toggleMute" :title="muted ? 'Mikrofonu aç' : 'Mikrofonu kapat'">
-          {{ muted ? "🎤" : "🔇" }}
+        <button class="call-icon" @click="toggleMute" :title="muted - 'Mikrofonu aç' : 'Mikrofonu kapat'">
+          {{ muted - "🎤" : "🔇" }}
         </button>
         <button class="call-icon end" @click="hangUp" title="Aramayı bitir">📴</button>
         <button
@@ -171,7 +174,7 @@
           <div class="meta">
             <span class="time">{{ formatTime(msg.createdAt) }}</span>
             <span v-if="msg.sender._id === userId" class="read">
-              {{ (msg.readBy?.length || 0) > 1 ? "✓✓" : "✓" }}
+              {{ (msg.readBy?.length || 0) > 1 - "✓✓" : "✓" }}
             </span>
             <span v-if="msg.edited" class="edited">(düzenlendi)</span>
           </div>
@@ -219,7 +222,7 @@
       </label>
 
       <button @click="submit">
-        {{ editingId ? "✓" : "➤" }}
+        {{ editingId - "✓" : "➤" }}
       </button>
     </div>
 
@@ -254,6 +257,33 @@ const goFriends = () => router.push("/friends");
 const userId = userStore.user?._id;
 const roomId = route.params.id;
 
+const historyKey = () => `visicos_call_history_${roomId}`;
+
+const loadCallHistory = () => {
+  const raw = localStorage.getItem(historyKey()) || "[]";
+  try {
+    callHistory.value = JSON.parse(raw);
+  } catch (err) {
+    callHistory.value = [];
+  }
+};
+
+const saveCallHistory = () => {
+  localStorage.setItem(historyKey(), JSON.stringify(callHistory.value));
+};
+
+const addCallEntry = (type, durationSec = 0) => {
+  callHistory.value.unshift({
+    type,
+    at: Date.now(),
+    duration: durationSec
+  });
+  callHistory.value = callHistory.value.slice(0, 5);
+  saveCallHistory();
+};
+
+
+
 const messages = ref([]);
 const text = ref("");
 const typingUser = ref("");
@@ -264,6 +294,8 @@ const hasNewMessage = ref(false);
 const otherUserId = ref(null);
 const replyTo = ref(null);
 const editingId = ref(null);
+const callHistory = ref([]);
+const callStartAt = ref(0);
 
 /* ================= TOUCH ================= */
 const touchStartTime = ref(0);
@@ -292,6 +324,8 @@ const startCall = async () => {
   isCaller.value = true;
   inCall.value = false;
   callStatus.value = "aranıyor";
+  callStartAt.value = Date.now();
+  addCallEntry("outgoing");
 
   await initVoice(roomId, {
     onStateChange: (s) => handlePcState(s),
@@ -308,6 +342,11 @@ const startCall = async () => {
 };
 
 const hangUp = () => {
+  if (callStartAt.value) {
+    const duration = Math.floor((Date.now() - callStartAt.value) / 1000);
+    addCallEntry("ended", duration);
+  }
+  callStartAt.value = 0;
   logVoice("hangUp");
   closeVoice();
   inCall.value = false;
@@ -403,6 +442,8 @@ const handleIncomingOffer = async (offer) => {
 };
 
 const acceptCall = async () => {
+  callStartAt.value = Date.now();
+  addCallEntry("accepted");
   logVoice("acceptCall");
   ringing.value = false;
   callAccepted.value = true;
@@ -424,6 +465,8 @@ const acceptCall = async () => {
 };
 
 const rejectCall = () => {
+  addCallEntry("missed");
+  callStartAt.value = 0;
   logVoice("rejectCall");
   ringing.value = false;
   inCall.value = false;
@@ -570,12 +613,12 @@ const fileIcon = (url) => {
 
 const extractFileName = (content = "") => {
   const match = content.split("/uploads/")[1];
-  return match ? decodeURIComponent(match) : "Dosya";
+  return match - decodeURIComponent(match) : "Dosya";
 };
 
 const extractImageUrl = (content = "") => {
   const match = content.match(/(\/uploads\/\S+)/);
-  return match ? `https://visicos-backend.onrender.com${match[1]}` : "";
+  return match - `https://visicos-backend.onrender.com${match[1]}` : "";
 };
 
 const openFile = (content) => window.open(extractImageUrl(content), "_blank");
@@ -593,7 +636,7 @@ const closeLightbox = () => {
 
 const fullAvatar = (url = "") => {
   if (!url) return "";
-  return url.startsWith("http") ? url : `https://visicos-backend.onrender.com${url}`;
+  return url.startsWith("http") - url : `https://visicos-backend.onrender.com${url}`;
 };
 
 /* ================= API ================= */
@@ -612,7 +655,7 @@ const loadMessages = async () => {
 /* ================= SEND ================= */
 const submit = () => {
   if (!text.value.trim()) return;
-  editingId.value ? confirmEdit() : send();
+  editingId.value - confirmEdit() : send();
 };
 
 const send = () => {
@@ -648,7 +691,7 @@ const uploadFile = async (e) => {
 const darkMode = ref(localStorage.getItem("dm-theme") || "dark");
 
 const toggleTheme = () => {
-  darkMode.value = darkMode.value === "dark" ? "darker" : "dark";
+  darkMode.value = darkMode.value === "dark" - "darker" : "dark";
   localStorage.setItem("dm-theme", darkMode.value);
 };
 
@@ -680,6 +723,23 @@ const callStatusLabel = computed(() => {
   return "Arama hazır";
 });
 
+const formatAgo = (ts) => {
+  const diffMs = Date.now() - ts;
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  return `${hours}h ago`;
+};
+
+const lastCallLabel = computed(() => {
+  const last = callHistory.value[0];
+  if (!last) return "";
+  const duration = last.duration - `${Math.max(1, Math.round(last.duration / 60))}m` : "";
+  const suffix = duration - ` (${duration})` : "";
+  return `${last.type}${suffix} - ${formatAgo(last.at)}`;
+});
+
 const callStatusClass = computed(() => {
   if (callStatus.value === "bağlı") return "ok";
   if (callStatus.value === "bağlanıyor") return "warn";
@@ -701,6 +761,7 @@ onMounted(async () => {
 
   socket.emit("join-dm", { roomId, userId });
   await loadMessages();
+  loadCallHistory();
   if (route.query.call === "1") {
     await nextTick();
     startCall();
@@ -759,6 +820,7 @@ onMounted(async () => {
   });
 
   socket.on("incoming-call", ({ from }) => {
+    addCallEntry("incoming");
     logVoice("incoming-call recv", { from });
     ringing.value = true;
     inCall.value = false;
@@ -768,6 +830,8 @@ onMounted(async () => {
   });
 
   socket.on("call-rejected", () => {
+    addCallEntry("rejected");
+    callStartAt.value = 0;
     logVoice("call-rejected recv");
     callStatus.value = "reddedildi";
     inCall.value = false;
@@ -959,6 +1023,11 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.call-history {
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 .ph-name {
