@@ -1,6 +1,11 @@
 <template>
   <div class="profile">
     <div class="card">
+      <div class="banner-wrap" @click="pickBanner">
+        <img v-if="bannerPreview" :src="bannerPreview" />
+        <div v-else class="banner-fallback">Banner</div>
+        <div class="banner-overlay">Change banner</div>
+      </div>
       <div class="header">
         <div class="avatar-wrap" @click="pickAvatar">
           <img v-if="preview" :src="preview" />
@@ -19,6 +24,7 @@
           {{ loading ? "Kaydediliyor..." : "Kaydet" }}
         </button>
         <input ref="fileInput" type="file" hidden accept="image/*" @change="onFile" />
+        <input ref="bannerInput" type="file" hidden accept="image/*" @change="onBannerFile" />
       </div>
     </div>
   </div>
@@ -36,7 +42,9 @@ const router = useRouter();
 const user = userStore.user;
 const username = ref(user?.username || "");
 const preview = ref(user?.avatar || "");
+const bannerPreview = ref(user?.banner || "");
 const fileInput = ref(null);
+const bannerInput = ref(null);
 const loading = ref(false);
 
 const initials = computed(() =>
@@ -48,6 +56,7 @@ onMounted(() => {
 });
 
 const pickAvatar = () => fileInput.value?.click();
+const pickBanner = () => bannerInput.value?.click();
 
 const onFile = async (e) => {
   const file = e.target.files?.[0];
@@ -64,13 +73,29 @@ const onFile = async (e) => {
   }
 };
 
+const onBannerFile = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const form = new FormData();
+  form.append("file", file);
+  loading.value = true;
+  try {
+    const res = await axios.post("/api/upload", form);
+    bannerPreview.value = `https://visicos-backend.onrender.com${res.data.url}`;
+  } finally {
+    loading.value = false;
+  }
+};
+
 const save = async () => {
   if (!user?._id) return;
   loading.value = true;
   try {
     const res = await axios.put(`/api/auth/profile/${user._id}`, {
       username: username.value,
-      avatar: preview.value
+      avatar: preview.value,
+      banner: bannerPreview.value
     });
     userStore.setUser(res.data);
     alert("Profil güncellendi");
@@ -101,6 +126,51 @@ const save = async () => {
   border-radius: 16px;
   padding: 18px;
   box-shadow: 0 18px 30px rgba(0,0,0,0.4);
+}
+
+.banner-wrap {
+  width: 100%;
+  height: 120px;
+  border-radius: 14px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elev-2);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+
+.banner-wrap img,
+.banner-fallback {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.banner-fallback {
+  background: linear-gradient(145deg, var(--border-strong), #3a0f0f);
+}
+
+.banner-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,0.55);
+  color: var(--text);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  font-size: 12px;
+  text-align: center;
+}
+
+.banner-wrap:hover .banner-overlay {
+  opacity: 1;
 }
 
 .header {

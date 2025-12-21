@@ -77,6 +77,7 @@
       <div
         class="dm-profile"
         @click="goProfile"
+        @click.stop="toggleProfileCard"
       >
         <div class="dm-avatar">
           <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
@@ -125,6 +126,64 @@
               <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.5 3.5a6.7 6.7 0 0 0-.09-1l2.05-1.6-2-3.46-2.5 1a7.8 7.8 0 0 0-1.73-1l-.38-2.7H9.15l-.38 2.7c-.6.22-1.18.56-1.73 1l-2.5-1-2 3.46 2.05 1.6a6.7 6.7 0 0 0 0 2l-2.05 1.6 2 3.46 2.5-1c.55.44 1.13.78 1.73 1l.38 2.7h5.7l.38-2.7c.6-.22 1.18-.56 1.73-1l2.5 1 2-3.46-2.05-1.6c.06-.33.09-.66.09-1Z" />
             </svg>
           </button>
+        </div>
+      </div>
+
+      <div v-if="profileCardOpen" class="profile-card" @click.stop>
+        <div class="profile-card-header">
+          <div
+            class="profile-banner"
+            :style="{
+              backgroundImage: userStore.user?.banner ? `url(${fullAvatar(userStore.user.banner)})` : ''
+            }"
+          ></div>
+          <div class="profile-avatar">
+            <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
+            <span v-else>{{ (userStore.user?.username || "U").slice(0,1).toUpperCase() }}</span>
+            <span
+              class="status-dot"
+              :class="isOnline ? 'online' : 'offline'"
+              :title="isOnline ? 'Online' : 'Offline'"
+            ></span>
+          </div>
+        </div>
+        <div class="profile-card-body">
+          <div class="profile-card-name">{{ userStore.user?.username }}</div>
+          <div class="profile-card-handle">@{{ userStore.user?.username?.toLowerCase() }}</div>
+          <div class="profile-card-note">
+            <div class="note-label">Not</div>
+            <div class="note-value">{{ profileNote || "Not ekle" }}</div>
+          </div>
+          <button class="note-edit" @click="editProfileNote">Notu duzenle</button>
+          <div class="profile-card-note">
+            <div class="note-label">Custom status</div>
+            <div class="note-value">
+              <span v-if="customStatusEmoji">{{ customStatusEmoji }}</span>
+              {{ displayStatus || "Durum ekle" }}
+            </div>
+          </div>
+          <button class="note-edit" @click="setCustomStatus">Status duzenle</button>
+          <div class="status-actions">
+            <button class="chip-btn" @click="setStatusDuration(30)">30 dk</button>
+            <button class="chip-btn" @click="setStatusDuration(60)">1 saat</button>
+            <button class="chip-btn" @click="setStatusDuration(240)">4 saat</button>
+            <button class="chip-btn" @click="setStatusDuration(1440)">24 saat</button>
+            <button class="chip-btn" @click="clearStatus">Temizle</button>
+          </div>
+          <div class="profile-card-row">
+            <span class="pill">Oyun Koleksiyonu</span>
+            <button class="ghost-btn" @click="goProfile">Go</button>
+          </div>
+          <div class="profile-card-section">
+            <button class="menu-row" @click="goProfile">Profili Duzenle</button>
+            <button class="menu-row" @click="toggleDnd">
+              {{ dndEnabled ? "Rahatsiz Etmeyin Kapat" : "Rahatsiz Etmeyin" }}
+            </button>
+          </div>
+          <div class="profile-card-section">
+            <button class="menu-row" @click="switchAccount">Hesap Degistir</button>
+            <button class="menu-row" @click="copyUserId">Kullanici ID'sini Kopyala</button>
+          </div>
         </div>
       </div>
 
@@ -265,6 +324,13 @@ const muteUntil = ref(0);
 const muteClock = ref(Date.now());
 let muteInterval;
 const customStatus = ref("");
+const customStatusEmoji = ref("");
+const customStatusUntil = ref(0);
+const statusClock = ref(Date.now());
+let statusInterval;
+const profileCardOpen = ref(false);
+const dndEnabled = ref(false);
+const profileNote = ref("");
 
 const loadAudioPrefs = () => {
   micMuted.value = localStorage.getItem("visicos_mic_muted") === "1";
@@ -362,29 +428,100 @@ const startCallFor = (dm) => {
   router.push({ path: `/dm/${dm._id}`, query: { call: "1" } });
 };
 
-const goProfile = () => router.push("/profile");
+const goProfile = () => {
+  closeProfileCard();
+  router.push("/profile");
+};
 const menuGoProfile = () => {
   closeUserMenu();
   goProfile();
 };
 
 const setCustomStatus = () => {
-  const next = window.prompt("Set status", customStatus.value || "");
+  const emoji = window.prompt("Emoji", customStatusEmoji.value || "");
+  if (emoji === null) return;
+  const next = window.prompt("Status", customStatus.value || "");
   if (next === null) return;
+  customStatusEmoji.value = emoji.trim();
   customStatus.value = next.trim();
-  if (customStatus.value) {
-    localStorage.setItem(`visicos_status_${userId}`, customStatus.value);
-  } else {
-    localStorage.removeItem(`visicos_status_${userId}`);
-  }
+  saveCustomStatus();
+};
+
+const saveCustomStatus = () => {
+  localStorage.setItem(`visicos_status_${userId}`, customStatus.value);
+  localStorage.setItem(`visicos_status_emoji_${userId}`, customStatusEmoji.value);
+  localStorage.setItem(`visicos_status_until_${userId}`, String(customStatusUntil.value));
 };
 
 const loadCustomStatus = () => {
   customStatus.value = localStorage.getItem(`visicos_status_${userId}`) || "";
+  customStatusEmoji.value = localStorage.getItem(`visicos_status_emoji_${userId}`) || "";
+  const stored = localStorage.getItem(`visicos_status_until_${userId}`);
+  customStatusUntil.value = stored ? Number(stored) : 0;
+};
+
+const setStatusDuration = (minutes) => {
+  if (!customStatus.value && !customStatusEmoji.value) return;
+  customStatusUntil.value = Date.now() + minutes * 60 * 1000;
+  saveCustomStatus();
+};
+
+const clearStatus = () => {
+  customStatus.value = "";
+  customStatusEmoji.value = "";
+  customStatusUntil.value = 0;
+  localStorage.removeItem(`visicos_status_${userId}`);
+  localStorage.removeItem(`visicos_status_emoji_${userId}`);
+  localStorage.removeItem(`visicos_status_until_${userId}`);
+};
+
+const editProfileNote = () => {
+  const next = window.prompt("Not", profileNote.value || "");
+  if (next === null) return;
+  profileNote.value = next.trim();
+  if (profileNote.value) {
+    localStorage.setItem(`visicos_note_${userId}`, profileNote.value);
+  } else {
+    localStorage.removeItem(`visicos_note_${userId}`);
+  }
+};
+
+const loadProfileNote = () => {
+  profileNote.value = localStorage.getItem(`visicos_note_${userId}`) || "";
 };
 
 const setFilter = (value) => {
   dmFilter.value = value;
+};
+
+const toggleProfileCard = () => {
+  profileCardOpen.value = !profileCardOpen.value;
+};
+
+const closeProfileCard = () => {
+  profileCardOpen.value = false;
+};
+
+const toggleDnd = () => {
+  dndEnabled.value = !dndEnabled.value;
+  localStorage.setItem("visicos_dnd", dndEnabled.value ? "1" : "0");
+};
+
+const switchAccount = () => {
+  localStorage.removeItem("user");
+  router.push("/login");
+};
+
+const copyUserId = async () => {
+  const id = userStore.user?._id || "";
+  if (!id) return;
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(id);
+  }
+};
+
+const loadProfilePrefs = () => {
+  dndEnabled.value = localStorage.getItem("visicos_dnd") === "1";
 };
 
 const prefKey = (suffix, targetId) => {
@@ -636,6 +773,17 @@ const notificationDms = computed(() => {
   return dms.value.filter((dm) => dm.unreadCount > 0 && !isDmMuted(dm));
 });
 
+const displayStatus = computed(() => {
+  statusClock.value;
+  if (!customStatus.value && !customStatusEmoji.value) return "";
+  if (!customStatusUntil.value) return customStatus.value;
+  if (Date.now() > customStatusUntil.value) {
+    clearStatus();
+    return "";
+  }
+  return customStatus.value;
+});
+
 const isOnline = computed(() => {
   if (!userId) return false;
   return onlineUsers.value.includes(userId);
@@ -648,8 +796,10 @@ onMounted(() => {
   }
 
   loadAudioPrefs();
+  loadProfilePrefs();
   loadPinned();
   loadCustomStatus();
+  loadProfileNote();
 
   loadRequests();
   loadDms();
@@ -667,9 +817,13 @@ onMounted(() => {
   });
 
   window.addEventListener("click", closeUserMenu);
+  window.addEventListener("click", closeProfileCard);
   window.addEventListener("keydown", onMenuKeydown);
   muteInterval = setInterval(() => {
     muteClock.value = Date.now();
+  }, 30000);
+  statusInterval = setInterval(() => {
+    statusClock.value = Date.now();
   }, 30000);
 });
 
@@ -678,8 +832,10 @@ onBeforeUnmount(() => {
   socket.off("messages-read");
   socket.off("online-users");
   window.removeEventListener("click", closeUserMenu);
+  window.removeEventListener("click", closeProfileCard);
   window.removeEventListener("keydown", onMenuKeydown);
   if (muteInterval) clearInterval(muteInterval);
+  if (statusInterval) clearInterval(statusInterval);
 });
 </script>
 
@@ -1148,6 +1304,180 @@ onBeforeUnmount(() => {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 
+.profile-card {
+  position: fixed;
+  left: 92px;
+  bottom: 96px;
+  width: 280px;
+  background: #2a2b30;
+  border: 1px solid #3a3b41;
+  border-radius: 14px;
+  overflow: hidden;
+  z-index: 60;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+
+.profile-card-header {
+  position: relative;
+  height: 88px;
+  background: #3b3d44;
+}
+
+.profile-banner {
+  height: 100%;
+  background: linear-gradient(120deg, #6c6aa8, #8a7bc0);
+  background-size: cover;
+  background-position: center;
+}
+
+.profile-avatar {
+  position: absolute;
+  left: 14px;
+  bottom: -20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 4px solid #2a2b30;
+  background: #1f1f22;
+  display: grid;
+  place-items: center;
+  color: var(--text-strong);
+  overflow: hidden;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-card-body {
+  padding: 28px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-card-name {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.profile-card-handle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.profile-card-note {
+  display: grid;
+  gap: 2px;
+  background: #1f1f22;
+  border: 1px solid #35363b;
+  border-radius: 10px;
+  padding: 6px 8px;
+}
+
+.note-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #9aa0a6;
+}
+
+.note-value {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.note-edit {
+  background: transparent;
+  border: 1px solid #3a3b41;
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.note-edit:hover {
+  color: var(--text-strong);
+  border-color: #4a4b52;
+}
+
+.status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip-btn {
+  background: #1f1f22;
+  border: 1px solid #3a3b41;
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.chip-btn:hover {
+  color: var(--text-strong);
+  border-color: #4a4b52;
+}
+
+.profile-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pill {
+  background: #1f1f22;
+  border: 1px solid #3a3b41;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.ghost-btn {
+  background: transparent;
+  border: 1px solid #3a3b41;
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ghost-btn:hover {
+  color: var(--text-strong);
+  border-color: #4a4b52;
+}
+
+.profile-card-section {
+  border-top: 1px solid #35363b;
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.menu-row {
+  background: transparent;
+  border: none;
+  color: var(--text);
+  text-align: left;
+  padding: 6px 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.menu-row:hover {
+  background: #35363b;
+}
 .user-menu-item {
   width: 100%;
   text-align: left;

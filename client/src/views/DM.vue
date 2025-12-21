@@ -16,8 +16,8 @@
         </div>
         <div class="ph-meta">
           <div class="ph-name">{{ otherUser }}</div>
-          <div class="status" :class="isOnline - 'online' : 'offline'">
-            {{ typingUser - 'yazıyor...' : isOnline - 'online' : 'offline' }}
+          <div class="status" :class="isOnline ? 'online' : 'offline'">
+            {{ typingUser ? 'yazıyor...' : isOnline ? 'online' : 'offline' }}
           </div>
           <div v-if="lastCallLabel" class="call-history">
             Last call: {{ lastCallLabel }}
@@ -30,7 +30,7 @@
         <button class="call-btn" @click="startCall" :disabled="inCall">🔊 Sesli Ara</button>
         <button class="call-btn danger" @click="hangUp" v-if="inCall">📴</button>
         <button class="call-btn" @click="toggleMute" v-if="inCall">
-          {{ muted - "🎤" : "🔇" }}
+          {{ muted ? "Unmute" : "Mute" }}
         </button>
       </div>
     </div>
@@ -55,8 +55,8 @@
         <button class="call-btn danger" @click="rejectCall">Reddet</button>
       </div>
       <div class="call-controls" v-else>
-        <button class="call-icon" @click="toggleMute" :title="muted - 'Mikrofonu aç' : 'Mikrofonu kapat'">
-          {{ muted - "🎤" : "🔇" }}
+        <button class="call-icon" @click="toggleMute" :title="muted ? 'Unmute' : 'Mute'">
+          {{ muted ? "Unmute" : "Mute" }}
         </button>
         <button class="call-icon end" @click="hangUp" title="Aramayı bitir">📴</button>
         <button
