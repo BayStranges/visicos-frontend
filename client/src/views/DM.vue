@@ -236,7 +236,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick, computed } from "vue";
+import { ref, onMounted, onBeforeUnmount, nextTick, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import socket from "../socket";
@@ -349,6 +349,7 @@ const incomingFrom = ref("");
 const callAccepted = ref(false);
 const pendingOffer = ref(null);
 const pendingRemoteCandidates = ref([]);
+const overlayStorageKey = "visicos_voice_overlay";
 
 const startCall = async () => {
   logVoice("startCall click", { roomId, userId });
@@ -507,6 +508,42 @@ const rejectCall = () => {
   pendingRemoteCandidates.value = [];
   logVoice("call-rejected emit");
   socket.emit("call-rejected", { roomId });
+};
+
+const buildOverlayPayload = () => {
+  const selfName = userStore.user?.displayName || userStore.user?.username || "Sen";
+  const otherName = otherUser.value || "Kullanici";
+  const status = ringing.value
+    ? "ringing"
+    : inCall.value
+      ? callAccepted.value
+        ? "connected"
+        : "connecting"
+      : "idle";
+
+  return {
+    active: inCall.value || ringing.value,
+    status,
+    roomId,
+    updatedAt: Date.now(),
+    self: {
+      id: userId,
+      name: selfName,
+      avatar: userStore.user?.avatar || "",
+      muted: muted.value
+    },
+    other: {
+      id: otherUserId.value,
+      name: otherName,
+      avatar: otherUserAvatar.value || ""
+    }
+  };
+};
+
+const updateOverlayState = () => {
+  const payload = buildOverlayPayload();
+  localStorage.setItem(overlayStorageKey, JSON.stringify(payload));
+  window.dispatchEvent(new CustomEvent("visicos-overlay-update", { detail: payload }));
 };
 
 /* ================= CONTEXT MENU ================= */
@@ -779,6 +816,21 @@ const callStatusClass = computed(() => {
   return "idle";
 });
 
+const clearOverlayState = () => {
+  const payload = buildOverlayPayload();
+  payload.active = false;
+  payload.status = "idle";
+  localStorage.setItem(overlayStorageKey, JSON.stringify(payload));
+  window.dispatchEvent(new CustomEvent("visicos-overlay-update", { detail: payload }));
+};
+
+watch(
+  [inCall, ringing, callAccepted, muted, otherUser, otherUserId, otherUserAvatar],
+  () => updateOverlayState(),
+  { immediate: true }
+);
+
+
 /* ================= MOUNT ================= */
 onMounted(async () => {
   if (!userId) {
@@ -914,6 +966,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  clearOverlayState();
   closeVoice();
 
   socket.off("receive-message");

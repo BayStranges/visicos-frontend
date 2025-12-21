@@ -25,6 +25,35 @@ router.isReady().then(() => {
 
     dmStore.initSocket(userStore.user._id);
     dmStore.loadDms(userStore.user._id);
+
+    const getDeviceId = () => {
+      let id = localStorage.getItem("visicos_device_id");
+      if (!id) {
+        id = (crypto?.randomUUID && crypto.randomUUID()) ||
+          `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        localStorage.setItem("visicos_device_id", id);
+      }
+      return id;
+    };
+
+    const getDeviceName = () => {
+      const ua = navigator.userAgent || "";
+      let os = "Unknown";
+      if (/Windows/i.test(ua)) os = "Windows";
+      else if (/Mac/i.test(ua)) os = "Mac";
+      else if (/Android/i.test(ua)) os = "Android";
+      else if (/iPhone|iPad/i.test(ua)) os = "iOS";
+      const app = /Electron|Discord/i.test(ua) ? "Discord Client" : "Web";
+      return `${os} - ${app}`;
+    };
+
+    axios.post("/api/auth/devices/register", {
+      userId: userStore.user._id,
+      deviceId: getDeviceId(),
+      name: getDeviceName(),
+      location: Intl.DateTimeFormat().resolvedOptions().timeZone || "Unknown",
+      userAgent: navigator.userAgent || ""
+    }).catch(() => {});
   }
 
   app.mount("#app");
