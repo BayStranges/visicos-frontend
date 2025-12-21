@@ -76,7 +76,6 @@
 
       <div
         class="dm-profile"
-        @click="goProfile"
         @click.stop="toggleProfileCard"
       >
         <div class="dm-avatar">
