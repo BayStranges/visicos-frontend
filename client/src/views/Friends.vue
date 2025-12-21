@@ -220,6 +220,87 @@
         </button>
       </div>
 
+      <transition name="fade">
+        <div v-if="profileModalOpen" class="profile-modal" @click="closeProfileModal">
+          <div class="profile-modal-card" @click.stop>
+          <div class="profile-modal-left">
+            <div
+              class="profile-modal-banner"
+              :style="{
+                backgroundImage: profileUser?.banner ? `url(${fullAvatar(profileUser.banner)})` : ''
+              }"
+            ></div>
+            <div class="profile-modal-avatar">
+              <img v-if="profileUser?.avatar" :src="fullAvatar(profileUser.avatar)" />
+              <span v-else>{{ profileUser?.username?.[0] || "?" }}</span>
+            </div>
+            <div class="profile-modal-name">{{ profileUser?.username }}</div>
+            <div class="profile-modal-handle">@{{ profileUser?.username?.toLowerCase() }}</div>
+            <div class="profile-modal-actions">
+              <button class="primary-btn" @click="openProfileDm">Message</button>
+              <button class="ghost-btn" @click="startProfileCall">Call</button>
+            </div>
+            <div class="profile-modal-section">
+              <div class="section-title">Note (only you)</div>
+              <div class="section-body">{{ userNote || "Add a note" }}</div>
+            </div>
+          </div>
+          <div class="profile-modal-right">
+            <div class="profile-tabs">
+              <button
+                class="tab-btn"
+                :class="{ active: profileTab === 'overview' }"
+                @click="profileTab = 'overview'"
+              >
+                Overview
+              </button>
+              <button
+                class="tab-btn"
+                :class="{ active: profileTab === 'activity' }"
+                @click="profileTab = 'activity'"
+              >
+                Activity
+              </button>
+              <button
+                class="tab-btn"
+                :class="{ active: profileTab === 'mutuals' }"
+                @click="profileTab = 'mutuals'"
+              >
+                Mutuals
+              </button>
+            </div>
+            <div class="profile-tab-content" v-if="profileTab === 'overview'">
+              <div class="info-card">
+                <div class="info-title">Favorite game</div>
+                <div class="info-body">{{ profileFavorite || "Not set" }}</div>
+                <button class="info-edit" @click="editProfileFavorite">Edit</button>
+              </div>
+              <div class="info-card">
+                <div class="info-title">Liked games</div>
+                <div class="info-body">{{ profileLiked || "Not set" }}</div>
+                <button class="info-edit" @click="editProfileLiked">Edit</button>
+              </div>
+            </div>
+            <div class="profile-tab-content" v-else-if="profileTab === 'activity'">
+              <div class="info-card">
+                <div class="info-title">Recent activity</div>
+                <div class="info-body">
+                  {{ profileActivity || "No activity" }}
+                </div>
+              </div>
+            </div>
+            <div class="profile-tab-content" v-else>
+              <div class="info-card">
+                <div class="info-title">Mutuals</div>
+                <div class="info-body">No mutuals</div>
+              </div>
+            </div>
+          </div>
+          <button class="modal-close" @click="closeProfileModal">Close</button>
+        </div>
+      </div>
+      </transition>
+
     </section>
 
     <!-- RIGHT: Friends / add / requests -->
@@ -330,6 +411,10 @@ let statusInterval;
 const profileCardOpen = ref(false);
 const dndEnabled = ref(false);
 const profileNote = ref("");
+const profileModalOpen = ref(false);
+const profileTab = ref("overview");
+const profileFavorite = ref("");
+const profileLiked = ref("");
 
 const loadAudioPrefs = () => {
   micMuted.value = localStorage.getItem("visicos_mic_muted") === "1";
@@ -433,7 +518,7 @@ const goProfile = () => {
 };
 const menuGoProfile = () => {
   closeUserMenu();
-  goProfile();
+  openProfileModal();
 };
 
 const setCustomStatus = () => {
@@ -491,6 +576,61 @@ const loadProfileNote = () => {
 
 const setFilter = (value) => {
   dmFilter.value = value;
+};
+
+const profileKey = (suffix, targetId) => {
+  if (!userId || !targetId) return `visicos_profile_${suffix}_unknown`;
+  return `visicos_profile_${suffix}_${userId}_${targetId}`;
+};
+
+const loadProfileExtras = (targetId) => {
+  profileFavorite.value = localStorage.getItem(profileKey("favorite", targetId)) || "";
+  profileLiked.value = localStorage.getItem(profileKey("liked", targetId)) || "";
+};
+
+const editProfileFavorite = () => {
+  if (!selectedUserId.value) return;
+  const next = window.prompt("Favorite game", profileFavorite.value || "");
+  if (next === null) return;
+  profileFavorite.value = next.trim();
+  if (profileFavorite.value) {
+    localStorage.setItem(profileKey("favorite", selectedUserId.value), profileFavorite.value);
+  } else {
+    localStorage.removeItem(profileKey("favorite", selectedUserId.value));
+  }
+};
+
+const editProfileLiked = () => {
+  if (!selectedUserId.value) return;
+  const next = window.prompt("Liked games (comma separated)", profileLiked.value || "");
+  if (next === null) return;
+  profileLiked.value = next.trim();
+  if (profileLiked.value) {
+    localStorage.setItem(profileKey("liked", selectedUserId.value), profileLiked.value);
+  } else {
+    localStorage.removeItem(profileKey("liked", selectedUserId.value));
+  }
+};
+
+const openProfileModal = () => {
+  if (!selectedDm.value) return;
+  loadProfileExtras(selectedUserId.value);
+  profileModalOpen.value = true;
+  profileTab.value = "overview";
+};
+
+const closeProfileModal = () => {
+  profileModalOpen.value = false;
+};
+
+const openProfileDm = () => {
+  if (selectedDm.value?._id) goDm(selectedDm.value._id);
+  closeProfileModal();
+};
+
+const startProfileCall = () => {
+  if (selectedDm.value?._id) startCallFor(selectedDm.value);
+  closeProfileModal();
 };
 
 const toggleProfileCard = () => {
@@ -707,7 +847,11 @@ const clearMute = () => {
 };
 
 const onMenuKeydown = (event) => {
-  if (event.key === "Escape") closeUserMenu();
+  if (event.key === "Escape") {
+    closeUserMenu();
+    closeProfileCard();
+    closeProfileModal();
+  }
 };
 
 const openUserMenu = (event, dm) => {
@@ -772,6 +916,17 @@ const notificationDms = computed(() => {
   return dms.value.filter((dm) => dm.unreadCount > 0 && !isDmMuted(dm));
 });
 
+const profileUser = computed(() => {
+  if (!selectedDm.value) return null;
+  return getOtherUser(selectedDm.value);
+});
+
+const profileActivity = computed(() => {
+  const msg = selectedDm.value?.lastMessage;
+  if (!msg?.content) return "";
+  return `Last message: ${msg.content}`;
+});
+
 const displayStatus = computed(() => {
   statusClock.value;
   if (!customStatus.value && !customStatusEmoji.value) return "";
@@ -817,6 +972,7 @@ onMounted(() => {
 
   window.addEventListener("click", closeUserMenu);
   window.addEventListener("click", closeProfileCard);
+  window.addEventListener("click", closeProfileModal);
   window.addEventListener("keydown", onMenuKeydown);
   muteInterval = setInterval(() => {
     muteClock.value = Date.now();
@@ -832,6 +988,7 @@ onBeforeUnmount(() => {
   socket.off("online-users");
   window.removeEventListener("click", closeUserMenu);
   window.removeEventListener("click", closeProfileCard);
+  window.removeEventListener("click", closeProfileModal);
   window.removeEventListener("keydown", onMenuKeydown);
   if (muteInterval) clearInterval(muteInterval);
   if (statusInterval) clearInterval(statusInterval);
@@ -1301,6 +1458,211 @@ onBeforeUnmount(() => {
   gap: 2px;
   z-index: 50;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.profile-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 70;
+}
+
+.profile-modal-card {
+  position: relative;
+  width: min(860px, 92vw);
+  min-height: 420px;
+  background: #1f2024;
+  border: 1px solid #2d2e33;
+  border-radius: 18px;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.profile-modal-left {
+  background: #23242a;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-modal-banner {
+  height: 120px;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #6c6aa8, #8a7bc0);
+  background-size: cover;
+  background-position: center;
+}
+
+.profile-modal-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  border: 4px solid #23242a;
+  background: #1f1f22;
+  display: grid;
+  place-items: center;
+  color: var(--text-strong);
+  margin-top: -46px;
+  overflow: hidden;
+}
+
+.profile-modal-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-modal-name {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.profile-modal-handle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.profile-modal-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.profile-modal-section {
+  border-top: 1px solid #2d2e33;
+  padding-top: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.section-title {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.section-body {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.profile-modal-right {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.profile-tabs {
+  display: flex;
+  gap: 10px;
+  border-bottom: 1px solid #2d2e33;
+  padding-bottom: 8px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 6px 2px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.tab-btn.active {
+  color: var(--text-strong);
+  border-bottom: 2px solid var(--accent);
+}
+
+.profile-tab-content {
+  display: grid;
+  gap: 12px;
+}
+
+.info-edit {
+  margin-top: 10px;
+  background: transparent;
+  border: 1px solid #3a3b41;
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.info-edit:hover {
+  color: var(--text-strong);
+  border-color: #4a4b52;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.info-card {
+  background: #2a2b30;
+  border: 1px solid #33343a;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.info-title {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.info-body {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.primary-btn {
+  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
+  color: var(--accent-dark);
+  border: none;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: 1px solid #33343a;
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: var(--text-strong);
+  border-color: #4a4b52;
+}
+
+@media (max-width: 720px) {
+  .profile-modal-card {
+    grid-template-columns: 1fr;
+  }
+  .profile-modal-right {
+    padding-top: 0;
+  }
 }
 
 .profile-card {

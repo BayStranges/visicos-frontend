@@ -31,7 +31,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import axios from "axios";
 import { useUserStore } from "../store/user";
 import { useRouter } from "vue-router";
@@ -53,6 +53,15 @@ const initials = computed(() =>
 
 onMounted(() => {
   if (!user) router.push("/login");
+  window.addEventListener("keydown", onEsc);
+});
+
+const onEsc = (event) => {
+  if (event.key === "Escape") router.push("/friends");
+};
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onEsc);
 });
 
 const pickAvatar = () => fileInput.value?.click();
