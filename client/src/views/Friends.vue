@@ -14,6 +14,7 @@
         :key="dm._id"
         class="dm-row"
         @click="goDm(dm._id)"
+        @contextmenu.prevent="openUserMenu($event, dm)"
       >
         <div class="dm-avatar">
           <img v-if="getOtherUser(dm)?.avatar" :src="fullAvatar(getOtherUser(dm)?.avatar)" />
@@ -30,7 +31,6 @@
       <div
         class="dm-profile"
         @click="goProfile"
-        @contextmenu.prevent="openUserMenu"
       >
         <div class="dm-avatar">
           <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
@@ -42,12 +42,11 @@
           ></span>
         </div>
         <div class="dm-meta">
-          <div class="dm-name">{{ displayName }}</div>
+          <div class="dm-name">{{ userStore.user?.username }}</div>
           <div class="status-row">
             <span class="status-pill" :class="isOnline ? 'online' : 'offline'">
               {{ isOnline ? "Online" : "Offline" }}
             </span>
-            <span v-if="userNote" class="status-note">{{ userNote }}</span>
           </div>
         </div>
         <div class="profile-actions">
@@ -182,6 +181,7 @@ const userNickname = ref("");
 const isIgnored = ref(false);
 const isBlocked = ref(false);
 const isChannelMuted = ref(false);
+const selectedDm = ref(null);
 
 const loadAudioPrefs = () => {
   micMuted.value = localStorage.getItem("visicos_mic_muted") === "1";
@@ -245,26 +245,29 @@ const menuGoProfile = () => {
   goProfile();
 };
 
-const prefKey = (suffix) => {
-  if (!userId) return `visicos_user_${suffix}_unknown`;
-  return `visicos_user_${suffix}_${userId}`;
+const prefKey = (suffix, targetId) => {
+  if (!userId || !targetId) return `visicos_user_${suffix}_unknown`;
+  return `visicos_user_${suffix}_${userId}_${targetId}`;
 };
 
-const loadUserPrefs = () => {
-  userNote.value = localStorage.getItem(prefKey("note")) || "";
-  userNickname.value = localStorage.getItem(prefKey("nickname")) || "";
-  isIgnored.value = localStorage.getItem(prefKey("ignored")) === "1";
-  isBlocked.value = localStorage.getItem(prefKey("blocked")) === "1";
-  isChannelMuted.value = localStorage.getItem(prefKey("channel_muted")) === "1";
+const loadUserPrefs = (targetId) => {
+  userNote.value = localStorage.getItem(prefKey("note", targetId)) || "";
+  userNickname.value = localStorage.getItem(prefKey("nickname", targetId)) || "";
+  isIgnored.value = localStorage.getItem(prefKey("ignored", targetId)) === "1";
+  isBlocked.value = localStorage.getItem(prefKey("blocked", targetId)) === "1";
+  isChannelMuted.value = localStorage.getItem(prefKey("channel_muted", targetId)) === "1";
 };
 
 const getMenuDm = () => {
-  const lastId = localStorage.getItem("visicos_last_dm");
-  return dms.value.find((dm) => dm._id === lastId) || dms.value[0] || null;
+  return selectedDm.value || null;
 };
 
 const markAllRead = () => {
-  dms.value = dms.value.map((dm) => ({ ...dm, unreadCount: 0 }));
+  const dm = getMenuDm();
+  if (!dm) return;
+  dms.value = dms.value.map((item) =>
+    item._id === dm._id ? { ...item, unreadCount: 0 } : item
+  );
   closeUserMenu();
 };
 
@@ -279,20 +282,32 @@ const menuCall = () => {
 };
 
 const menuSetNote = () => {
+  const dm = getMenuDm();
+  const other = dm ? getOtherUser(dm) : null;
+  if (!other?._id) {
+    window.alert("Kisi bulunamadi.");
+    return;
+  }
   const next = window.prompt("Not Ekle", userNote.value || "");
   if (next === null) return;
   userNote.value = next.trim();
-  if (userNote.value) localStorage.setItem(prefKey("note"), userNote.value);
-  else localStorage.removeItem(prefKey("note"));
+  if (userNote.value) localStorage.setItem(prefKey("note", other._id), userNote.value);
+  else localStorage.removeItem(prefKey("note", other._id));
   closeUserMenu();
 };
 
 const menuSetNickname = () => {
+  const dm = getMenuDm();
+  const other = dm ? getOtherUser(dm) : null;
+  if (!other?._id) {
+    window.alert("Kisi bulunamadi.");
+    return;
+  }
   const next = window.prompt("Arkadas Takma Adi Ekle", userNickname.value || "");
   if (next === null) return;
   userNickname.value = next.trim();
-  if (userNickname.value) localStorage.setItem(prefKey("nickname"), userNickname.value);
-  else localStorage.removeItem(prefKey("nickname"));
+  if (userNickname.value) localStorage.setItem(prefKey("nickname", other._id), userNickname.value);
+  else localStorage.removeItem(prefKey("nickname", other._id));
   closeUserMenu();
 };
 
@@ -360,20 +375,29 @@ const menuRemoveFriend = async () => {
 };
 
 const toggleIgnore = () => {
+  const dm = getMenuDm();
+  const other = dm ? getOtherUser(dm) : null;
+  if (!other?._id) return;
   isIgnored.value = !isIgnored.value;
-  localStorage.setItem(prefKey("ignored"), isIgnored.value ? "1" : "0");
+  localStorage.setItem(prefKey("ignored", other._id), isIgnored.value ? "1" : "0");
   closeUserMenu();
 };
 
 const toggleBlock = () => {
+  const dm = getMenuDm();
+  const other = dm ? getOtherUser(dm) : null;
+  if (!other?._id) return;
   isBlocked.value = !isBlocked.value;
-  localStorage.setItem(prefKey("blocked"), isBlocked.value ? "1" : "0");
+  localStorage.setItem(prefKey("blocked", other._id), isBlocked.value ? "1" : "0");
   closeUserMenu();
 };
 
 const toggleChannelMute = () => {
+  const dm = getMenuDm();
+  const other = dm ? getOtherUser(dm) : null;
+  if (!other?._id) return;
   isChannelMuted.value = !isChannelMuted.value;
-  localStorage.setItem(prefKey("channel_muted"), isChannelMuted.value ? "1" : "0");
+  localStorage.setItem(prefKey("channel_muted", other._id), isChannelMuted.value ? "1" : "0");
   closeUserMenu();
 };
 
@@ -381,7 +405,11 @@ const onMenuKeydown = (event) => {
   if (event.key === "Escape") closeUserMenu();
 };
 
-const openUserMenu = (event) => {
+const openUserMenu = (event, dm) => {
+  const other = dm ? getOtherUser(dm) : null;
+  if (!other?._id) return;
+  selectedDm.value = dm;
+  loadUserPrefs(other._id);
   const menuWidth = 220;
   const menuHeight = 360;
   const padding = 12;
@@ -415,10 +443,6 @@ const activeUsers = computed(() => {
   return list;
 });
 
-const displayName = computed(() => {
-  return userNickname.value || userStore.user?.username || "";
-});
-
 const isOnline = computed(() => {
   if (!userId) return false;
   return onlineUsers.value.includes(userId);
@@ -431,7 +455,6 @@ onMounted(() => {
   }
 
   loadAudioPrefs();
-  loadUserPrefs();
 
   loadRequests();
   loadDms();
@@ -745,12 +768,6 @@ onBeforeUnmount(() => {
 
 .status-pill.offline {
   color: var(--text-muted);
-}
-
-.status-note {
-  font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1.2;
 }
 
 .profile-actions {
