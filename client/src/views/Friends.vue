@@ -21,10 +21,13 @@
           <span v-else>{{ getOtherUser(dm)?.username?.[0] || "?" }}</span>
         </div>
         <div class="dm-meta">
-          <div class="dm-name">{{ getOtherUser(dm)?.username || "Kullanıcı" }}</div>
-          <div class="dm-last">{{ dm.lastMessage?.content || "Henüz mesaj yok" }}</div>
+          <div class="dm-title">
+            <div class="dm-name">{{ getOtherUser(dm)?.username || "Kullan??c??" }}</div>
+            <span v-if="isDmMuted(dm)" class="mute-badge">mute</span>
+          </div>
+          <div class="dm-last">{{ dm.lastMessage?.content || "Hen??z mesaj yok" }}</div>
         </div>
-        <div v-if="dm.unreadCount > 0" class="badge">{{ dm.unreadCount }}</div>
+        <div v-if="dm.unreadCount > 0 && !isDmMuted(dm)" class="badge">{{ dm.unreadCount }}</div>
       </div>
       <div v-if="dms.length === 0" class="empty">DM yok</div>
 
@@ -99,8 +102,14 @@
           {{ isBlocked ? "Engeli Kaldir" : "Engelle" }}
         </button>
         <div class="user-menu-divider"></div>
-        <button class="user-menu-item" :class="{ active: isChannelMuted }" @click="toggleChannelMute">
-          {{ isChannelMuted ? "@YigitOz kanalini susturmayi kaldir" : "@YigitOz kanalini sustur" }}
+        <div class="user-menu-label">@{{ selectedUsername }} kanalini sustur</div>
+        <button class="user-menu-item" @click="setMuteDuration(15)">15 dk</button>
+        <button class="user-menu-item" @click="setMuteDuration(60)">1 saat</button>
+        <button class="user-menu-item" @click="setMuteDuration(480)">8 saat</button>
+        <button class="user-menu-item" @click="setMuteDuration(1440)">24 saat</button>
+        <button class="user-menu-item" @click="setMuteDuration(0)">Sonsuza dek</button>
+        <button class="user-menu-item" :class="{ active: isChannelMuted }" @click="clearMute">
+          Susturmayi kaldir
         </button>
       </div>
 
@@ -182,6 +191,11 @@ const isIgnored = ref(false);
 const isBlocked = ref(false);
 const isChannelMuted = ref(false);
 const selectedDm = ref(null);
+const selectedUserId = ref("");
+const selectedUsername = ref("kisi");
+const muteUntil = ref(0);
+const muteClock = ref(Date.now());
+let muteInterval;
 
 const loadAudioPrefs = () => {
   micMuted.value = localStorage.getItem("visicos_mic_muted") === "1";
@@ -255,11 +269,27 @@ const loadUserPrefs = (targetId) => {
   userNickname.value = localStorage.getItem(prefKey("nickname", targetId)) || "";
   isIgnored.value = localStorage.getItem(prefKey("ignored", targetId)) === "1";
   isBlocked.value = localStorage.getItem(prefKey("blocked", targetId)) === "1";
-  isChannelMuted.value = localStorage.getItem(prefKey("channel_muted", targetId)) === "1";
+  const stored = localStorage.getItem(prefKey("mute_until", targetId));
+  muteUntil.value = stored ? Number(stored) : 0;
+  isChannelMuted.value = muteUntil.value === -1 || Date.now() < muteUntil.value;
 };
 
 const getMenuDm = () => {
   return selectedDm.value || null;
+};
+
+const getMuteUntil = (targetId) => {
+  const stored = localStorage.getItem(prefKey("mute_until", targetId));
+  return stored ? Number(stored) : 0;
+};
+
+const isDmMuted = (dm) => {
+  muteClock.value;
+  const other = dm ? getOtherUser(dm) : null;
+  if (!other?._id) return false;
+  const until = getMuteUntil(other._id);
+  if (until === -1) return true;
+  return Date.now() < until;
 };
 
 const markAllRead = () => {
@@ -392,12 +422,23 @@ const toggleBlock = () => {
   closeUserMenu();
 };
 
-const toggleChannelMute = () => {
-  const dm = getMenuDm();
-  const other = dm ? getOtherUser(dm) : null;
-  if (!other?._id) return;
-  isChannelMuted.value = !isChannelMuted.value;
-  localStorage.setItem(prefKey("channel_muted", other._id), isChannelMuted.value ? "1" : "0");
+const setMuteDuration = (minutes) => {
+  if (!selectedUserId.value) return;
+  if (minutes === 0) {
+    muteUntil.value = -1;
+  } else {
+    muteUntil.value = Date.now() + minutes * 60 * 1000;
+  }
+  localStorage.setItem(prefKey("mute_until", selectedUserId.value), String(muteUntil.value));
+  isChannelMuted.value = muteUntil.value === -1 || Date.now() < muteUntil.value;
+  closeUserMenu();
+};
+
+const clearMute = () => {
+  if (!selectedUserId.value) return;
+  muteUntil.value = 0;
+  localStorage.removeItem(prefKey("mute_until", selectedUserId.value));
+  isChannelMuted.value = false;
   closeUserMenu();
 };
 
@@ -409,9 +450,11 @@ const openUserMenu = (event, dm) => {
   const other = dm ? getOtherUser(dm) : null;
   if (!other?._id) return;
   selectedDm.value = dm;
+  selectedUserId.value = other._id;
+  selectedUsername.value = other.username || "kisi";
   loadUserPrefs(other._id);
   const menuWidth = 220;
-  const menuHeight = 360;
+  const menuHeight = 460;
   const padding = 12;
   const maxX = window.innerWidth - menuWidth - padding;
   const maxY = window.innerHeight - menuHeight - padding;
@@ -473,6 +516,9 @@ onMounted(() => {
 
   window.addEventListener("click", closeUserMenu);
   window.addEventListener("keydown", onMenuKeydown);
+  muteInterval = setInterval(() => {
+    muteClock.value = Date.now();
+  }, 30000);
 });
 
 onBeforeUnmount(() => {
@@ -481,6 +527,7 @@ onBeforeUnmount(() => {
   socket.off("online-users");
   window.removeEventListener("click", closeUserMenu);
   window.removeEventListener("keydown", onMenuKeydown);
+  if (muteInterval) clearInterval(muteInterval);
 });
 </script>
 
@@ -492,7 +539,7 @@ onBeforeUnmount(() => {
   background: var(--bg);
   color: var(--text);
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
-  --user-panel-height: 84px;
+  --user-panel-height: 72px;
 }
 
 .servers {
@@ -718,27 +765,49 @@ onBeforeUnmount(() => {
 .dm-profile {
   position: sticky;
   bottom: 0;
-  min-height: var(--user-panel-height);
-  background: var(--bg-elev);
-  border-top: 1px solid var(--border);
-  padding: 12px 14px;
+  min-height: 64px;
+  background: #1f1f22;
+  border-top: 1px solid #2a2a2e;
+  padding: 10px 12px;
   display: grid;
-  grid-template-columns: 44px 1fr auto;
+  grid-template-columns: 36px 1fr auto;
   gap: 10px;
   align-items: center;
   cursor: pointer;
   z-index: 5;
-  box-shadow: 0 -12px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.35);
+}
+
+.dm-profile .dm-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+
+.dm-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mute-badge {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #9aa0a6;
+  background: #2a2a2e;
+  padding: 2px 6px;
+  border-radius: 999px;
 }
 
 .status-dot {
   position: absolute;
   right: 2px;
   bottom: 2px;
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  border: 2px solid var(--bg-elev);
+  border: 2px solid #1f1f22;
 }
 
 .status-row {
@@ -750,7 +819,7 @@ onBeforeUnmount(() => {
 
 .status-pill {
   display: inline-block;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
 }
 
@@ -773,24 +842,31 @@ onBeforeUnmount(() => {
 .profile-actions {
   display: inline-flex;
   gap: 6px;
+  align-items: center;
 }
 
 .icon-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-elev-2);
-  color: var(--text);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: #2a2a2e;
+  color: var(--text-strong);
 }
 
 .icon-btn.off {
-  color: var(--text-muted);
-  background: var(--input-bg);
+  color: #7d7d7d;
+  background: #2a2a2e;
 }
 
 .icon {
@@ -837,6 +913,12 @@ onBeforeUnmount(() => {
 
 .user-menu-item.danger {
   color: #ff6b6b;
+}
+
+.user-menu-label {
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .user-menu-divider {

@@ -1,5 +1,11 @@
 <template>
-  <div class="dm-wrapper" :class="darkMode">
+  <div class="dm-layout">
+    <aside class="servers">
+      <div class="logo" @click="goFriends">V</div>
+      <div class="server-pill add">+</div>
+    </aside>
+
+    <div class="dm-wrapper" :class="darkMode">
 
     <!-- HEADER -->
     <div class="dm-header">
@@ -222,6 +228,7 @@
       <img :src="lightbox.src" />
       <span class="close" @click="closeLightbox">✖</span>
     </div>
+    </div>
   </div>
 </template>
 
@@ -241,6 +248,8 @@ const logVoice = (...args) => {
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
+
+const goFriends = () => router.push("/friends");
 
 const userId = userStore.user?._id;
 const roomId = route.params.id;
@@ -828,10 +837,67 @@ onBeforeUnmount(() => {
 
 
 <style scoped>
-  .dm-wrapper {
+.dm-layout {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+}
+
+.servers {
+  background: var(--bg-elev);
+  border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  align-items: center;
+  padding: 12px 0;
+  gap: 12px;
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 20px;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+  cursor: pointer;
+}
+
+.server-pill {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent-dark);
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.server-pill:hover {
+  background: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+.server-pill.add {
+  background: #1f1f1f;
+  color: var(--accent);
+  border: 1px dashed var(--border-soft);
+}
+
+.dm-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   background: var(--bg);
   color: var(--text);
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
