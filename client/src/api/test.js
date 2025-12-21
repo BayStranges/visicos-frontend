@@ -3,7 +3,7 @@ import axios from "axios";
 export const testProtected = async () => {
   try {
     const token = localStorage.getItem("token");
-    const res = await axios.get("http://localhost:3001/api/test/protected", {
+    const res = await axios.get("https://visicos-backend.onrender.com/api/test/protected", {
       headers: { Authorization: `Bearer ${token}` },
     });
     return res.data;

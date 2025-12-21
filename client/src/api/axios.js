@@ -1,7 +1,7 @@
 import axios from "axios"; // en üstte
 
 const api = axios.create({
-  baseURL: "http://localhost:3001/api/",
+  baseURL: "https://visicos-backend.onrender.com/api/",
 });
 
 // 🔥 HER İSTEKTE TOKEN EKLE

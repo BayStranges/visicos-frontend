@@ -1,7 +1,7 @@
 import axios from "./axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:3001/api/auth",
+  baseURL: "https://visicos-backend.onrender.com/api/auth",
 });
 
 export const login = (email, password) => {

@@ -147,7 +147,7 @@ const goProfile = () => router.push("/profile");
 
 const fullAvatar = (url) => {
   if (!url) return "";
-  return url.startsWith("http") ? url : `http://localhost:3001${url}`;
+  return url.startsWith("http") ? url : `https://visicos-backend.onrender.com${url}`;
 };
 
 const activeUsers = computed(() => {

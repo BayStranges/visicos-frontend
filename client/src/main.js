@@ -1,10 +1,13 @@
 import { createApp } from "vue";
+import axios from "axios";
 import App from "./App.vue";
 import router from "./router";
 import socket from "./socket";
 import { createPinia } from "pinia";
 import { useUserStore } from "./store/user";
 import { useDmStore } from "./store/dm";
+
+axios.defaults.baseURL = "https://visicos-backend.onrender.com";
 
 const app = createApp(App);
 

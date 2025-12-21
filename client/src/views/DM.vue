@@ -566,7 +566,7 @@ const extractFileName = (content = "") => {
 
 const extractImageUrl = (content = "") => {
   const match = content.match(/(\/uploads\/\S+)/);
-  return match ? `http://localhost:3001${match[1]}` : "";
+  return match ? `https://visicos-backend.onrender.com${match[1]}` : "";
 };
 
 const openFile = (content) => window.open(extractImageUrl(content), "_blank");
@@ -584,7 +584,7 @@ const closeLightbox = () => {
 
 const fullAvatar = (url = "") => {
   if (!url) return "";
-  return url.startsWith("http") ? url : `http://localhost:3001${url}`;
+  return url.startsWith("http") ? url : `https://visicos-backend.onrender.com${url}`;
 };
 
 /* ================= API ================= */

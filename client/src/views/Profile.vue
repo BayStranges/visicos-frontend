@@ -58,7 +58,7 @@ const onFile = async (e) => {
   loading.value = true;
   try {
     const res = await axios.post("/api/upload", form);
-    preview.value = `http://localhost:3001${res.data.url}`;
+    preview.value = `https://visicos-backend.onrender.com${res.data.url}`;
   } finally {
     loading.value = false;
   }
