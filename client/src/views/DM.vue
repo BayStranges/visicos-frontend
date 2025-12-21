@@ -1014,10 +1014,11 @@ onBeforeUnmount(() => {
 .dm-wrapper {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 100vh;
   background: var(--bg);
   color: var(--text);
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
 }
 
 /* HEADER */
@@ -1203,6 +1204,7 @@ onBeforeUnmount(() => {
 /* MESSAGES */
 .dm-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 20px;
   position: relative;
