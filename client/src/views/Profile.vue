@@ -1,32 +1,87 @@
 <template>
-  <div class="profile">
-    <div class="card">
-      <div class="banner-wrap" @click="pickBanner">
-        <img v-if="bannerPreview" :src="bannerPreview" />
-        <div v-else class="banner-fallback">Banner</div>
-        <div class="banner-overlay">Change banner</div>
+  <div class="settings">
+    <aside class="settings-nav">
+      <div class="settings-title">Kullanici Ayarlari</div>
+      <div class="settings-group">
+        <button
+          v-for="item in userSettings"
+          :key="item"
+          class="nav-btn"
+          :class="{ active: activeTab === item }"
+          @click="activeTab = item"
+        >
+          {{ item }}
+        </button>
       </div>
-      <div class="header">
-        <div class="avatar-wrap" @click="pickAvatar">
-          <img v-if="preview" :src="preview" />
-          <div v-else class="avatar-fallback">{{ initials }}</div>
-          <div class="avatar-overlay">Avatarı değiştir</div>
+
+      <div class="settings-title">Uygulama Ayarlari</div>
+      <div class="settings-group">
+        <button
+          v-for="item in appSettings"
+          :key="item"
+          class="nav-btn"
+          :class="{ active: activeTab === item }"
+          @click="activeTab = item"
+        >
+          {{ item }}
+        </button>
+      </div>
+
+      <div class="settings-title">Etkinlik Ayarlari</div>
+      <div class="settings-group">
+        <button
+          v-for="item in activitySettings"
+          :key="item"
+          class="nav-btn"
+          :class="{ active: activeTab === item }"
+          @click="activeTab = item"
+        >
+          {{ item }}
+        </button>
+      </div>
+
+      <button class="logout-btn" @click="logout">Cikis Yap</button>
+    </aside>
+
+    <main class="settings-panel">
+      <div class="panel-header">
+        <div class="panel-title">{{ activeTab }}</div>
+      </div>
+
+      <div v-if="activeTab === 'Hesabim'" class="panel-card">
+        <div class="banner-wrap" @click="pickBanner">
+          <img v-if="bannerPreview" :src="bannerPreview" />
+          <div v-else class="banner-fallback">Banner</div>
+          <div class="banner-overlay">Change banner</div>
         </div>
-        <div class="user-info">
-          <div class="label">Kullanıcı adı</div>
-          <input v-model="username" />
-          <div class="sub">E-posta: {{ user?.email }}</div>
+        <div class="header">
+          <div class="avatar-wrap" @click="pickAvatar">
+            <img v-if="preview" :src="preview" />
+            <div v-else class="avatar-fallback">{{ initials }}</div>
+            <div class="avatar-overlay">Change avatar</div>
+          </div>
+          <div class="user-info">
+            <div class="label">Kullanici adi</div>
+            <input v-model="username" />
+            <div class="sub">E-posta: {{ user?.email }}</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button @click="save" :disabled="loading">
+            {{ loading ? "Kaydediliyor..." : "Kaydet" }}
+          </button>
+          <input ref="fileInput" type="file" hidden accept="image/*" @change="onFile" />
+          <input ref="bannerInput" type="file" hidden accept="image/*" @change="onBannerFile" />
         </div>
       </div>
 
-      <div class="actions">
-        <button @click="save" :disabled="loading">
-          {{ loading ? "Kaydediliyor..." : "Kaydet" }}
-        </button>
-        <input ref="fileInput" type="file" hidden accept="image/*" @change="onFile" />
-        <input ref="bannerInput" type="file" hidden accept="image/*" @change="onBannerFile" />
+      <div v-else class="panel-card">
+        <div class="panel-note">
+          {{ activeTab }} ayarlari yakinda buradan yonetilecek.
+        </div>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -46,19 +101,44 @@ const bannerPreview = ref(user?.banner || "");
 const fileInput = ref(null);
 const bannerInput = ref(null);
 const loading = ref(false);
+const activeTab = ref("Hesabim");
+
+const userSettings = [
+  "Hesabim",
+  "Icerik ve Sosyal",
+  "Veri Gizliligi",
+  "Cihazlar",
+  "Baglantilar"
+];
+
+const appSettings = [
+  "Gorunum",
+  "Erisilebilirlik",
+  "Ses Ve Goruntu",
+  "Sohbet",
+  "Bildirimler",
+  "Dil",
+  "Windows Ayarlari"
+];
+
+const activitySettings = [
+  "Etkinlik Gizliligi",
+  "Kayitli Oyunlar",
+  "Oyun Arayuzu"
+];
 
 const initials = computed(() =>
   (user?.username || "U").slice(0, 2).toUpperCase()
 );
 
+const onEsc = (event) => {
+  if (event.key === "Escape") router.push("/friends");
+};
+
 onMounted(() => {
   if (!user) router.push("/login");
   window.addEventListener("keydown", onEsc);
 });
-
-const onEsc = (event) => {
-  if (event.key === "Escape") router.push("/friends");
-};
 
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", onEsc);
@@ -107,34 +187,109 @@ const save = async () => {
       banner: bannerPreview.value
     });
     userStore.setUser(res.data);
-    alert("Profil güncellendi");
+    alert("Profil guncellendi");
   } catch (e) {
     console.error(e);
-    alert("Profil güncellenemedi");
+    alert("Profil guncellenemedi");
   } finally {
     loading.value = false;
   }
 };
+
+const logout = () => {
+  userStore.logout();
+  router.push("/login");
+};
 </script>
 
 <style scoped>
-.profile {
+.settings {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 260px 1fr;
   background: var(--bg);
   color: var(--text);
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
 }
 
-.card {
-  width: 420px;
+.settings-nav {
+  background: var(--bg-elev);
+  border-right: 1px solid var(--border);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.settings-title {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.nav-btn.active,
+.nav-btn:hover {
+  background: #1f1f1f;
+  color: var(--text-strong);
+}
+
+.logout-btn {
+  margin-top: auto;
+  background: #2b1313;
+  border: 1px solid var(--accent-strong);
+  color: var(--text-strong);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.settings-panel {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.panel-card {
   background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 18px;
   box-shadow: 0 18px 30px rgba(0,0,0,0.4);
+}
+
+.panel-note {
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 .banner-wrap {
@@ -274,5 +429,15 @@ button {
 button:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+@media (max-width: 800px) {
+  .settings {
+    grid-template-columns: 1fr;
+  }
+  .settings-nav {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
 }
 </style>

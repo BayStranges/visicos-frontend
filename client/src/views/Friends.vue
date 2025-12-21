@@ -122,7 +122,7 @@
               <path d="M12 3a9 9 0 0 0-9 9v5a3 3 0 0 0 3 3h1v-7H6a1 1 0 0 0-1 1v-2a7 7 0 1 1 14 0v2a1 1 0 0 0-1-1h-1v7h1a3 3 0 0 0 3-3v-5a9 9 0 0 0-9-9Z" />
             </svg>
           </button>
-          <button class="icon-btn" @click.stop="goProfile" title="Ayarlar">
+          <button class="icon-btn" @click.stop="goProfile" title="Kullanici Ayarlari">
             <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.5 3.5a6.7 6.7 0 0 0-.09-1l2.05-1.6-2-3.46-2.5 1a7.8 7.8 0 0 0-1.73-1l-.38-2.7H9.15l-.38 2.7c-.6.22-1.18.56-1.73 1l-2.5-1-2 3.46 2.05 1.6a6.7 6.7 0 0 0 0 2l-2.05 1.6 2 3.46 2.5-1c.55.44 1.13.78 1.73 1l.38 2.7h5.7l.38-2.7c.6-.22 1.18-.56 1.73-1l2.5 1 2-3.46-2.05-1.6c.06-.33.09-.66.09-1Z" />
             </svg>
@@ -456,6 +456,22 @@ const loadAudioPrefs = () => {
   headphoneMuted.value = localStorage.getItem("visicos_headphone_muted") === "1";
   setGlobalMute(micMuted.value);
   setGlobalDeafen(headphoneMuted.value);
+};
+
+const requestNotifications = () => {
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+};
+
+const notifyMessage = (msg) => {
+  if (!("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+  if (!document.hidden) return;
+  const title = msg?.sender?.username ? `New message from ${msg.sender.username}` : "New message";
+  const body = msg?.content ? msg.content.slice(0, 140) : "Open DM to read";
+  new Notification(title, { body });
 };
 const loadRequests = async () => {
   const res = await axios.get(`/api/friends/requests/${userId}`);
@@ -1045,6 +1061,7 @@ onMounted(() => {
   }
 
   loadAudioPrefs();
+  requestNotifications();
   loadProfilePrefs();
   loadPinned();
   loadCustomStatus();
@@ -1053,8 +1070,9 @@ onMounted(() => {
   loadRequests();
   loadDms();
 
-  socket.on("new-message", () => {
+  socket.on("new-message", (payload) => {
     loadDms(); // yeni mesaj -> liste guncelle
+    if (payload?.message) notifyMessage(payload.message);
   });
 
   socket.on("messages-read", () => {

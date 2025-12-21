@@ -247,6 +247,22 @@ const logVoice = (...args) => {
   console.log("[dm-voice]", ...args);
 };
 
+const requestNotifications = () => {
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+};
+
+const notifyMessage = (msg) => {
+  if (!("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+  if (!document.hidden) return;
+  const title = msg?.sender?.username ? `New message from ${msg.sender.username}` : "New message";
+  const body = msg?.content ? msg.content.slice(0, 140) : "Open DM to read";
+  new Notification(title, { body });
+};
+
 /* ================= STATE ================= */
 const route = useRoute();
 const router = useRouter();
@@ -772,6 +788,8 @@ onMounted(async () => {
 
   if (!socket.connected) socket.connect();
 
+  requestNotifications();
+
   window.addEventListener("click", closeMenu);
 
   socket.emit("join-dm", { roomId, userId });
@@ -868,6 +886,7 @@ onMounted(async () => {
     messages.value.push(msg);
     computeOtherUser();
     scrollBottomIfNeeded();
+    notifyMessage(msg);
   });
 
   socket.on("typing", (u) => (typingUser.value = u));
@@ -923,6 +942,7 @@ onBeforeUnmount(() => {
   background: var(--bg);
   color: var(--text);
   font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
 }
 
 .servers {
@@ -933,6 +953,8 @@ onBeforeUnmount(() => {
   align-items: center;
   padding: 12px 0;
   gap: 12px;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .logo {
