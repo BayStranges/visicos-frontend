@@ -222,7 +222,7 @@
       </label>
 
       <button @click="submit">
-        {{ editingId - "✓" : "➤" }}
+        {{ editingId ? "Save" : "Send" }}
       </button>
     </div>
 
@@ -613,12 +613,12 @@ const fileIcon = (url) => {
 
 const extractFileName = (content = "") => {
   const match = content.split("/uploads/")[1];
-  return match - decodeURIComponent(match) : "Dosya";
+  return match ? decodeURIComponent(match) : "Dosya";
 };
 
 const extractImageUrl = (content = "") => {
   const match = content.match(/(\/uploads\/\S+)/);
-  return match - `https://visicos-backend.onrender.com${match[1]}` : "";
+  return match ? `https://visicos-backend.onrender.com${match[1]}` : "";
 };
 
 const openFile = (content) => window.open(extractImageUrl(content), "_blank");
@@ -636,7 +636,7 @@ const closeLightbox = () => {
 
 const fullAvatar = (url = "") => {
   if (!url) return "";
-  return url.startsWith("http") - url : `https://visicos-backend.onrender.com${url}`;
+  return url.startsWith("http") ? url : `https://visicos-backend.onrender.com${url}`;
 };
 
 /* ================= API ================= */
@@ -655,7 +655,7 @@ const loadMessages = async () => {
 /* ================= SEND ================= */
 const submit = () => {
   if (!text.value.trim()) return;
-  editingId.value - confirmEdit() : send();
+  editingId.value ? confirmEdit() : send();
 };
 
 const send = () => {
@@ -691,7 +691,7 @@ const uploadFile = async (e) => {
 const darkMode = ref(localStorage.getItem("dm-theme") || "dark");
 
 const toggleTheme = () => {
-  darkMode.value = darkMode.value === "dark" - "darker" : "dark";
+  darkMode.value = darkMode.value === "dark" ? "darker" : "dark";
   localStorage.setItem("dm-theme", darkMode.value);
 };
 
@@ -735,8 +735,8 @@ const formatAgo = (ts) => {
 const lastCallLabel = computed(() => {
   const last = callHistory.value[0];
   if (!last) return "";
-  const duration = last.duration - `${Math.max(1, Math.round(last.duration / 60))}m` : "";
-  const suffix = duration - ` (${duration})` : "";
+  const duration = last.duration ? `${Math.max(1, Math.round(last.duration / 60))}m` : "";
+  const suffix = duration ? ` (${duration})` : "";
   return `${last.type}${suffix} - ${formatAgo(last.at)}`;
 });
 
