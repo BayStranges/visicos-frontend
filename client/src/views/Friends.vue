@@ -27,46 +27,55 @@
       </div>
       <div v-if="dms.length === 0" class="empty">DM yok</div>
 
-      <div class="dm-footer">
-        <div class="dm-profile" @click="goProfile">
-          <div class="dm-avatar">
-            <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
-            <span v-else>{{ (userStore.user?.username || "U").slice(0,1).toUpperCase() }}</span>
-          </div>
-          <div class="dm-meta">
-            <div class="dm-name">{{ userStore.user?.username }}</div>
-            <div class="dm-last">{{ userStore.user?.email }}</div>
-          </div>
-          <span class="link-text">Profil</span>
+      <div class="dm-profile" @click="goProfile">
+        <div class="dm-avatar">
+          <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
+          <span v-else>{{ (userStore.user?.username || "U").slice(0,1).toUpperCase() }}</span>
+          <span
+            class="status-dot"
+            :class="isOnline ? 'online' : 'offline'"
+            :title="isOnline ? 'Online' : 'Offline'"
+          ></span>
         </div>
-
-        <div class="voice-controls">
+        <div class="dm-meta">
+          <div class="dm-name">{{ userStore.user?.username }}</div>
+          <div class="dm-last">{{ userStore.user?.email }}</div>
+          <div class="status-row">
+            <span class="status-pill" :class="isOnline ? 'online' : 'offline'">
+              {{ isOnline ? "Online" : "Offline" }}
+            </span>
+          </div>
+        </div>
+        <div class="profile-actions">
           <button
-            class="voice-btn"
+            class="icon-btn"
             :class="{ off: micMuted }"
-            @click="toggleMic"
+            @click.stop="toggleMic"
+            title="Mikrofon"
           >
-            <svg class="voice-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
               <path d="M5 12a1 1 0 0 1 2 0 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V21a1 1 0 1 1-2 0v-2.08A7 7 0 0 1 5 12Z" />
             </svg>
           </button>
           <button
-            class="voice-btn"
+            class="icon-btn"
             :class="{ off: headphoneMuted }"
-            @click="toggleHeadphones"
+            @click.stop="toggleHeadphones"
+            title="Kulaklik"
           >
-            <svg class="voice-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 3a9 9 0 0 0-9 9v5a3 3 0 0 0 3 3h1v-7H6a1 1 0 0 0-1 1v-2a7 7 0 1 1 14 0v2a1 1 0 0 0-1-1h-1v7h1a3 3 0 0 0 3-3v-5a9 9 0 0 0-9-9Z" />
             </svg>
           </button>
-          <button class="voice-btn settings" @click="goProfile">
-            <svg class="voice-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <button class="icon-btn" @click.stop="goProfile" title="Ayarlar">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.5 3.5a6.7 6.7 0 0 0-.09-1l2.05-1.6-2-3.46-2.5 1a7.8 7.8 0 0 0-1.73-1l-.38-2.7H9.15l-.38 2.7c-.6.22-1.18.56-1.73 1l-2.5-1-2 3.46 2.05 1.6a6.7 6.7 0 0 0 0 2l-2.05 1.6 2 3.46 2.5-1c.55.44 1.13.78 1.73 1l.38 2.7h5.7l.38-2.7c.6-.22 1.18-.56 1.73-1l2.5 1 2-3.46-2.05-1.6c.06-.33.09-.66.09-1Z" />
             </svg>
           </button>
         </div>
       </div>
+
     </section>
 
     <!-- RIGHT: Friends / add / requests -->
@@ -144,7 +153,6 @@ const loadAudioPrefs = () => {
   setGlobalMute(micMuted.value);
   setGlobalDeafen(headphoneMuted.value);
 };
-
 const loadRequests = async () => {
   const res = await axios.get(`/api/friends/requests/${userId}`);
   requests.value = res.data;
@@ -211,6 +219,11 @@ const activeUsers = computed(() => {
     }
   });
   return list;
+});
+
+const isOnline = computed(() => {
+  if (!userId) return false;
+  return onlineUsers.value.includes(userId);
 });
 
 onMounted(() => {
@@ -343,6 +356,7 @@ onBeforeUnmount(() => {
   font-weight: 700;
   color: var(--accent);
   overflow: hidden;
+  position: relative;
 }
 
 .dm-avatar img {
@@ -472,18 +486,12 @@ onBeforeUnmount(() => {
   padding: 10px 0;
 }
 
-.dm-footer {
+.dm-profile {
   position: sticky;
   bottom: 0;
   background: var(--bg-elev);
   border-top: 1px solid var(--border);
   padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.dm-profile {
   display: grid;
   grid-template-columns: 44px 1fr auto;
   gap: 10px;
@@ -491,44 +499,72 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-.voice-controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: 8px;
+.status-dot {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-elev);
 }
 
-.voice-btn {
-  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
-  color: var(--accent-dark);
-  border: none;
-  border-radius: 10px;
-  padding: 8px 10px;
-  cursor: pointer;
-  font-weight: 700;
-  font-size: 12px;
+.status-row {
+  margin-top: 4px;
+}
+
+.status-pill {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.status-dot.online {
+  background: #2ecc71;
+}
+
+.status-dot.offline {
+  background: #7b7b7b;
+}
+
+.status-pill.online {
+  color: #9be7a1;
+}
+
+.status-pill.offline {
+  color: var(--text-muted);
+}
+
+.profile-actions {
   display: inline-flex;
-  align-items: center;
   gap: 6px;
 }
 
-.voice-btn.off {
-  background: var(--input-bg);
-  color: var(--text-muted);
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   border: 1px solid var(--border-strong);
-}
-
-.voice-btn.settings {
   background: var(--bg-elev-2);
   color: var(--text);
-  border: 1px solid var(--border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
-.voice-icon {
+.icon-btn.off {
+  color: var(--text-muted);
+  background: var(--input-bg);
+}
+
+.icon {
   width: 16px;
   height: 16px;
   fill: currentColor;
-  display: inline-block;
 }
+
+
 
 .activity {
   padding: 20px;
