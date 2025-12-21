@@ -1,7 +1,7 @@
 <template>
   <div class="dm-layout">
     <aside class="servers">
-      <div class="logo" @click="goFriends">V</div>
+      <div class="logo active" @click="goFriends">V</div>
       <div class="server-pill add">+</div>
     </aside>
 
@@ -870,6 +870,10 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
+.logo.active {
+  box-shadow: 0 0 0 2px rgba(247, 201, 72, 0.45), 0 10px 18px rgba(0,0,0,0.35);
+}
+
 .server-pill {
   width: 48px;
   height: 48px;
@@ -892,6 +896,18 @@ onBeforeUnmount(() => {
   background: #1f1f1f;
   color: var(--accent);
   border: 1px dashed var(--border-soft);
+}
+
+@media (max-width: 720px) {
+  .dm-layout {
+    grid-template-columns: 64px 1fr;
+  }
+  .logo,
+  .server-pill {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
 }
 
 .dm-wrapper {
