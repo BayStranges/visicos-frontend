@@ -46,6 +46,8 @@
         class="dm-row"
         @click="goDm(dm._id)"
         @contextmenu.prevent="openUserMenu($event, dm)"
+        @touchstart="(e) => onRowTouchStart(e, dm)"
+        @touchend="onRowTouchEnd"
       >
         <div class="dm-avatar">
           <img v-if="getOtherUser(dm)?.avatar" :src="fullAvatar(getOtherUser(dm)?.avatar)" />
@@ -53,7 +55,7 @@
         </div>
         <div class="dm-meta">
           <div class="dm-title">
-            <div class="dm-name">{{ getOtherUser(dm)?.username || "Kullan??c??" }}</div>
+          <div class="dm-name">{{ getDisplayName(dm) || "Kullan??c??" }}</div>
             <span v-if="isDmMuted(dm)" class="mute-badge">mute</span>
             <span v-if="isPinned(dm)" class="pin-badge">pin</span>
           </div>
@@ -221,6 +223,29 @@
       </div>
 
       <transition name="fade">
+        <div v-if="nicknameModalOpen" class="nickname-modal" @click="closeNicknameModal">
+          <div class="nickname-card" @click.stop>
+            <div class="nickname-head">
+              <div class="nickname-title">Arkadas Takma Adi Ekle</div>
+              <button class="modal-close" @click="closeNicknameModal">X</button>
+            </div>
+            <div class="nickname-sub">
+              Kisisel takma adlarla arkadasini daha hizli bul. DM'lerde sadece sana gorunur.
+            </div>
+            <div class="nickname-field">
+              <label>Arkadas Takma Adi</label>
+              <input v-model="nicknameDraft" placeholder="Takma ad" @keydown.enter.prevent="saveNickname" />
+              <button class="link-btn ghost" @click="resetNickname">Arkadas Takma Adini Sifirla</button>
+            </div>
+            <div class="nickname-actions">
+              <button class="ghost-btn" @click="closeNicknameModal">Iptal</button>
+              <button class="primary-btn" @click="saveNickname">Kaydet</button>
+            </div>
+          </div>
+        </div>
+      </transition>
+
+      <transition name="fade">
         <div v-if="profileModalOpen" class="profile-modal" @click="closeProfileModal">
           <div class="profile-modal-card" @click.stop>
           <div class="profile-modal-left">
@@ -234,7 +259,7 @@
               <img v-if="profileUser?.avatar" :src="fullAvatar(profileUser.avatar)" />
               <span v-else>{{ profileUser?.username?.[0] || "?" }}</span>
             </div>
-            <div class="profile-modal-name">{{ profileUser?.username }}</div>
+            <div class="profile-modal-name">{{ profileDisplayName }}</div>
             <div class="profile-modal-handle">@{{ profileUser?.username?.toLowerCase() }}</div>
             <div class="profile-modal-actions">
               <button class="primary-btn" @click="openProfileDm">Message</button>
@@ -242,7 +267,12 @@
             </div>
             <div class="profile-modal-section">
               <div class="section-title">Note (only you)</div>
-              <div class="section-body">{{ userNote || "Add a note" }}</div>
+              <textarea
+                class="note-input"
+                v-model="userNote"
+                placeholder="Add a note"
+                @input="saveUserNote"
+              ></textarea>
             </div>
           </div>
           <div class="profile-modal-right">
@@ -314,7 +344,7 @@
             <span v-else>{{ getOtherUser(dm)?.username?.[0] || "?" }}</span>
           </div>
           <div class="notification-meta">
-            <div class="dm-name">{{ getOtherUser(dm)?.username }}</div>
+          <div class="dm-name">{{ getDisplayName(dm) }}</div>
             <div class="dm-last">{{ dm.unreadCount }} unread</div>
           </div>
           <button class="link-btn" @click="goDm(dm._id)">Open</button>
@@ -415,6 +445,11 @@ const profileModalOpen = ref(false);
 const profileTab = ref("overview");
 const profileFavorite = ref("");
 const profileLiked = ref("");
+const nicknameModalOpen = ref(false);
+const nicknameDraft = ref("");
+const rowTouchTimer = ref(null);
+const rowTouchPos = ref({ x: 0, y: 0 });
+const rowTouchDm = ref(null);
 
 const loadAudioPrefs = () => {
   micMuted.value = localStorage.getItem("visicos_mic_muted") === "1";
@@ -623,6 +658,27 @@ const closeProfileModal = () => {
   profileModalOpen.value = false;
 };
 
+const closeNicknameModal = () => {
+  nicknameModalOpen.value = false;
+};
+
+const saveNickname = () => {
+  if (!selectedUserId.value) return;
+  const next = nicknameDraft.value.trim();
+  if (next) {
+    localStorage.setItem(prefKey("nickname", selectedUserId.value), next);
+  } else {
+    localStorage.removeItem(prefKey("nickname", selectedUserId.value));
+  }
+  nicknameModalOpen.value = false;
+};
+
+const resetNickname = () => {
+  if (!selectedUserId.value) return;
+  nicknameDraft.value = "";
+  localStorage.removeItem(prefKey("nickname", selectedUserId.value));
+};
+
 const openProfileDm = () => {
   if (selectedDm.value?._id) goDm(selectedDm.value._id);
   closeProfileModal();
@@ -678,6 +734,43 @@ const loadUserPrefs = (targetId) => {
   isChannelMuted.value = muteUntil.value === -1 || Date.now() < muteUntil.value;
 };
 
+const saveUserNote = () => {
+  const targetId = selectedUserId.value;
+  if (!targetId) return;
+  if (userNote.value) localStorage.setItem(prefKey("note", targetId), userNote.value);
+  else localStorage.removeItem(prefKey("note", targetId));
+};
+
+const onRowTouchStart = (event, dm) => {
+  rowTouchDm.value = dm;
+  rowTouchPos.value = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+  if (rowTouchTimer.value) clearTimeout(rowTouchTimer.value);
+  rowTouchTimer.value = setTimeout(() => {
+    if (!rowTouchDm.value) return;
+    openUserMenu({ clientX: rowTouchPos.value.x, clientY: rowTouchPos.value.y }, rowTouchDm.value);
+    rowTouchTimer.value = null;
+  }, 550);
+};
+
+const onRowTouchEnd = () => {
+  if (rowTouchTimer.value) {
+    clearTimeout(rowTouchTimer.value);
+    rowTouchTimer.value = null;
+  }
+  rowTouchDm.value = null;
+};
+
+const getNickname = (targetId) => {
+  if (!targetId) return "";
+  return localStorage.getItem(prefKey("nickname", targetId)) || "";
+};
+
+const getDisplayName = (dm) => {
+  const other = dm ? getOtherUser(dm) : null;
+  if (!other?._id) return "";
+  return getNickname(other._id) || other.username || "";
+};
+
 const getMenuDm = () => {
   return selectedDm.value || null;
 };
@@ -725,8 +818,7 @@ const menuSetNote = () => {
   const next = window.prompt("Not Ekle", userNote.value || "");
   if (next === null) return;
   userNote.value = next.trim();
-  if (userNote.value) localStorage.setItem(prefKey("note", other._id), userNote.value);
-  else localStorage.removeItem(prefKey("note", other._id));
+  saveUserNote();
   closeUserMenu();
 };
 
@@ -737,11 +829,8 @@ const menuSetNickname = () => {
     window.alert("Kisi bulunamadi.");
     return;
   }
-  const next = window.prompt("Arkadas Takma Adi Ekle", userNickname.value || "");
-  if (next === null) return;
-  userNickname.value = next.trim();
-  if (userNickname.value) localStorage.setItem(prefKey("nickname", other._id), userNickname.value);
-  else localStorage.removeItem(prefKey("nickname", other._id));
+  nicknameDraft.value = getNickname(other._id) || other.username || "";
+  nicknameModalOpen.value = true;
   closeUserMenu();
 };
 
@@ -851,6 +940,7 @@ const onMenuKeydown = (event) => {
     closeUserMenu();
     closeProfileCard();
     closeProfileModal();
+    closeNicknameModal();
   }
 };
 
@@ -919,6 +1009,11 @@ const notificationDms = computed(() => {
 const profileUser = computed(() => {
   if (!selectedDm.value) return null;
   return getOtherUser(selectedDm.value);
+});
+
+const profileDisplayName = computed(() => {
+  if (!profileUser.value?._id) return "";
+  return getNickname(profileUser.value._id) || profileUser.value.username || "";
 });
 
 const profileActivity = computed(() => {
@@ -1552,6 +1647,22 @@ onBeforeUnmount(() => {
   color: var(--text);
 }
 
+.note-input {
+  min-height: 72px;
+  resize: none;
+  background: #1f1f22;
+  border: 1px solid #33343a;
+  border-radius: 10px;
+  padding: 8px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.note-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .profile-modal-right {
   padding: 18px;
   display: flex;
@@ -1609,6 +1720,74 @@ onBeforeUnmount(() => {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+.nickname-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+}
+
+.nickname-card {
+  width: min(420px, 92vw);
+  background: #2a2b30;
+  border: 1px solid #35363b;
+  border-radius: 16px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.nickname-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nickname-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.nickname-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.nickname-field {
+  display: grid;
+  gap: 8px;
+}
+
+.nickname-field label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.nickname-field input {
+  background: #1f1f22;
+  border: 1px solid #33343a;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+}
+
+.nickname-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.link-btn.ghost {
+  background: transparent;
+  border: none;
+  color: #7aa7ff;
+  padding: 0;
 }
 
 .info-card {
@@ -1916,18 +2095,24 @@ onBeforeUnmount(() => {
 }
 @media (max-width: 700px) {
   .layout {
-    grid-template-columns: 70px 1fr;
+    grid-template-columns: 64px 1fr;
   }
-  .friends {
-    grid-column: span 2;
+  .logo,
+  .server-pill {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
   }
   .dm-list {
-    max-height: 40vh;
+    max-height: none;
   }
   .dm-row {
     grid-template-columns: 44px 1fr auto;
   }
   .dm-actions {
+    display: none;
+  }
+  .friends {
     display: none;
   }
   .activity {

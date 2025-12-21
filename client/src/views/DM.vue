@@ -120,8 +120,8 @@
   :data-msg-id="msg._id"
   :class="{ mine: msg.sender._id === userId }"
   @contextmenu.prevent="openMenu($event, msg)"
-  @touchstart="onTouchStart"
-  @touchend="(e) => onTouchEndReply(e, msg)"
+  @touchstart="(e) => onTouchStart(e, msg)"
+  @touchend="onTouchEnd"
 >
 
         <div class="msg-avatar" :class="{ mine: msg.sender._id === userId }">
@@ -299,13 +299,28 @@ const callStartAt = ref(0);
 
 /* ================= TOUCH ================= */
 const touchStartTime = ref(0);
-const onTouchStart = () => {
+const touchTimer = ref(null);
+const touchPos = ref({ x: 0, y: 0 });
+const touchMsg = ref(null);
+
+const onTouchStart = (event, msg) => {
   touchStartTime.value = Date.now();
+  touchMsg.value = msg;
+  touchPos.value = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+  if (touchTimer.value) clearTimeout(touchTimer.value);
+  touchTimer.value = setTimeout(() => {
+    if (!touchMsg.value) return;
+    openMenu({ clientX: touchPos.value.x, clientY: touchPos.value.y }, touchMsg.value);
+    touchTimer.value = null;
+  }, 550);
 };
-const onTouchEndReply = (_e, msg) => {
-  if (Date.now() - touchStartTime.value > 600) {
-    setReply(msg);
+
+const onTouchEnd = () => {
+  if (touchTimer.value) {
+    clearTimeout(touchTimer.value);
+    touchTimer.value = null;
   }
+  touchMsg.value = null;
 };
 
 /* ================= VOICE CALL ================= */
@@ -1329,6 +1344,68 @@ onBeforeUnmount(() => {
 
 .image-preview:hover {
   transform: scale(1.03);
+}
+
+@media (max-width: 700px) {
+  .dm-layout {
+    grid-template-columns: 56px 1fr;
+  }
+  .servers {
+    padding: 10px 0;
+  }
+  .logo,
+  .server-pill {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+  .dm-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+  }
+  .profile-head {
+    width: 100%;
+  }
+  .ph-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .call-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .call-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .dm-messages {
+    padding: 14px;
+  }
+  .bubble {
+    max-width: 85%;
+  }
+  .dm-input {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .dm-input input {
+    width: 100%;
+  }
+  .image-preview {
+    max-width: 100%;
+    height: auto;
+  }
+  .file-card {
+    max-width: 100%;
+  }
 }
 .lightbox {
   position: fixed;
