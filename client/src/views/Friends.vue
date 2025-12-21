@@ -39,7 +39,6 @@
         </div>
         <div class="dm-meta">
           <div class="dm-name">{{ userStore.user?.username }}</div>
-          <div class="dm-last">{{ userStore.user?.email }}</div>
           <div class="status-row">
             <span class="status-pill" :class="isOnline ? 'online' : 'offline'">
               {{ isOnline ? "Online" : "Offline" }}
