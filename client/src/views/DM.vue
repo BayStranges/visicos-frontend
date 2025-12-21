@@ -174,7 +174,7 @@
           <div class="meta">
             <span class="time">{{ formatTime(msg.createdAt) }}</span>
             <span v-if="msg.sender._id === userId" class="read">
-              {{ (msg.readBy?.length || 0) > 1 - "✓✓" : "✓" }}
+              {{ (msg.readBy?.length || 0) > 1 ? "Read" : "Sent" }}
             </span>
             <span v-if="msg.edited" class="edited">(düzenlendi)</span>
           </div>
