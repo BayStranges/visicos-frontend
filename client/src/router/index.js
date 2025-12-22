@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createWebHistory, createWebHashHistory } from "vue-router";
 import Login from "../views/Login.vue";
 import Register from "../views/Register.vue";
 import DM from "../views/DM.vue";
@@ -13,8 +13,10 @@ const routes = [
   { path: "/profile", component: () => import("../views/Profile.vue"), meta: { requiresAuth: true } }
 ];
 
+const isElectron = typeof navigator !== "undefined" && /Electron/i.test(navigator.userAgent || "");
+
 const router = createRouter({
-  history: createWebHistory(),
+  history: isElectron ? createWebHashHistory() : createWebHistory(),
   routes,
 });
 
