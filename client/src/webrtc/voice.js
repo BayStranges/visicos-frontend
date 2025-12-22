@@ -5,6 +5,8 @@ let localStream = null;
 let rawStream = null;
 let audioContext = null;
 let audioNodes = null;
+let voiceBoost = 1.2;
+let noiseMode = "rnnoise";
 let currentRoomId = null;
 let globalMute = false;
 let globalDeafen = false;
@@ -13,6 +15,25 @@ const log = (...args) => {
   const room = currentRoomId ? ` room=${currentRoomId}` : "";
   console.log(`[voice]${room}`, ...args);
 };
+
+const loadVoiceBoost = () => {
+  const stored = localStorage.getItem("visicos_voice_boost") || "medium";
+  if (stored === "off") return 1.0;
+  if (stored === "low") return 1.1;
+  if (stored === "high") return 1.35;
+  return 1.2;
+};
+
+voiceBoost = loadVoiceBoost();
+
+const loadNoiseMode = () => {
+  const stored = localStorage.getItem("visicos_noise_mode") || "rnnoise";
+  if (stored === "off") return "off";
+  if (stored === "webrtc") return "webrtc";
+  return "rnnoise";
+};
+
+noiseMode = loadNoiseMode();
 
 const buildIceServers = () => {
   const servers = [{ urls: "stun:stun.l.google.com:19302" }];
@@ -45,9 +66,9 @@ const applyGlobalState = () => {
 };
 
 const buildAudioConstraints = () => ({
-  echoCancellation: true,
-  noiseSuppression: true,
-  autoGainControl: true,
+  echoCancellation: noiseMode !== "off",
+  noiseSuppression: noiseMode !== "off",
+  autoGainControl: noiseMode !== "off",
   channelCount: 1
 });
 
@@ -67,27 +88,48 @@ const buildProcessedStream = async (stream) => {
   }
 
   const source = audioContext.createMediaStreamSource(stream);
+  let rnnoise = null;
+  if (noiseMode === "rnnoise") {
+    try {
+      const { RNNoiseNode, rnnoise_loadAssets } = await import("simple-rnnoise-wasm");
+      const assets = await rnnoise_loadAssets({
+        scriptSrc: "/rnnoise/rnnoise.worklet.js",
+        moduleSrc: "/rnnoise/rnnoise.wasm"
+      });
+      await RNNoiseNode.register(audioContext, assets);
+      rnnoise = new RNNoiseNode(audioContext);
+    } catch (err) {
+      log("rnnoise init failed, fallback to webrtc", {
+        message: err?.message
+      });
+    }
+  }
   const highpass = audioContext.createBiquadFilter();
   highpass.type = "highpass";
-  highpass.frequency.value = 120;
+  highpass.frequency.value = 160;
 
   const compressor = audioContext.createDynamicsCompressor();
-  compressor.threshold.value = -50;
+  compressor.threshold.value = -55;
   compressor.knee.value = 30;
-  compressor.ratio.value = 8;
-  compressor.attack.value = 0.003;
-  compressor.release.value = 0.25;
+  compressor.ratio.value = 10;
+  compressor.attack.value = 0.002;
+  compressor.release.value = 0.2;
 
   const gain = audioContext.createGain();
-  gain.gain.value = 1.2;
+  gain.gain.value = voiceBoost;
 
   const destination = audioContext.createMediaStreamDestination();
-  source.connect(highpass);
+  if (rnnoise) {
+    source.connect(rnnoise);
+    rnnoise.connect(highpass);
+  } else {
+    source.connect(highpass);
+  }
   highpass.connect(compressor);
   compressor.connect(gain);
   gain.connect(destination);
 
-  audioNodes = { source, highpass, compressor, gain, destination };
+  audioNodes = { source, rnnoise, highpass, compressor, gain, destination };
   return new MediaStream(destination.stream.getAudioTracks());
 };
 
@@ -220,6 +262,21 @@ export const setGlobalDeafen = (value) => {
   globalDeafen = !!value;
   log("global deafen", globalDeafen);
   applyGlobalState();
+};
+
+export const setVoiceBoost = (level) => {
+  if (!level) return;
+  localStorage.setItem("visicos_voice_boost", level);
+  voiceBoost = loadVoiceBoost();
+  if (audioNodes?.gain) {
+    audioNodes.gain.gain.value = voiceBoost;
+  }
+};
+
+export const setNoiseMode = (mode) => {
+  if (!mode) return;
+  localStorage.setItem("visicos_noise_mode", mode);
+  noiseMode = loadNoiseMode();
 };
 
 export const closeVoice = () => {

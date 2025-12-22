@@ -331,6 +331,36 @@
         </div>
       </div>
 
+      <div v-else-if="activeTab === 'Ses Ve Goruntu'" class="panel-card">
+        <div class="overlay-row">
+          <div>
+            <div class="overlay-title">Ses Boost</div>
+            <div class="overlay-desc">
+              Mikrofon sesini guclendirir ve daha dolgun verir.
+            </div>
+          </div>
+          <select v-model="voiceBoost" class="control-select">
+            <option value="off">Kapali</option>
+            <option value="low">Dusuk</option>
+            <option value="medium">Orta</option>
+            <option value="high">Yuksek</option>
+          </select>
+        </div>
+        <div class="overlay-row">
+          <div>
+            <div class="overlay-title">Gurultu Engelleme</div>
+            <div class="overlay-desc">
+              Agresif RNNoise gurultu engelleme ile dis sesleri bastirir. Degisiklik yeni aramada gecerli olur.
+            </div>
+          </div>
+          <select v-model="noiseMode" class="control-select">
+            <option value="rnnoise">Agresif (RNNoise)</option>
+            <option value="webrtc">Standart</option>
+            <option value="off">Kapali</option>
+          </select>
+        </div>
+      </div>
+
       <div v-else-if="activeTab === 'Oyun Arayuzu'" class="panel-card overlay-card">
         <div class="overlay-section">
           <div class="overlay-row">
@@ -618,6 +648,7 @@ import axios from "axios";
 import { useUserStore } from "../store/user";
 import { useRouter } from "vue-router";
 import { initPushNotifications } from "../push";
+import { setVoiceBoost, setNoiseMode } from "../webrtc/voice";
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -655,6 +686,8 @@ const connectionUsername = ref("");
 const keybindModalOpen = ref(false);
 const pendingKeybind = ref("");
 const keybindHandler = ref(null);
+const voiceBoost = ref(localStorage.getItem("visicos_voice_boost") || "medium");
+const noiseMode = ref(localStorage.getItem("visicos_noise_mode") || "rnnoise");
 const canRequestPush = computed(
   () => typeof Notification !== "undefined" && Notification.permission === "default"
 );
@@ -669,6 +702,12 @@ const requestPush = async () => {
   if (!userStore.user?._id) return;
   await initPushNotifications(userStore.user._id);
 };
+watch(voiceBoost, (value) => {
+  setVoiceBoost(value);
+});
+watch(noiseMode, (value) => {
+  setNoiseMode(value);
+});
 const gameModalOpen = ref(false);
 const gameNameInput = ref("");
 

@@ -5,7 +5,9 @@ self.addEventListener("install", (event) => {
         "/",
         "/index.html",
         "/manifest.json",
-        "/logo.png"
+        "/logo.png",
+        "/rnnoise/rnnoise.wasm",
+        "/rnnoise/rnnoise.worklet.js"
       ])
     )
   );
