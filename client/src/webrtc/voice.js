@@ -1,5 +1,4 @@
 import socket from "../socket";
-import { tuneOpusSdp } from "./opusSdp";
 
 let pc = null;
 let localStream = null;
@@ -10,6 +9,10 @@ let voiceBoost = 1.2;
 let noiseMode = "rnnoise";
 let gateTimer = null;
 let audioTransceiver = null;
+let micDeviceId = localStorage.getItem("visicos_mic_device") || "";
+let outputDeviceId = localStorage.getItem("visicos_out_device") || "";
+let micGain = Number(localStorage.getItem("visicos_mic_gain") || "1");
+let outputVolume = Number(localStorage.getItem("visicos_out_volume") || "1");
 let currentRoomId = null;
 let globalMute = false;
 let globalDeafen = false;
@@ -37,6 +40,9 @@ const loadNoiseMode = () => {
 };
 
 noiseMode = loadNoiseMode();
+
+if (Number.isNaN(micGain)) micGain = 1;
+if (Number.isNaN(outputVolume)) outputVolume = 1;
 
 const buildIceServers = () => {
   const servers = [{ urls: "stun:stun.l.google.com:19302" }];
@@ -76,6 +82,10 @@ const ensureRemoteAudioElement = () => {
     document.body.appendChild(audio);
   }
   audio.muted = globalDeafen;
+  audio.volume = Math.max(0, Math.min(1, outputVolume));
+  if (outputDeviceId && audio.setSinkId) {
+    audio.setSinkId(outputDeviceId).catch(() => {});
+  }
   return audio;
 };
 
@@ -90,12 +100,18 @@ const applyGlobalState = () => {
   if (audio) audio.muted = globalDeafen;
 };
 
-const buildAudioConstraints = () => ({
-  echoCancellation: noiseMode !== "off",
-  noiseSuppression: noiseMode !== "off",
-  autoGainControl: noiseMode !== "off",
-  channelCount: 1
-});
+const buildAudioConstraints = () => {
+  const constraints = {
+    echoCancellation: noiseMode !== "off",
+    noiseSuppression: noiseMode !== "off",
+    autoGainControl: noiseMode !== "off",
+    channelCount: 1
+  };
+  if (micDeviceId) {
+    constraints.deviceId = { exact: micDeviceId };
+  }
+  return constraints;
+};
 
 const buildProcessedStream = async (stream) => {
   if (!stream) return null;
@@ -147,7 +163,7 @@ const buildProcessedStream = async (stream) => {
   compressor.release.value = 0.2;
 
   const gain = audioContext.createGain();
-  gain.gain.value = voiceBoost;
+  gain.gain.value = voiceBoost * micGain;
 
   const destination = audioContext.createMediaStreamDestination();
   if (rnnoise) {
@@ -325,7 +341,7 @@ export const setVoiceBoost = (level) => {
   localStorage.setItem("visicos_voice_boost", level);
   voiceBoost = loadVoiceBoost();
   if (audioNodes?.gain) {
-    audioNodes.gain.gain.value = voiceBoost;
+    audioNodes.gain.gain.value = voiceBoost * micGain;
   }
 };
 
@@ -333,6 +349,44 @@ export const setNoiseMode = (mode) => {
   if (!mode) return;
   localStorage.setItem("visicos_noise_mode", mode);
   noiseMode = loadNoiseMode();
+};
+
+export const setAudioInputDevice = (deviceId) => {
+  micDeviceId = deviceId || "";
+  localStorage.setItem("visicos_mic_device", micDeviceId);
+  if (rawStream || localStream) {
+    if (rawStream) rawStream.getTracks().forEach((t) => t.stop());
+    rawStream = null;
+    localStream = null;
+  }
+};
+
+export const setOutputDevice = (deviceId) => {
+  outputDeviceId = deviceId || "";
+  localStorage.setItem("visicos_out_device", outputDeviceId);
+  const audio = document.getElementById("remote-audio");
+  if (audio && audio.setSinkId && outputDeviceId) {
+    audio.setSinkId(outputDeviceId).catch(() => {});
+  }
+};
+
+export const setMicGain = (value) => {
+  const next = Number(value);
+  if (Number.isNaN(next)) return;
+  micGain = Math.max(0, Math.min(2, next));
+  localStorage.setItem("visicos_mic_gain", String(micGain));
+  if (audioNodes?.gain) {
+    audioNodes.gain.gain.value = voiceBoost * micGain;
+  }
+};
+
+export const setOutputVolume = (value) => {
+  const next = Number(value);
+  if (Number.isNaN(next)) return;
+  outputVolume = Math.max(0, Math.min(1, next));
+  localStorage.setItem("visicos_out_volume", String(outputVolume));
+  const audio = document.getElementById("remote-audio");
+  if (audio) audio.volume = outputVolume;
 };
 
 export const closeVoice = () => {

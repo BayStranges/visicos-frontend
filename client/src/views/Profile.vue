@@ -331,33 +331,106 @@
         </div>
       </div>
 
-      <div v-else-if="activeTab === 'Ses Ve Goruntu'" class="panel-card">
-        <div class="overlay-row">
-          <div>
-            <div class="overlay-title">Ses Boost</div>
-            <div class="overlay-desc">
-              Mikrofon sesini guclendirir ve daha dolgun verir.
-            </div>
-          </div>
-          <select v-model="voiceBoost" class="control-select">
-            <option value="off">Kapali</option>
-            <option value="low">Dusuk</option>
-            <option value="medium">Orta</option>
-            <option value="high">Yuksek</option>
-          </select>
+      <div v-else-if="activeTab === 'Ses Ve Goruntu'" class="panel-card audio-card">
+        <div class="audio-tabs">
+          <button class="audio-tab" :class="{ active: audioTab === 'Ses' }" @click="audioTab = 'Ses'">Ses</button>
+          <button class="audio-tab" :class="{ active: audioTab === 'Video' }" @click="audioTab = 'Video'">Video</button>
+          <button class="audio-tab" :class="{ active: audioTab === 'Ses Paneli' }" @click="audioTab = 'Ses Paneli'">Ses Paneli</button>
+          <button class="audio-tab" :class="{ active: audioTab === 'Hata ayiklama' }" @click="audioTab = 'Hata ayiklama'">Hata ayiklama</button>
         </div>
-        <div class="overlay-row">
-          <div>
-            <div class="overlay-title">Gurultu Engelleme</div>
-            <div class="overlay-desc">
-              Agresif RNNoise gurultu engelleme ile dis sesleri bastirir. Degisiklik yeni aramada gecerli olur.
+
+        <div v-if="audioTab === 'Ses'" class="audio-panel">
+          <div class="audio-grid">
+            <div class="audio-field">
+              <div class="audio-label">Giris Aygiti</div>
+              <select v-model="selectedInputId" class="audio-select">
+                <option v-for="d in audioInputs" :key="d.deviceId" :value="d.deviceId">
+                  {{ d.label || "Mikrofon" }}
+                </option>
+              </select>
+            </div>
+            <div class="audio-field">
+              <div class="audio-label">Cikis Aygiti</div>
+              <select v-model="selectedOutputId" class="audio-select">
+                <option v-for="d in audioOutputs" :key="d.deviceId" :value="d.deviceId">
+                  {{ d.label || "Hoparlor" }}
+                </option>
+              </select>
             </div>
           </div>
-          <select v-model="noiseMode" class="control-select">
-            <option value="rnnoise">Agresif (RNNoise)</option>
-            <option value="webrtc">Standart</option>
-            <option value="off">Kapali</option>
-          </select>
+
+          <div class="audio-grid">
+            <div class="audio-field">
+              <div class="audio-label">Giris Sesi</div>
+              <input v-model="inputVolume" type="range" min="0" max="2" step="0.05" class="audio-range" />
+            </div>
+            <div class="audio-field">
+              <div class="audio-label">Cikis Sesi</div>
+              <input v-model="outputVolume" type="range" min="0" max="1" step="0.05" class="audio-range" />
+            </div>
+          </div>
+
+          <div class="mic-test">
+            <div class="mic-title">Mikrofon Testi</div>
+            <div class="mic-desc">
+              Mikrofonunda sorun mu var? Bir test yap ve konus; seviyeni gosterecegiz.
+            </div>
+            <div class="mic-row">
+              <button class="primary-btn" @click="toggleMicTest">
+                {{ micTestActive ? "Durdur" : "Kontrol Edelim" }}
+              </button>
+              <div class="mic-bars">
+                <span
+                  v-for="(v, idx) in micBars"
+                  :key="idx"
+                  class="mic-bar"
+                  :style="{ height: `${Math.max(2, v * 20)}px` }"
+                ></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="audio-row">
+            <div>
+              <div class="audio-label">Ses Boost</div>
+              <div class="audio-hint">Mikrofon sesini guclendirir ve daha dolgun verir.</div>
+            </div>
+            <select v-model="voiceBoost" class="audio-select small">
+              <option value="off">Kapali</option>
+              <option value="low">Dusuk</option>
+              <option value="medium">Orta</option>
+              <option value="high">Yuksek</option>
+            </select>
+          </div>
+
+          <div class="audio-profile">
+            <div class="audio-profile-title">Giris Profili</div>
+            <label class="audio-profile-option" :class="{ active: noiseMode === 'rnnoise' }">
+              <input type="radio" v-model="noiseMode" value="rnnoise" />
+              <div>
+                <div class="audio-profile-name">Ses Izolasyonu</div>
+                <div class="audio-profile-desc">Gurultuyu keser, sadece sesini on plana alir.</div>
+              </div>
+            </label>
+            <label class="audio-profile-option" :class="{ active: noiseMode === 'webrtc' }">
+              <input type="radio" v-model="noiseMode" value="webrtc" />
+              <div>
+                <div class="audio-profile-name">Studio</div>
+                <div class="audio-profile-desc">Saf ses: WebRTC standart isleme.</div>
+              </div>
+            </label>
+            <label class="audio-profile-option" :class="{ active: noiseMode === 'off' }">
+              <input type="radio" v-model="noiseMode" value="off" />
+              <div>
+                <div class="audio-profile-name">Ozel</div>
+                <div class="audio-profile-desc">Gelistirmis mod: tum islemleri kapat.</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div v-else class="panel-note">
+          {{ audioTab }} ayarlari yakinda buradan yonetilecek.
         </div>
       </div>
 
@@ -648,7 +721,14 @@ import axios from "axios";
 import { useUserStore } from "../store/user";
 import { useRouter } from "vue-router";
 import { initPushNotifications } from "../push";
-import { setVoiceBoost, setNoiseMode } from "../webrtc/voice";
+import {
+  setVoiceBoost,
+  setNoiseMode,
+  setAudioInputDevice,
+  setOutputDevice,
+  setMicGain,
+  setOutputVolume
+} from "../webrtc/voice";
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -688,6 +768,20 @@ const pendingKeybind = ref("");
 const keybindHandler = ref(null);
 const voiceBoost = ref(localStorage.getItem("visicos_voice_boost") || "medium");
 const noiseMode = ref(localStorage.getItem("visicos_noise_mode") || "rnnoise");
+const audioTab = ref("Ses");
+const audioInputs = ref([]);
+const audioOutputs = ref([]);
+const selectedInputId = ref(localStorage.getItem("visicos_mic_device") || "");
+const selectedOutputId = ref(localStorage.getItem("visicos_out_device") || "");
+const inputVolume = ref(Number(localStorage.getItem("visicos_mic_gain") || "1"));
+const outputVolume = ref(Number(localStorage.getItem("visicos_out_volume") || "1"));
+const micTestActive = ref(false);
+const micBars = ref(Array.from({ length: 48 }, () => 0));
+let micTestStream = null;
+let micTestCtx = null;
+let micTestAnalyser = null;
+let micTestTimer = null;
+const deviceChangeHandler = () => loadAudioDevices();
 const canRequestPush = computed(
   () => typeof Notification !== "undefined" && Notification.permission === "default"
 );
@@ -702,11 +796,97 @@ const requestPush = async () => {
   if (!userStore.user?._id) return;
   await initPushNotifications(userStore.user._id);
 };
+
+const loadAudioDevices = async () => {
+  if (!navigator.mediaDevices?.enumerateDevices) return;
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  audioInputs.value = devices.filter((d) => d.kind === "audioinput");
+  audioOutputs.value = devices.filter((d) => d.kind === "audiooutput");
+  if (!selectedInputId.value && audioInputs.value.length) {
+    selectedInputId.value = audioInputs.value[0].deviceId;
+  }
+  if (!selectedOutputId.value && audioOutputs.value.length) {
+    selectedOutputId.value = audioOutputs.value[0].deviceId;
+  }
+};
+
+const stopMicTest = () => {
+  micTestActive.value = false;
+  if (micTestTimer) {
+    clearInterval(micTestTimer);
+    micTestTimer = null;
+  }
+  if (micTestStream) {
+    micTestStream.getTracks().forEach((t) => t.stop());
+    micTestStream = null;
+  }
+  if (micTestCtx) {
+    micTestCtx.close().catch(() => {});
+    micTestCtx = null;
+    micTestAnalyser = null;
+  }
+  micBars.value = micBars.value.map(() => 0);
+};
+
+const startMicTest = async () => {
+  if (micTestActive.value) return;
+  try {
+    const constraints = {
+      audio: {
+        deviceId: selectedInputId.value ? { exact: selectedInputId.value } : undefined,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1
+      },
+      video: false
+    };
+    micTestStream = await navigator.mediaDevices.getUserMedia(constraints);
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    micTestCtx = new Ctx();
+    const source = micTestCtx.createMediaStreamSource(micTestStream);
+    micTestAnalyser = micTestCtx.createAnalyser();
+    micTestAnalyser.fftSize = 1024;
+    source.connect(micTestAnalyser);
+    const data = new Float32Array(micTestAnalyser.fftSize);
+    micTestActive.value = true;
+    micTestTimer = setInterval(() => {
+      if (!micTestAnalyser) return;
+      micTestAnalyser.getFloatTimeDomainData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i += 1) {
+        sum += data[i] * data[i];
+      }
+      const rms = Math.sqrt(sum / data.length);
+      const level = Math.min(1, rms * 6);
+      micBars.value = [...micBars.value.slice(1), level];
+    }, 60);
+  } catch (err) {
+    stopMicTest();
+  }
+};
+
+const toggleMicTest = () => {
+  if (micTestActive.value) stopMicTest();
+  else startMicTest();
+};
 watch(voiceBoost, (value) => {
   setVoiceBoost(value);
 });
 watch(noiseMode, (value) => {
   setNoiseMode(value);
+});
+watch(selectedInputId, (value) => {
+  setAudioInputDevice(value);
+});
+watch(selectedOutputId, (value) => {
+  setOutputDevice(value);
+});
+watch(inputVolume, (value) => {
+  setMicGain(value);
+});
+watch(outputVolume, (value) => {
+  setOutputVolume(value);
 });
 const gameModalOpen = ref(false);
 const gameNameInput = ref("");
@@ -911,6 +1091,12 @@ onMounted(() => {
   loadOverlayLive();
   window.addEventListener("storage", loadOverlayLive);
   window.addEventListener("visicos-overlay-update", loadOverlayLive);
+  loadAudioDevices();
+  if (navigator.mediaDevices?.addEventListener) {
+    navigator.mediaDevices.addEventListener("devicechange", deviceChangeHandler);
+  } else if (navigator.mediaDevices?.ondevicechange !== undefined) {
+    navigator.mediaDevices.ondevicechange = deviceChangeHandler;
+  }
   loadRegisteredGames();
   fetchRunningGames();
   gamePollTimer = setInterval(fetchRunningGames, 10000);
@@ -920,6 +1106,12 @@ onBeforeUnmount(() => {
   window.removeEventListener("keydown", onEsc);
   window.removeEventListener("storage", loadOverlayLive);
   window.removeEventListener("visicos-overlay-update", loadOverlayLive);
+  if (navigator.mediaDevices?.removeEventListener) {
+    navigator.mediaDevices.removeEventListener("devicechange", deviceChangeHandler);
+  } else if (navigator.mediaDevices?.ondevicechange === deviceChangeHandler) {
+    navigator.mediaDevices.ondevicechange = null;
+  }
+  stopMicTest();
   cleanupKeybindListener();
   if (gamePollTimer) clearInterval(gamePollTimer);
 });
@@ -1315,7 +1507,7 @@ const toggleGameDetected = (game) => {
 };
 </script>
 
-<style scoped> .settings {   min-height: 100vh;   display: grid;   grid-template-columns: 260px 1fr;   background: var(--bg);   color: var(--text);   font-family: "Inter", "Segoe UI", system-ui, sans-serif; }  .settings-nav {   background: var(--bg-elev);   border-right: 1px solid var(--border);   padding: 20px 16px;   display: flex;   flex-direction: column;   gap: 14px; }  .settings-title {   font-size: 12px;   color: var(--text-muted);   text-transform: uppercase;   letter-spacing: 0.5px; }  .settings-group {   display: flex;   flex-direction: column;   gap: 6px; }  .nav-btn {   background: transparent;   border: none;   color: var(--text-muted);   text-align: left;   padding: 8px 10px;   border-radius: 8px;   cursor: pointer; }  .nav-btn.active, .nav-btn:hover {   background: #1f1f1f;   color: var(--text-strong); }  .logout-btn {   margin-top: auto;   background: #2b1313;   border: 1px solid var(--accent-strong);   color: var(--text-strong);   border-radius: 10px;   padding: 10px 12px;   cursor: pointer;   font-weight: 700; }  .settings-panel {   padding: 24px;   display: flex;   flex-direction: column;   gap: 16px; }  .panel-header {   display: flex;   align-items: center;   justify-content: space-between; }  .panel-title {   font-size: 18px;   font-weight: 700; }  .panel-card {   background: var(--bg-elev);   border: 1px solid var(--border);   border-radius: 16px;   padding: 18px;   box-shadow: 0 18px 30px rgba(0,0,0,0.4); }  .account-card {   display: flex;   flex-direction: column;   gap: 18px; }  .account-top {   display: flex;   flex-direction: column;   gap: 12px; }  .account-header {   display: flex;   align-items: center;   justify-content: space-between;   gap: 12px; }  .account-left {   display: flex;   align-items: center;   gap: 14px; }  .account-identity {   display: flex;   flex-direction: column;   gap: 4px; }  .account-name {   font-size: 18px;   font-weight: 700; }  .account-status {   font-size: 12px;   color: #9be7a1; }  .account-info {   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 12px;   padding: 12px;   display: flex;   flex-direction: column;   gap: 10px; }  .info-row {   display: flex;   align-items: center;   justify-content: space-between;   gap: 12px; }  .info-text {   display: flex;   flex-direction: column;   gap: 4px; }  .info-label {   font-size: 11px;   color: var(--text-muted); }  .info-value {   font-size: 13px;   color: var(--text); }  .account-section {   display: flex;   flex-direction: column;   gap: 10px;   padding-top: 6px;   border-top: 1px solid #2d2e33; }  .section-desc {   font-size: 12px;   color: var(--text-muted); }  .account-section.danger .section-title {   color: #ff6b6b; }  .danger-btn {   background: #2b1313;   border: 1px solid #5a1d1d;   color: #ffd4d4;   border-radius: 10px;   padding: 10px 16px;   cursor: pointer;   font-weight: 700; }  .danger-btn:hover {   border-color: #7a2a2a; }  .panel-note {   color: var(--text-muted);   font-size: 13px; }  .privacy-card {   display: flex;   flex-direction: column;   gap: 16px; }  .privacy-item {   display: flex;   justify-content: space-between;   gap: 16px;   padding: 12px;   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 12px; }  .privacy-text {   display: flex;   flex-direction: column;   gap: 6px; }  .privacy-title {   font-size: 13px;   font-weight: 600; }  .privacy-desc {   font-size: 12px;   color: var(--text-muted); }  .privacy-link {   font-size: 12px;   color: #7aa7ff; }  .privacy-divider {   height: 1px;   background: #2d2e33; }  .privacy-request {   display: flex;   flex-direction: column;   gap: 8px; }  .devices-card {   display: flex;   flex-direction: column;   gap: 18px; }  .devices-intro {   color: var(--text-muted);   font-size: 12px; }  .devices-section {   display: flex;   flex-direction: column;   gap: 10px;   padding-top: 6px;   border-top: 1px solid #2d2e33; }  .device-row {   display: grid;   grid-template-columns: 40px 1fr auto;   gap: 12px;   align-items: center;   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 12px;   padding: 10px; }  .device-icon {   width: 36px;   height: 36px;   border-radius: 50%;   background: #2a2b30;   display: grid;   place-items: center;   font-size: 12px;   color: var(--text-muted); }  .device-info {   display: flex;   flex-direction: column;   gap: 4px; }  .device-title {   font-size: 13px;   font-weight: 600; }  .device-sub {   font-size: 12px;   color: var(--text-muted); }  .device-remove {   background: transparent;   border: none;   color: var(--text-muted);   cursor: pointer;   font-size: 16px; }  .device-warning {   font-size: 12px;   color: var(--text-muted);   padding: 8px 10px;   background: #1f1f22;   border: 1px dashed #2d2e33;   border-radius: 10px; }  .connections-card {   display: flex;   flex-direction: column;   gap: 16px; }  .connections-intro {   font-size: 12px;   color: var(--text-muted); }  .connections-icons {   display: flex;   flex-wrap: wrap;   gap: 8px; }  .platform-btn {   background: #1f1f22;   border: 1px solid #2d2e33;   color: var(--text);   border-radius: 10px;   padding: 8px 10px;   display: inline-flex;   align-items: center;   gap: 8px;   cursor: pointer;   font-size: 12px; }  .platform-icon {   width: 22px;   height: 22px;   border-radius: 6px;   display: grid;   place-items: center;   color: #fff;   font-size: 11px;   font-weight: 700; }  .connections-badges {   display: flex;   flex-wrap: wrap;   gap: 8px; }  .badge-item {   display: inline-flex;   align-items: center;   gap: 6px;   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 10px;   padding: 6px 8px;   font-size: 12px;   color: var(--text); }  .connection-card {   display: flex;   align-items: flex-start;   justify-content: space-between;   gap: 12px;   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 12px;   padding: 12px; }  .connection-left {   display: flex;   gap: 10px;   align-items: center; }  .connection-name {   font-size: 13px;   font-weight: 600; }  .connection-platform {   font-size: 12px;   color: var(--text-muted); }  .connection-toggles {   display: grid;   gap: 8px; }  .toggle-row {   display: flex;   align-items: center;   gap: 10px;   font-size: 12px;   color: var(--text-muted); }  .modal-grid {   max-height: 160px;   overflow-y: auto; }  .games-card {   display: flex;   flex-direction: column;   gap: 16px; }  .games-detect {   background: #2a2b30;   border: 1px solid #33343a;   border-radius: 14px;   padding: 16px; }  .games-detect.running {   border-color: #2ecc71;   box-shadow: 0 0 0 1px rgba(46, 204, 113, 0.2); }  .games-detect-title {   font-size: 13px;   font-weight: 700; }  .games-detect-desc {   font-size: 12px;   color: var(--text-muted);   margin-top: 6px; }  .games-detect-foot {   font-size: 12px;   color: var(--text-muted); }  .running-games {   display: flex;   flex-wrap: wrap;   gap: 8px;   margin-top: 10px; }  .running-pill {   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 999px;   padding: 4px 10px;   font-size: 11px;   color: #9be7a1; }  .link-btn {   background: none;   border: none;   color: #7aa7ff;   cursor: pointer;   padding: 0;   font-size: 12px; }  .games-divider {   height: 1px;   background: #2d2e33; }  .games-section {   display: flex;   flex-direction: column;   gap: 10px; }  .games-empty {   font-size: 12px;   color: var(--text-muted);   padding: 10px 12px;   background: #1f1f22;   border: 1px dashed #2d2e33;   border-radius: 10px; }  .games-list {   display: grid;   gap: 10px; }  .game-card {   display: flex;   justify-content: space-between;   align-items: center;   gap: 12px;   background: #2a2b30;   border: 1px solid #33343a;   border-radius: 12px;   padding: 12px; }  .game-left {   display: flex;   align-items: center;   gap: 12px; }  .game-cover {   width: 42px;   height: 42px;   border-radius: 10px;   background: #1f1f22;   border: 1px solid #33343a;   display: grid;   place-items: center;   color: #fff;   font-weight: 700; }  .game-title {   font-size: 13px;   font-weight: 700;   display: flex;   align-items: center;   gap: 6px; }  .game-verified {   color: #7aa7ff;   font-size: 12px; }  .game-sub {   font-size: 12px;   color: var(--text-muted);   margin-top: 4px; }  .game-actions {   display: flex;   gap: 8px; }  .game-icon {   width: 30px;   height: 30px;   border-radius: 8px;   border: 1px solid #3a3b41;   background: #1f1f22;   color: var(--text-muted);   cursor: pointer;   display: grid;   place-items: center; }  .game-icon.active {   color: #9be7a1;   border-color: #2ecc71; }  .game-icon.danger {   color: #ff9a9a;   border-color: #5a2a2a;   background: #2b1313; }  .overlay-card {   display: flex;   flex-direction: column;   gap: 18px; }  .overlay-section {   display: flex;   flex-direction: column;   gap: 12px;   padding-top: 6px;   border-top: 1px solid #2d2e33; }  .overlay-row {   display: flex;   align-items: center;   justify-content: space-between;   gap: 16px;   padding: 12px;   background: #2a2b30;   border: 1px solid #33343a;   border-radius: 12px; }  .overlay-title {   font-size: 13px;   font-weight: 600; }  .overlay-desc {   font-size: 12px;   color: var(--text-muted);   margin-top: 4px;   max-width: 520px; }  .mini-btn {   background: linear-gradient(145deg, var(--accent-strong), var(--accent));   color: var(--accent-dark);   border: none;   border-radius: 10px;   padding: 6px 10px;   font-size: 12px;   cursor: pointer;   font-weight: 700;   white-space: nowrap; }  .mini-pill {   background: #1f1f22;   border: 1px solid #3a3b41;   color: var(--text-muted);   border-radius: 999px;   padding: 4px 10px;   font-size: 11px; }  .overlay-subtitle {   font-size: 14px;   font-weight: 700;   margin-bottom: 4px; }  .overlay-keybind {   display: flex;   align-items: center;   gap: 10px; }  .key-pill {   background: #1f1f22;   border: 1px solid #3a3b41;   color: var(--text);   border-radius: 8px;   padding: 6px 10px;   font-size: 12px;   font-weight: 700; }  .overlay-grid {   display: grid;   grid-template-columns: 1.2fr 0.8fr;   gap: 16px; }  .overlay-controls {   display: grid;   gap: 12px; }  .overlay-control {   display: flex;   flex-direction: column;   gap: 8px;   background: #2a2b30;   border: 1px solid #33343a;   border-radius: 12px;   padding: 12px; }  .control-label {   font-size: 12px;   color: var(--text-muted); }  .control-select {   background: #1f1f22;   border: 1px solid #33343a;   border-radius: 10px;   padding: 10px 12px;   color: var(--text); }  .slider-wrap {   display: grid;   gap: 8px; }  .control-slider {   width: 100%; }  .slider-scale {   display: flex;   justify-content: space-between;   font-size: 11px;   color: var(--text-muted); }  .overlay-preview {   background: #2a2b30;   border: 1px dashed #3a3b41;   border-radius: 12px;   padding: 12px;   display: flex;   flex-direction: column;   gap: 10px; }  .preview-title {   font-size: 12px;   color: var(--text-muted);   display: flex;   align-items: center;   gap: 8px; }  .preview-live {   font-size: 10px;   color: #9be7a1;   background: rgba(46, 204, 113, 0.15);   border: 1px solid rgba(46, 204, 113, 0.4);   border-radius: 999px;   padding: 2px 8px;   text-transform: uppercase;   letter-spacing: 0.4px; }  .preview-card {   display: grid;   gap: 8px; }  .preview-user {   display: flex;   align-items: center;   gap: 8px;   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 10px;   padding: 6px 8px; }  .preview-user.speaking {   border-color: #5865f2;   box-shadow: 0 0 0 1px rgba(88,101,242,0.4); }  .preview-avatar {   width: 26px;   height: 26px;   border-radius: 50%;   display: grid;   place-items: center;   font-size: 10px;   font-weight: 700; }  .preview-name {   font-size: 12px;   font-weight: 600;   flex: 1; }  .preview-status {   font-size: 10px;   color: var(--text-muted);   padding: 2px 6px;   border-radius: 999px;   background: #2a2b30; }  .preview-status.mute {   color: #ff9a9a;   background: #3b1f1f; }  .preview-mic {   background: #2a2b30;   border: 1px solid #3a3b41;   color: var(--text-muted);   border-radius: 8px;   padding: 4px 8px;   font-size: 10px;   cursor: pointer; }  .preview-mic.muted {   color: #ff9a9a;   border-color: #5a2a2a;   background: #2b1313; }  .preview-mic.disabled {   opacity: 0.6;   cursor: default; }  .keybind-instructions {   font-size: 12px;   color: var(--text-muted); }  .keybind-display {   background: #1f1f22;   border: 1px solid #33343a;   border-radius: 10px;   padding: 10px 12px;   font-size: 12px;   font-weight: 700;   text-align: center; }  .toggle {   position: relative;   width: 46px;   height: 26px;   flex-shrink: 0; }  .toggle input {   opacity: 0;   width: 0;   height: 0; }  .toggle-ui {   position: absolute;   inset: 0;   background: #3a3b41;   border-radius: 999px;   transition: background 0.2s ease; }  .toggle-ui::after {   content: "";   position: absolute;   width: 20px;   height: 20px;   top: 3px;   left: 3px;   border-radius: 50%;   background: #fff;   transition: transform 0.2s ease; }  .toggle input:checked + .toggle-ui {   background: #5865f2; }  .toggle input:checked + .toggle-ui::after {   transform: translateX(20px); }  .banner-wrap {   width: 100%;   height: 120px;   border-radius: 14px;   border: 1px solid var(--border-strong);   background: var(--bg-elev-2);   position: relative;   overflow: hidden;   cursor: pointer;   margin-bottom: 16px; }  .banner-wrap img {   width: 100%;   height: 100%;   object-fit: cover;   object-position: center;   display: block; }  .banner-fallback {   width: 100%;   height: 100%;   display: grid;   place-items: center;   color: var(--accent);   font-weight: 700; }  .banner-fallback {   background: linear-gradient(145deg, var(--border-strong), #3a0f0f); }  .banner-overlay {   position: absolute;   inset: 0;   display: grid;   place-items: center;   background: rgba(0,0,0,0.55);   color: var(--text);   opacity: 0;   transition: opacity 0.15s ease;   font-size: 12px;   text-align: center; }  .banner-wrap:hover .banner-overlay {   opacity: 1; }  .header {   display: flex;   gap: 16px; }  .avatar-wrap {   width: 96px;   height: 96px;   border-radius: 18px;   border: 1px solid var(--border-strong);   background: var(--bg-elev-2);   position: relative;   overflow: hidden;   cursor: pointer; }  .avatar-wrap img {   width: 100%;   height: 100%;   object-fit: cover;   display: block; }  .avatar-fallback {   width: 100%;   height: 100%;   object-fit: contain;   display: block; }  .avatar-fallback {   background: linear-gradient(145deg, var(--border-strong), #3a0f0f); }  .avatar-overlay {   position: absolute;   inset: 0;   display: grid;   place-items: center;   background: rgba(0,0,0,0.55);   color: var(--text);   opacity: 0;   transition: opacity 0.15s ease;   font-size: 12px;   text-align: center; }  .avatar-wrap:hover .avatar-overlay {   opacity: 1; }  .user-info {   flex: 1;   display: flex;   flex-direction: column;   gap: 8px; }  .label {   color: var(--text-muted);   font-size: 12px; }  input {   background: var(--input-bg);   border: 1px solid var(--border-strong);   border-radius: 10px;   padding: 10px 12px;   color: var(--text); }  .sub {   font-size: 12px;   color: var(--text-muted); }  .actions {   margin-top: 18px;   display: flex;   justify-content: flex-end; }  .primary-btn {   background: linear-gradient(145deg, var(--accent-strong), var(--accent));   color: var(--accent-dark);   border: none;   border-radius: 10px;   padding: 10px 16px;   cursor: pointer;   font-weight: 700; }  .primary-btn:disabled {   opacity: 0.6;   cursor: default; }  .ghost-btn {   background: #2a2b30;   border: 1px solid #3a3b41;   color: var(--text-muted);   border-radius: 10px;   padding: 8px 12px;   cursor: pointer;   font-weight: 600; }  .ghost-btn:hover {   color: var(--text-strong);   border-color: #4a4b52; }  .edit-modal {   position: fixed;   inset: 0;   background: rgba(0,0,0,0.55);   display: flex;   align-items: center;   justify-content: center;   z-index: 99; }  .edit-card {   width: min(420px, 92vw);   background: #2a2b30;   border: 1px solid #35363b;   border-radius: 16px;   padding: 16px;   display: grid;   gap: 12px;   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); }  .edit-title {   font-size: 16px;   font-weight: 700; }  .edit-input {   background: #1f1f22;   border: 1px solid #33343a;   border-radius: 10px;   padding: 10px 12px;   color: var(--text); }  .edit-actions {   display: flex;   gap: 10px;   justify-content: flex-end; }  @media (max-width: 800px) {   .settings {     grid-template-columns: 1fr;   }   .settings-nav {     border-right: none;     border-bottom: 1px solid var(--border);   }   .overlay-grid {     grid-template-columns: 1fr;   } } </style>
+<style scoped> .settings {   min-height: 100vh;   display: grid;   grid-template-columns: 260px 1fr;   background: var(--bg);   color: var(--text);   font-family: "Inter", "Segoe UI", system-ui, sans-serif; }  .settings-nav {   background: var(--bg-elev);   border-right: 1px solid var(--border);   padding: 20px 16px;   display: flex;   flex-direction: column;   gap: 14px; }  .settings-title {   font-size: 12px;   color: var(--text-muted);   text-transform: uppercase;   letter-spacing: 0.5px; }  .settings-group {   display: flex;   flex-direction: column;   gap: 6px; }  .nav-btn {   background: transparent;   border: none;   color: var(--text-muted);   text-align: left;   padding: 8px 10px;   border-radius: 8px;   cursor: pointer; }  .nav-btn.active, .nav-btn:hover {   background: #1f1f1f;   color: var(--text-strong); }  .logout-btn {   margin-top: auto;   background: #2b1313;   border: 1px solid var(--accent-strong);   color: var(--text-strong);   border-radius: 10px;   padding: 10px 12px;   cursor: pointer;   font-weight: 700; }  .settings-panel {   padding: 24px;   display: flex;   flex-direction: column;   gap: 16px; }  .panel-header {   display: flex;   align-items: center;   justify-content: space-between; }  .panel-title {   font-size: 18px;   font-weight: 700; }  .panel-card {   background: var(--bg-elev);   border: 1px solid var(--border);   border-radius: 16px;   padding: 18px;   box-shadow: 0 18px 30px rgba(0,0,0,0.4); }  .account-card {   display: flex;   flex-direction: column;   gap: 18px; }  .account-top {   display: flex;   flex-direction: column;   gap: 12px; }  .account-header {   display: flex;   align-items: center;   justify-content: space-between;   gap: 12px; }  .account-left {   display: flex;   align-items: center;   gap: 14px; }  .account-identity {   display: flex;   flex-direction: column;   gap: 4px; }  .account-name {   font-size: 18px;   font-weight: 700; }  .account-status {   font-size: 12px;   color: #9be7a1; }  .account-info {   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 12px;   padding: 12px;   display: flex;   flex-direction: column;   gap: 10px; }  .info-row {   display: flex;   align-items: center;   justify-content: space-between;   gap: 12px; }  .info-text {   display: flex;   flex-direction: column;   gap: 4px; }  .info-label {   font-size: 11px;   color: var(--text-muted); }  .info-value {   font-size: 13px;   color: var(--text); }  .account-section {   display: flex;   flex-direction: column;   gap: 10px;   padding-top: 6px;   border-top: 1px solid #2d2e33; }  .section-desc {   font-size: 12px;   color: var(--text-muted); }  .account-section.danger .section-title {   color: #ff6b6b; }  .danger-btn {   background: #2b1313;   border: 1px solid #5a1d1d;   color: #ffd4d4;   border-radius: 10px;   padding: 10px 16px;   cursor: pointer;   font-weight: 700; }  .danger-btn:hover {   border-color: #7a2a2a; }  .panel-note {   color: var(--text-muted);   font-size: 13px; }  .privacy-card {   display: flex;   flex-direction: column;   gap: 16px; }  .privacy-item {   display: flex;   justify-content: space-between;   gap: 16px;   padding: 12px;   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 12px; }  .privacy-text {   display: flex;   flex-direction: column;   gap: 6px; }  .privacy-title {   font-size: 13px;   font-weight: 600; }  .privacy-desc {   font-size: 12px;   color: var(--text-muted); }  .privacy-link {   font-size: 12px;   color: #7aa7ff; }  .privacy-divider {   height: 1px;   background: #2d2e33; }  .privacy-request {   display: flex;   flex-direction: column;   gap: 8px; }  .devices-card {   display: flex;   flex-direction: column;   gap: 18px; }  .devices-intro {   color: var(--text-muted);   font-size: 12px; }  .devices-section {   display: flex;   flex-direction: column;   gap: 10px;   padding-top: 6px;   border-top: 1px solid #2d2e33; }  .device-row {   display: grid;   grid-template-columns: 40px 1fr auto;   gap: 12px;   align-items: center;   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 12px;   padding: 10px; }  .device-icon {   width: 36px;   height: 36px;   border-radius: 50%;   background: #2a2b30;   display: grid;   place-items: center;   font-size: 12px;   color: var(--text-muted); }  .device-info {   display: flex;   flex-direction: column;   gap: 4px; }  .device-title {   font-size: 13px;   font-weight: 600; }  .device-sub {   font-size: 12px;   color: var(--text-muted); }  .device-remove {   background: transparent;   border: none;   color: var(--text-muted);   cursor: pointer;   font-size: 16px; }  .device-warning {   font-size: 12px;   color: var(--text-muted);   padding: 8px 10px;   background: #1f1f22;   border: 1px dashed #2d2e33;   border-radius: 10px; }  .connections-card {   display: flex;   flex-direction: column;   gap: 16px; }  .connections-intro {   font-size: 12px;   color: var(--text-muted); }  .connections-icons {   display: flex;   flex-wrap: wrap;   gap: 8px; }  .platform-btn {   background: #1f1f22;   border: 1px solid #2d2e33;   color: var(--text);   border-radius: 10px;   padding: 8px 10px;   display: inline-flex;   align-items: center;   gap: 8px;   cursor: pointer;   font-size: 12px; }  .platform-icon {   width: 22px;   height: 22px;   border-radius: 6px;   display: grid;   place-items: center;   color: #fff;   font-size: 11px;   font-weight: 700; }  .connections-badges {   display: flex;   flex-wrap: wrap;   gap: 8px; }  .badge-item {   display: inline-flex;   align-items: center;   gap: 6px;   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 10px;   padding: 6px 8px;   font-size: 12px;   color: var(--text); }  .connection-card {   display: flex;   align-items: flex-start;   justify-content: space-between;   gap: 12px;   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 12px;   padding: 12px; }  .connection-left {   display: flex;   gap: 10px;   align-items: center; }  .connection-name {   font-size: 13px;   font-weight: 600; }  .connection-platform {   font-size: 12px;   color: var(--text-muted); }  .connection-toggles {   display: grid;   gap: 8px; }  .toggle-row {   display: flex;   align-items: center;   gap: 10px;   font-size: 12px;   color: var(--text-muted); }  .modal-grid {   max-height: 160px;   overflow-y: auto; }  .games-card {   display: flex;   flex-direction: column;   gap: 16px; }  .games-detect {   background: #2a2b30;   border: 1px solid #33343a;   border-radius: 14px;   padding: 16px; }  .games-detect.running {   border-color: #2ecc71;   box-shadow: 0 0 0 1px rgba(46, 204, 113, 0.2); }  .games-detect-title {   font-size: 13px;   font-weight: 700; }  .games-detect-desc {   font-size: 12px;   color: var(--text-muted);   margin-top: 6px; }  .games-detect-foot {   font-size: 12px;   color: var(--text-muted); }  .running-games {   display: flex;   flex-wrap: wrap;   gap: 8px;   margin-top: 10px; }  .running-pill {   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 999px;   padding: 4px 10px;   font-size: 11px;   color: #9be7a1; }  .link-btn {   background: none;   border: none;   color: #7aa7ff;   cursor: pointer;   padding: 0;   font-size: 12px; }  .games-divider {   height: 1px;   background: #2d2e33; }  .games-section {   display: flex;   flex-direction: column;   gap: 10px; }  .games-empty {   font-size: 12px;   color: var(--text-muted);   padding: 10px 12px;   background: #1f1f22;   border: 1px dashed #2d2e33;   border-radius: 10px; }  .games-list {   display: grid;   gap: 10px; }  .game-card {   display: flex;   justify-content: space-between;   align-items: center;   gap: 12px;   background: #2a2b30;   border: 1px solid #33343a;   border-radius: 12px;   padding: 12px; }  .game-left {   display: flex;   align-items: center;   gap: 12px; }  .game-cover {   width: 42px;   height: 42px;   border-radius: 10px;   background: #1f1f22;   border: 1px solid #33343a;   display: grid;   place-items: center;   color: #fff;   font-weight: 700; }  .game-title {   font-size: 13px;   font-weight: 700;   display: flex;   align-items: center;   gap: 6px; }  .game-verified {   color: #7aa7ff;   font-size: 12px; }  .game-sub {   font-size: 12px;   color: var(--text-muted);   margin-top: 4px; }  .game-actions {   display: flex;   gap: 8px; }  .game-icon {   width: 30px;   height: 30px;   border-radius: 8px;   border: 1px solid #3a3b41;   background: #1f1f22;   color: var(--text-muted);   cursor: pointer;   display: grid;   place-items: center; }  .game-icon.active {   color: #9be7a1;   border-color: #2ecc71; }  .game-icon.danger {   color: #ff9a9a;   border-color: #5a2a2a;   background: #2b1313; }  .overlay-card {   display: flex;   flex-direction: column;   gap: 18px; }  .overlay-section {   display: flex;   flex-direction: column;   gap: 12px;   padding-top: 6px;   border-top: 1px solid #2d2e33; }  .overlay-row {   display: flex;   align-items: center;   justify-content: space-between;   gap: 16px;   padding: 12px;   background: #2a2b30;   border: 1px solid #33343a;   border-radius: 12px; }  .overlay-title {   font-size: 13px;   font-weight: 600; }  .overlay-desc {   font-size: 12px;   color: var(--text-muted);   margin-top: 4px;   max-width: 520px; }  .mini-btn {   background: linear-gradient(145deg, var(--accent-strong), var(--accent));   color: var(--accent-dark);   border: none;   border-radius: 10px;   padding: 6px 10px;   font-size: 12px;   cursor: pointer;   font-weight: 700;   white-space: nowrap; }  .mini-pill {   background: #1f1f22;   border: 1px solid #3a3b41;   color: var(--text-muted);   border-radius: 999px;   padding: 4px 10px;   font-size: 11px; }  .overlay-subtitle {   font-size: 14px;   font-weight: 700;   margin-bottom: 4px; }  .overlay-keybind {   display: flex;   align-items: center;   gap: 10px; }  .key-pill {   background: #1f1f22;   border: 1px solid #3a3b41;   color: var(--text);   border-radius: 8px;   padding: 6px 10px;   font-size: 12px;   font-weight: 700; }  .overlay-grid {   display: grid;   grid-template-columns: 1.2fr 0.8fr;   gap: 16px; }  .overlay-controls {   display: grid;   gap: 12px; }  .overlay-control {   display: flex;   flex-direction: column;   gap: 8px;   background: #2a2b30;   border: 1px solid #33343a;   border-radius: 12px;   padding: 12px; }  .control-label {   font-size: 12px;   color: var(--text-muted); }  .control-select {   background: #1f1f22;   border: 1px solid #33343a;   border-radius: 10px;   padding: 10px 12px;   color: var(--text); }  .slider-wrap {   display: grid;   gap: 8px; }  .control-slider {   width: 100%; }  .slider-scale {   display: flex;   justify-content: space-between;   font-size: 11px;   color: var(--text-muted); }  .overlay-preview {   background: #2a2b30;   border: 1px dashed #3a3b41;   border-radius: 12px;   padding: 12px;   display: flex;   flex-direction: column;   gap: 10px; }  .preview-title {   font-size: 12px;   color: var(--text-muted);   display: flex;   align-items: center;   gap: 8px; }  .preview-live {   font-size: 10px;   color: #9be7a1;   background: rgba(46, 204, 113, 0.15);   border: 1px solid rgba(46, 204, 113, 0.4);   border-radius: 999px;   padding: 2px 8px;   text-transform: uppercase;   letter-spacing: 0.4px; }  .preview-card {   display: grid;   gap: 8px; }  .preview-user {   display: flex;   align-items: center;   gap: 8px;   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 10px;   padding: 6px 8px; }  .preview-user.speaking {   border-color: #5865f2;   box-shadow: 0 0 0 1px rgba(88,101,242,0.4); }  .preview-avatar {   width: 26px;   height: 26px;   border-radius: 50%;   display: grid;   place-items: center;   font-size: 10px;   font-weight: 700; }  .preview-name {   font-size: 12px;   font-weight: 600;   flex: 1; }  .preview-status {   font-size: 10px;   color: var(--text-muted);   padding: 2px 6px;   border-radius: 999px;   background: #2a2b30; }  .preview-status.mute {   color: #ff9a9a;   background: #3b1f1f; }  .preview-mic {   background: #2a2b30;   border: 1px solid #3a3b41;   color: var(--text-muted);   border-radius: 8px;   padding: 4px 8px;   font-size: 10px;   cursor: pointer; }  .preview-mic.muted {   color: #ff9a9a;   border-color: #5a2a2a;   background: #2b1313; }  .preview-mic.disabled {   opacity: 0.6;   cursor: default; }  .keybind-instructions {   font-size: 12px;   color: var(--text-muted); }  .keybind-display {   background: #1f1f22;   border: 1px solid #33343a;   border-radius: 10px;   padding: 10px 12px;   font-size: 12px;   font-weight: 700;   text-align: center; }  .toggle {   position: relative;   width: 46px;   height: 26px;   flex-shrink: 0; }  .toggle input {   opacity: 0;   width: 0;   height: 0; }  .toggle-ui {   position: absolute;   inset: 0;   background: #3a3b41;   border-radius: 999px;   transition: background 0.2s ease; }  .toggle-ui::after {   content: "";   position: absolute;   width: 20px;   height: 20px;   top: 3px;   left: 3px;   border-radius: 50%;   background: #fff;   transition: transform 0.2s ease; }  .toggle input:checked + .toggle-ui {   background: #5865f2; }  .toggle input:checked + .toggle-ui::after {   transform: translateX(20px); }  .banner-wrap {   width: 100%;   height: 120px;   border-radius: 14px;   border: 1px solid var(--border-strong);   background: var(--bg-elev-2);   position: relative;   overflow: hidden;   cursor: pointer;   margin-bottom: 16px; }  .banner-wrap img {   width: 100%;   height: 100%;   object-fit: cover;   object-position: center;   display: block; }  .banner-fallback {   width: 100%;   height: 100%;   display: grid;   place-items: center;   color: var(--accent);   font-weight: 700; }  .banner-fallback {   background: linear-gradient(145deg, var(--border-strong), #3a0f0f); }  .banner-overlay {   position: absolute;   inset: 0;   display: grid;   place-items: center;   background: rgba(0,0,0,0.55);   color: var(--text);   opacity: 0;   transition: opacity 0.15s ease;   font-size: 12px;   text-align: center; }  .banner-wrap:hover .banner-overlay {   opacity: 1; }  .header {   display: flex;   gap: 16px; }  .avatar-wrap {   width: 96px;   height: 96px;   border-radius: 18px;   border: 1px solid var(--border-strong);   background: var(--bg-elev-2);   position: relative;   overflow: hidden;   cursor: pointer; }  .avatar-wrap img {   width: 100%;   height: 100%;   object-fit: cover;   display: block; }  .avatar-fallback {   width: 100%;   height: 100%;   object-fit: contain;   display: block; }  .avatar-fallback {   background: linear-gradient(145deg, var(--border-strong), #3a0f0f); }  .avatar-overlay {   position: absolute;   inset: 0;   display: grid;   place-items: center;   background: rgba(0,0,0,0.55);   color: var(--text);   opacity: 0;   transition: opacity 0.15s ease;   font-size: 12px;   text-align: center; }  .avatar-wrap:hover .avatar-overlay {   opacity: 1; }  .user-info {   flex: 1;   display: flex;   flex-direction: column;   gap: 8px; }  .label {   color: var(--text-muted);   font-size: 12px; }  input {   background: var(--input-bg);   border: 1px solid var(--border-strong);   border-radius: 10px;   padding: 10px 12px;   color: var(--text); }  .sub {   font-size: 12px;   color: var(--text-muted); }  .actions {   margin-top: 18px;   display: flex;   justify-content: flex-end; }  .primary-btn {   background: linear-gradient(145deg, var(--accent-strong), var(--accent));   color: var(--accent-dark);   border: none;   border-radius: 10px;   padding: 10px 16px;   cursor: pointer;   font-weight: 700; }  .primary-btn:disabled {   opacity: 0.6;   cursor: default; }  .ghost-btn {   background: #2a2b30;   border: 1px solid #3a3b41;   color: var(--text-muted);   border-radius: 10px;   padding: 8px 12px;   cursor: pointer;   font-weight: 600; }  .ghost-btn:hover {   color: var(--text-strong);   border-color: #4a4b52; }  .edit-modal {   position: fixed;   inset: 0;   background: rgba(0,0,0,0.55);   display: flex;   align-items: center;   justify-content: center;   z-index: 99; }  .edit-card {   width: min(420px, 92vw);   background: #2a2b30;   border: 1px solid #35363b;   border-radius: 16px;   padding: 16px;   display: grid;   gap: 12px;   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); }  .edit-title {   font-size: 16px;   font-weight: 700; }  .edit-input {   background: #1f1f22;   border: 1px solid #33343a;   border-radius: 10px;   padding: 10px 12px;   color: var(--text); }  .edit-actions {   display: flex;   gap: 10px;   justify-content: flex-end; }  @media (max-width: 800px) {   .settings {     grid-template-columns: 1fr;   }   .settings-nav {     border-right: none;     border-bottom: 1px solid var(--border);   }   .overlay-grid {     grid-template-columns: 1fr;   } }   .audio-card {   display: flex;   flex-direction: column;   gap: 16px; }  .audio-tabs {   display: flex;   gap: 10px;   border-bottom: 1px solid #2d2e33;   padding-bottom: 8px; }  .audio-tab {   background: transparent;   border: none;   color: var(--text-muted);   padding: 6px 2px;   cursor: pointer;   font-size: 13px; }  .audio-tab.active {   color: var(--text-strong);   border-bottom: 2px solid var(--accent); }  .audio-panel {   display: flex;   flex-direction: column;   gap: 16px; }  .audio-grid {   display: grid;   grid-template-columns: 1fr 1fr;   gap: 16px; }  .audio-field {   display: flex;   flex-direction: column;   gap: 8px; }  .audio-label {   font-size: 13px;   font-weight: 600; }  .audio-select {   background: #1f1f22;   border: 1px solid #33343a;   border-radius: 10px;   padding: 10px 12px;   color: var(--text); }  .audio-select.small {   min-width: 160px; }  .audio-range {   width: 100%; }  .mic-test {   background: #1f1f22;   border: 1px solid #2d2e33;   border-radius: 12px;   padding: 12px;   display: flex;   flex-direction: column;   gap: 8px; }  .mic-title {   font-size: 14px;   font-weight: 700; }  .mic-desc {   font-size: 12px;   color: var(--text-muted); }  .mic-row {   display: flex;   align-items: center;   gap: 12px; }  .mic-bars {   display: flex;   align-items: flex-end;   gap: 2px;   flex: 1;   height: 24px; }  .mic-bar {   width: 3px;   background: #5865f2;   border-radius: 2px;   opacity: 0.8; }  .audio-row {   display: flex;   align-items: center;   justify-content: space-between;   gap: 16px;   background: #2a2b30;   border: 1px solid #33343a;   border-radius: 12px;   padding: 12px; }  .audio-hint {   font-size: 12px;   color: var(--text-muted);   margin-top: 4px; }  .audio-profile {   display: flex;   flex-direction: column;   gap: 10px; }  .audio-profile-title {   font-size: 13px;   font-weight: 700; }  .audio-profile-option {   display: flex;   align-items: center;   gap: 12px;   padding: 12px;   border-radius: 12px;   border: 1px solid #2d2e33;   background: #1f1f22;   cursor: pointer; }  .audio-profile-option input {   accent-color: var(--accent); }  .audio-profile-option.active {   border-color: var(--accent-strong);   box-shadow: 0 0 0 1px rgba(247, 201, 72, 0.3); }  .audio-profile-name {   font-size: 13px;   font-weight: 600; }  .audio-profile-desc {   font-size: 12px;   color: var(--text-muted); }  @media (max-width: 800px) {   .audio-grid {     grid-template-columns: 1fr;   }   .mic-row {     flex-direction: column;     align-items: stretch;   } } </style>
 
 
 
