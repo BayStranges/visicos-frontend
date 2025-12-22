@@ -16,6 +16,13 @@
           Android: Menu &gt; Ana ekrana ekle / Uygulamayi yukle
         </div>
       </div>
+      <button
+        v-if="canInstall"
+        class="app-gate-btn"
+        @click="installApp"
+      >
+        Uygulamayi Yukle
+      </button>
     </div>
   </div>
   <router-view v-else />
@@ -25,6 +32,8 @@
 import { ref, onMounted, onBeforeUnmount } from "vue";
 
 const showAppGate = ref(false);
+const canInstall = ref(false);
+const deferredPrompt = ref(null);
 
 const checkStandalone = () => {
   const ua = navigator.userAgent || "";
@@ -35,10 +44,39 @@ const checkStandalone = () => {
   showAppGate.value = isMobile && !isStandalone;
 };
 
+const onBeforeInstallPrompt = (event) => {
+  event.preventDefault();
+  deferredPrompt.value = event;
+  canInstall.value = true;
+};
+
+const onAppInstalled = () => {
+  deferredPrompt.value = null;
+  canInstall.value = false;
+  checkStandalone();
+};
+
+const installApp = async () => {
+  if (!deferredPrompt.value) return;
+  deferredPrompt.value.prompt();
+  try {
+    const result = await deferredPrompt.value.userChoice;
+    if (result?.outcome === "accepted") {
+      canInstall.value = false;
+    }
+  } catch (err) {
+    // Ignore prompt errors
+  } finally {
+    deferredPrompt.value = null;
+  }
+};
+
 let mediaQuery;
 
 onMounted(() => {
   checkStandalone();
+  window.addEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+  window.addEventListener("appinstalled", onAppInstalled);
   mediaQuery = window.matchMedia?.("(display-mode: standalone)");
   if (mediaQuery?.addEventListener) {
     mediaQuery.addEventListener("change", checkStandalone);
@@ -54,6 +92,8 @@ onBeforeUnmount(() => {
   } else if (mediaQuery?.removeListener) {
     mediaQuery.removeListener(checkStandalone);
   }
+  window.removeEventListener("beforeinstallprompt", onBeforeInstallPrompt);
+  window.removeEventListener("appinstalled", onAppInstalled);
   window.removeEventListener("visibilitychange", checkStandalone);
 });
 </script>
@@ -122,6 +162,21 @@ onBeforeUnmount(() => {
   border: 1px solid #2b2b32;
   border-radius: 12px;
   padding: 10px 12px;
+}
+
+.app-gate-btn {
+  margin-top: 12px;
+  background: linear-gradient(145deg, #f7c948, #ff9f1c);
+  color: #1a1408;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.app-gate-btn:hover {
+  filter: brightness(1.05);
 }
 </style>
 
