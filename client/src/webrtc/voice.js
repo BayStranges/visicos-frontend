@@ -1,4 +1,5 @@
 import socket from "../socket";
+import { tuneOpusSdp } from "./opusSdp";
 
 let pc = null;
 let localStream = null;
@@ -8,6 +9,7 @@ let audioNodes = null;
 let voiceBoost = 1.2;
 let noiseMode = "rnnoise";
 let gateTimer = null;
+let audioTransceiver = null;
 let currentRoomId = null;
 let globalMute = false;
 let globalDeafen = false;
@@ -40,6 +42,28 @@ const buildIceServers = () => {
   const servers = [{ urls: "stun:stun.l.google.com:19302" }];
   log("ice servers final:", servers);
   return servers;
+};
+
+const preferOpus = () => {
+  if (!pc) return;
+  try {
+    const capabilities = RTCRtpSender.getCapabilities("audio");
+    if (!capabilities?.codecs?.length) return;
+    const codecs = [...capabilities.codecs];
+    codecs.sort((a, b) => {
+      const aOpus = (a.mimeType || "").toLowerCase() === "audio/opus";
+      const bOpus = (b.mimeType || "").toLowerCase() === "audio/opus";
+      return Number(bOpus) - Number(aOpus);
+    });
+    if (!audioTransceiver) {
+      audioTransceiver = pc.addTransceiver("audio", { direction: "sendrecv" });
+    }
+    if (audioTransceiver?.setCodecPreferences) {
+      audioTransceiver.setCodecPreferences(codecs);
+    }
+  } catch (err) {
+    log("preferOpus failed", { message: err?.message });
+  }
 };
 
 const ensureRemoteAudioElement = () => {
@@ -204,6 +228,7 @@ export const initVoice = async (roomId, { onStateChange, onRemoteTrack } = {}) =
   if (!pc) {
     pc = new RTCPeerConnection({ iceServers: buildIceServers() });
     log("pc created", pc);
+    preferOpus();
 
     pc.onicecandidate = (e) => {
       if (!e.candidate) {
@@ -317,6 +342,7 @@ export const closeVoice = () => {
   } catch {}
 
   pc = null;
+  audioTransceiver = null;
 
   if (gateTimer) {
     clearInterval(gateTimer);

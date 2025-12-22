@@ -259,6 +259,7 @@ import axios from "axios";
 import socket from "../socket";
 import { useUserStore } from "../store/user";
 import { initVoice, getPC, closeVoice } from "../webrtc/voice";
+import { tuneOpusSdp } from "../webrtc/opusSdp";
 
 const logVoice = (...args) => {
   console.log("[dm-voice]", ...args);
@@ -463,6 +464,7 @@ const createOffer = async () => {
   }
 
   const offer = await pc.createOffer();
+  offer.sdp = tuneOpusSdp(offer.sdp);
   await pc.setLocalDescription(offer);
 
   logVoice("webrtc-offer emit");
@@ -489,6 +491,7 @@ const handleIncomingOffer = async (offer) => {
   pendingRemoteCandidates.value = [];
 
   const answer = await pc.createAnswer();
+  answer.sdp = tuneOpusSdp(answer.sdp);
   await pc.setLocalDescription(answer);
 
   logVoice("webrtc-answer emit");
