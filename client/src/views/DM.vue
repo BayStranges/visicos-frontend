@@ -209,29 +209,29 @@
 
     <!-- INPUT -->
     <div class="dm-input">
-      <div class=\"input-wrap\">
+      <div class="input-wrap">
         <input
-          ref=\"inputRef\"
-          v-model=\"text\"
-          placeholder=\"Mesaj yaz...\"
-          @input=\"handleTyping\"
-          @keydown=\"onInputKeydown\"
+          ref="inputRef"
+          v-model="text"
+          placeholder="Mesaj yaz..."
+          @input="handleTyping"
+          @keydown="onInputKeydown"
         />
-        <div v-if=\"mentionOpen\" class=\"mention-list\">
+        <div v-if="mentionOpen" class="mention-list">
           <button
-            v-for=\"(name, idx) in filteredMentions\"
-            :key=\"name\"
-            class=\"mention-item\"
-            :class=\"{ active: idx === mentionIndex }\"
-            @mousedown.prevent=\"applyMention(name)\"
+            v-for="(name, idx) in filteredMentions"
+            :key="name"
+            class="mention-item"
+            :class="{ active: idx === mentionIndex }"
+            @mousedown.prevent="applyMention(name)"
           >
-            <span class=\"mention-tag\">@</span>
+            <span class="mention-tag">@</span>
             <span>{{ name }}</span>
           </button>
         </div>
       </div>
 
-<span class="emoji" @click="text += '😄'">🙂</span>
+      <span class="emoji" @click="text += '😄'">🙂</span>
 
       <label class="file">
         📎
