@@ -25,17 +25,17 @@
       </button>
     </div>
   </div>
-  <div v-else-if="showPushPrompt" class="push-banner">
+  <router-view v-else />
+  <div v-if="showPushPrompt" class="push-banner">
     <div class="push-banner-text">Bildirimleri acmak ister misin?</div>
     <button class="push-banner-btn" @click="requestPush">Bildirimleri Ac</button>
   </div>
-  <router-view v-else />
 </template>
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from "vue";
 import { useUserStore } from "./store/user";
-import { initPushNotifications, isPushSupported } from "./push";
+import { initPushNotifications } from "./push";
 
 const showAppGate = ref(false);
 const canInstall = ref(false);
@@ -56,7 +56,6 @@ const showPushPrompt = computed(() => {
   if (showAppGate.value) return false;
   if (pushPromptDismissed.value) return false;
   if (!userStore.user?._id) return false;
-  if (!isPushSupported()) return false;
   return Notification.permission === "default";
 });
 
