@@ -7,6 +7,7 @@ let audioContext = null;
 let audioNodes = null;
 let voiceBoost = 1.2;
 let noiseMode = "rnnoise";
+let gateTimer = null;
 let currentRoomId = null;
 let globalMute = false;
 let globalDeafen = false;
@@ -104,6 +105,12 @@ const buildProcessedStream = async (stream) => {
       });
     }
   }
+  const analyser = audioContext.createAnalyser();
+  analyser.fftSize = 2048;
+
+  const gateGain = audioContext.createGain();
+  gateGain.gain.value = 1.0;
+
   const highpass = audioContext.createBiquadFilter();
   highpass.type = "highpass";
   highpass.frequency.value = 160;
@@ -121,15 +128,39 @@ const buildProcessedStream = async (stream) => {
   const destination = audioContext.createMediaStreamDestination();
   if (rnnoise) {
     source.connect(rnnoise);
-    rnnoise.connect(highpass);
+    rnnoise.connect(analyser);
   } else {
-    source.connect(highpass);
+    source.connect(analyser);
   }
+  analyser.connect(gateGain);
+  gateGain.connect(highpass);
   highpass.connect(compressor);
   compressor.connect(gain);
   gain.connect(destination);
 
-  audioNodes = { source, rnnoise, highpass, compressor, gain, destination };
+  const data = new Float32Array(analyser.fftSize);
+  if (gateTimer) clearInterval(gateTimer);
+  gateTimer = setInterval(() => {
+    analyser.getFloatTimeDomainData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i += 1) {
+      sum += data[i] * data[i];
+    }
+    const rms = Math.sqrt(sum / data.length);
+    const target = rms < 0.015 ? 0.05 : 1.0;
+    gateGain.gain.setTargetAtTime(target, audioContext.currentTime, 0.03);
+  }, 40);
+
+  audioNodes = {
+    source,
+    rnnoise,
+    analyser,
+    gateGain,
+    highpass,
+    compressor,
+    gain,
+    destination
+  };
   return new MediaStream(destination.stream.getAudioTracks());
 };
 
@@ -286,6 +317,11 @@ export const closeVoice = () => {
   } catch {}
 
   pc = null;
+
+  if (gateTimer) {
+    clearInterval(gateTimer);
+    gateTimer = null;
+  }
 
   if (localStream) {
     localStream.getTracks().forEach((t) => t.stop());
