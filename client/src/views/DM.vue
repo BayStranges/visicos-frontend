@@ -14,7 +14,7 @@
       <div class="profile-head">
         <div class="ph-avatar">
           <img v-if="otherUserAvatar" :src="fullAvatar(otherUserAvatar)" />
-          <img v-else :src="getFallbackLogo(otherUserId || otherUser)" alt="Fallback logo" />
+          <span v-else>{{ otherUser?.[0]?.toUpperCase() || "?" }}</span>
         </div>
         <div class="ph-meta">
           <div class="ph-name">{{ otherUser }}</div>
@@ -42,7 +42,7 @@
       <div class="call-left">
         <div class="call-avatar">
           <img v-if="otherUserAvatar" :src="fullAvatar(otherUserAvatar)" />
-          <img v-else :src="getFallbackLogo(otherUserId || otherUser)" alt="Fallback logo" />
+          <span v-else>{{ otherUser?.[0]?.toUpperCase() || "?" }}</span>
         </div>
         <div class="call-meta">
           <div class="call-title">{{ otherUser }} ile arama</div>
@@ -128,7 +128,7 @@
 
         <div class="msg-avatar" :class="{ mine: msg.sender._id === userId }">
           <img v-if="msg.sender.avatar" :src="fullAvatar(msg.sender.avatar)" />
-          <img v-else :src="getFallbackLogo(msg.sender._id || msg.sender.username)" alt="Fallback logo" />
+          <span v-else>{{ msg.sender.username?.[0] || "?" }}</span>
         </div>
 
         <div class="bubble">
@@ -244,7 +244,6 @@ import axios from "axios";
 import socket from "../socket";
 import { useUserStore } from "../store/user";
 import { initVoice, getPC, closeVoice } from "../webrtc/voice";
-import { getFallbackLogo } from "../utils/fallbackLogo";
 
 const logVoice = (...args) => {
   console.log("[dm-voice]", ...args);

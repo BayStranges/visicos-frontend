@@ -59,12 +59,7 @@
             <div class="account-left">
               <div class="avatar-wrap" @click="pickAvatar">
                 <img v-if="avatarSrc" :src="avatarSrc" />
-                <img
-                  v-else
-                  class="avatar-fallback"
-                  :src="getFallbackLogo(user?._id || user?.username || displayName)"
-                  alt="Fallback logo"
-                />
+                <div v-else class="avatar-fallback">{{ initials }}</div>
                 <div class="avatar-overlay">Change avatar</div>
               </div>
               <div class="account-identity">
@@ -606,7 +601,6 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import axios from "axios";
 import { useUserStore } from "../store/user";
 import { useRouter } from "vue-router";
-import { getFallbackLogo } from "../utils/fallbackLogo";
 
 const userStore = useUserStore();
 const router = useRouter();

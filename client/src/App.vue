@@ -2,7 +2,7 @@
   <div v-if="showAppGate" class="app-gate">
     <div class="app-gate-card">
       <div class="app-gate-logo">
-        <img src="/logo.svg" alt="Nexora logo" />
+        <img src="/logo.png" alt="Nexora logo" />
       </div>
       <div class="app-gate-title">Nexora sadece mobil uygulama olarak acilir</div>
       <div class="app-gate-desc">

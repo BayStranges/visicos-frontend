@@ -53,11 +53,7 @@
       >
         <div class="dm-avatar">
           <img v-if="getOtherUser(dm)?.avatar" :src="fullAvatar(getOtherUser(dm)?.avatar)" />
-          <img
-            v-else
-            :src="getFallbackLogo(getOtherUser(dm)?._id || getOtherUser(dm)?.username || dm._id)"
-            alt="Fallback logo"
-          />
+          <span v-else>{{ (getOtherUser(dm)?.username || "?").slice(0,1).toUpperCase() }}</span>
         </div>
         <div class="dm-meta">
           <div class="dm-title">
@@ -88,11 +84,7 @@
       >
         <div class="dm-avatar">
           <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
-          <img
-            v-else
-            :src="getFallbackLogo(userStore.user?._id || userStore.user?.username)"
-            alt="Fallback logo"
-          />
+          <span v-else>{{ (userStore.user?.username || "U").slice(0,1).toUpperCase() }}</span>
           <span
             class="status-dot"
             :class="isOnline ? 'online' : 'offline'"
@@ -150,11 +142,7 @@
           ></div>
           <div class="profile-avatar">
             <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
-            <img
-              v-else
-              :src="getFallbackLogo(userStore.user?._id || userStore.user?.username)"
-              alt="Fallback logo"
-            />
+            <span v-else>{{ (userStore.user?.username || "U").slice(0,1).toUpperCase() }}</span>
             <span
               class="status-dot"
               :class="isOnline ? 'online' : 'offline'"
@@ -355,11 +343,7 @@
         <div v-for="dm in notificationDms" :key="dm._id" class="notification-row">
           <div class="dm-avatar sm">
             <img v-if="getOtherUser(dm)?.avatar" :src="fullAvatar(getOtherUser(dm)?.avatar)" />
-            <img
-              v-else
-              :src="getFallbackLogo(getOtherUser(dm)?._id || getOtherUser(dm)?.username || dm._id)"
-              alt="Fallback logo"
-            />
+            <span v-else>{{ (getOtherUser(dm)?.username || "?").slice(0,1).toUpperCase() }}</span>
           </div>
           <div class="notification-meta">
           <div class="dm-name">{{ getDisplayName(dm) }}</div>
@@ -422,11 +406,7 @@
         >
           <div class="dm-avatar sm">
             <img v-if="u.avatar" :src="fullAvatar(u.avatar)" />
-            <img
-              v-else
-              :src="getFallbackLogo(u._id || u.username)"
-              alt="Fallback logo"
-            />
+            <span v-else>{{ (u.username || "?").slice(0,1).toUpperCase() }}</span>
           </div>
           <div class="activity-meta">
             <div class="dm-name">{{ u.username }}</div>
@@ -446,7 +426,6 @@ import { useRouter } from "vue-router";
 import { useUserStore } from "../store/user";
 import socket from "../socket";
 import { setGlobalMute, setGlobalDeafen } from "../webrtc/voice";
-import { getFallbackLogo } from "../utils/fallbackLogo";
 
 const router = useRouter();
 const userStore = useUserStore();
