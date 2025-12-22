@@ -2,7 +2,7 @@
   <div v-if="showAppGate" class="app-gate">
     <div class="app-gate-card">
       <div class="app-gate-logo">V</div>
-      <div class="app-gate-title">Visicos sadece mobil uygulama olarak acilir</div>
+      <div class="app-gate-title">Nexora sadece mobil uygulama olarak acilir</div>
       <div class="app-gate-desc">
         Devam etmek icin bu sayfayi ana ekrana ekleyip uygulama olarak ac.
       </div>
@@ -116,3 +116,4 @@ onBeforeUnmount(() => {
   padding: 10px 12px;
 }
 </style>
+

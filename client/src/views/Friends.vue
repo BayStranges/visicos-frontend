@@ -2,7 +2,9 @@
   <div class="layout">
     <!-- LEFT: Servers (Discord-like) -->
     <aside class="servers">
-      <div class="logo">V</div>
+      <div class="logo">
+        <img src="/logo.svg" alt="Nexora logo" />
+      </div>
       <div class="server-pill add">+</div>
     </aside>
 
@@ -1109,44 +1111,86 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
 .layout {
   display: grid;
   grid-template-columns: 80px 260px 1fr 260px;
   height: 100vh;
-  background: var(--bg);
+  background:
+    radial-gradient(1200px 520px at 12% -10%, rgba(47, 210, 180, 0.2), transparent 60%),
+    radial-gradient(900px 640px at 90% 10%, rgba(255, 190, 118, 0.18), transparent 60%),
+    #0b0f14;
   color: var(--text);
-  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
   --user-panel-height: 72px;
+  --bg: #0b0f14;
+  --bg-elev: #121826;
+  --bg-elev-2: #151c2b;
+  --text: #e9edf5;
+  --text-strong: #ffffff;
+  --text-muted: #a8b3c7;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-soft: rgba(255, 255, 255, 0.12);
+  --accent: #2fd2b4;
+  --accent-strong: #4ff0cf;
+  --accent-dark: #04211e;
+  --chip: rgba(19, 27, 41, 0.8);
+  --panel: rgba(19, 27, 41, 0.92);
+  --input-bg: rgba(19, 27, 41, 0.85);
+  --shadow-soft: 0 24px 48px rgba(6, 10, 16, 0.55);
+}
+
+.layout::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 13, 20, 0.6), rgba(10, 13, 20, 0.9));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.layout > * {
+  position: relative;
+  z-index: 1;
 }
 
 .servers {
-  background: var(--bg-elev);
+  background: rgba(14, 19, 30, 0.9);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 12px 0;
   gap: 12px;
+  backdrop-filter: blur(16px);
 }
 
 .logo {
   width: 48px;
   height: 48px;
   border-radius: 14px;
-  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
+  background: transparent;
   display: grid;
   place-items: center;
   font-weight: 800;
   font-size: 20px;
   color: #fff;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+  box-shadow: 0 12px 20px rgba(10, 14, 20, 0.35);
+}
+
+.logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .server-pill {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--accent-dark);
+  background: rgba(19, 27, 41, 0.85);
   display: grid;
   place-items: center;
   color: var(--accent);
@@ -1156,18 +1200,18 @@ onBeforeUnmount(() => {
 }
 
 .server-pill:hover {
-  background: var(--border-strong);
+  background: rgba(47, 210, 180, 0.12);
   transform: translateY(-2px);
 }
 
 .server-pill.add {
-  background: #1f1f1f;
+  background: rgba(19, 27, 41, 0.85);
   color: var(--accent);
   border: 1px dashed var(--border-soft);
 }
 
 .dm-list {
-  background: var(--bg-elev);
+  background: rgba(14, 19, 30, 0.9);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -1175,6 +1219,7 @@ onBeforeUnmount(() => {
   overflow-y: auto;
   position: relative;
   padding-bottom: calc(var(--user-panel-height) + 10px);
+  backdrop-filter: blur(16px);
 }
 
 .dm-header {
@@ -1189,14 +1234,14 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 10px;
   border-bottom: 1px solid var(--border);
-  background: #151515;
+  background: rgba(19, 27, 41, 0.6);
 }
 
 .dm-search {
   width: 100%;
   background: var(--input-bg);
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 8px 10px;
   color: var(--text);
 }
@@ -1207,8 +1252,8 @@ onBeforeUnmount(() => {
 }
 
 .filter-btn {
-  background: #1f1f1f;
-  border: 1px solid var(--border-strong);
+  background: rgba(19, 27, 41, 0.8);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: 999px;
   padding: 4px 10px;
@@ -1218,8 +1263,8 @@ onBeforeUnmount(() => {
 
 .filter-btn.active {
   color: var(--text-strong);
-  border-color: var(--accent-strong);
-  background: #241214;
+  border-color: rgba(47, 210, 180, 0.6);
+  background: rgba(47, 210, 180, 0.12);
 }
 
 .dm-row {
@@ -1229,12 +1274,12 @@ onBeforeUnmount(() => {
   align-items: center;
   padding: 12px 14px;
   cursor: pointer;
-  border-bottom: 1px solid var(--accent-dark);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   transition: background 0.12s ease;
 }
 
 .dm-row:hover {
-  background: #191313;
+  background: rgba(47, 210, 180, 0.08);
 }
 
 .dm-avatar {
@@ -1300,9 +1345,9 @@ onBeforeUnmount(() => {
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 16px;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+  box-shadow: var(--shadow-soft);
 }
 
 .panel-title {
@@ -1317,13 +1362,14 @@ onBeforeUnmount(() => {
 }
 
 .link-btn {
-  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
+  background: linear-gradient(120deg, var(--accent), #7fe7d4);
   color: var(--accent-dark);
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 8px 12px;
   cursor: pointer;
   font-weight: 700;
+  box-shadow: 0 10px 20px rgba(47, 210, 180, 0.2);
 }
 
 .add-row {
@@ -1334,17 +1380,17 @@ onBeforeUnmount(() => {
 .add-row input {
   flex: 1;
   background: var(--input-bg);
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 10px 12px;
   color: var(--text);
 }
 
 .add-row button {
-  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
+  background: linear-gradient(120deg, var(--accent), #7fe7d4);
   color: var(--accent-dark);
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 0 16px;
   cursor: pointer;
   font-weight: 600;
@@ -1355,7 +1401,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid #161b25;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .request-row:last-child {
@@ -1363,10 +1409,10 @@ onBeforeUnmount(() => {
 }
 
 .request-row button {
-  background: var(--accent-strong);
-  color: #fdf5d9;
+  background: rgba(47, 210, 180, 0.2);
+  color: var(--text-strong);
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 6px 12px;
   cursor: pointer;
 }
@@ -1383,7 +1429,7 @@ onBeforeUnmount(() => {
   gap: 10px;
   align-items: center;
   padding: 8px 0;
-  border-bottom: 1px solid #161b25;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .notification-row:last-child {
@@ -1400,8 +1446,8 @@ onBeforeUnmount(() => {
   position: sticky;
   bottom: 0;
   min-height: 64px;
-  background: #1f1f22;
-  border-top: 1px solid #2a2a2e;
+  background: rgba(14, 19, 30, 0.95);
+  border-top: 1px solid var(--border);
   padding: 10px 12px;
   display: grid;
   grid-template-columns: 36px 1fr auto;
@@ -1409,7 +1455,7 @@ onBeforeUnmount(() => {
   align-items: center;
   cursor: pointer;
   z-index: 5;
-  box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 -10px 24px rgba(6, 10, 16, 0.4);
 }
 
 .dm-profile .dm-avatar {
@@ -1428,8 +1474,8 @@ onBeforeUnmount(() => {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: #9aa0a6;
-  background: #2a2a2e;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.08);
   padding: 2px 6px;
   border-radius: 999px;
 }
@@ -1438,8 +1484,8 @@ onBeforeUnmount(() => {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: #c7bfa4;
-  background: #2a1e1e;
+  color: #ffd9a0;
+  background: rgba(255, 190, 118, 0.2);
   padding: 2px 6px;
   border-radius: 999px;
 }
@@ -1458,16 +1504,16 @@ onBeforeUnmount(() => {
 .dm-action-btn {
   height: 24px;
   padding: 0 6px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: none;
-  background: #1f1f22;
+  background: rgba(19, 27, 41, 0.8);
   color: var(--text-muted);
   cursor: pointer;
   font-size: 11px;
 }
 
 .dm-action-btn:hover {
-  background: #2a2a2e;
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-strong);
 }
 
@@ -1478,7 +1524,7 @@ onBeforeUnmount(() => {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  border: 2px solid #1f1f22;
+  border: 2px solid rgba(14, 19, 30, 0.95);
 }
 
 .status-row {
@@ -1508,15 +1554,15 @@ onBeforeUnmount(() => {
 }
 
 .status-dot.online {
-  background: #2ecc71;
+  background: var(--accent-strong);
 }
 
 .status-dot.offline {
-  background: #7b7b7b;
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .status-pill.online {
-  color: #9be7a1;
+  color: var(--accent-strong);
 }
 
 .status-pill.offline {
@@ -1544,13 +1590,13 @@ onBeforeUnmount(() => {
 }
 
 .icon-btn:hover {
-  background: #2a2a2e;
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-strong);
 }
 
 .icon-btn.off {
-  color: #7d7d7d;
-  background: #2a2a2e;
+  color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .icon {
@@ -1562,21 +1608,21 @@ onBeforeUnmount(() => {
 .user-menu {
   position: fixed;
   min-width: 220px;
-  background: #1d1d1f;
-  border: 1px solid #2a2a2e;
-  border-radius: 10px;
+  background: rgba(19, 27, 41, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 2px;
   z-index: 50;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-soft);
 }
 
 .profile-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(6, 8, 12, 0.65);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1587,17 +1633,17 @@ onBeforeUnmount(() => {
   position: relative;
   width: min(860px, 92vw);
   min-height: 420px;
-  background: #1f2024;
-  border: 1px solid #2d2e33;
-  border-radius: 18px;
+  background: rgba(19, 27, 41, 0.98);
+  border: 1px solid var(--border);
+  border-radius: 20px;
   display: grid;
   grid-template-columns: 280px 1fr;
   overflow: hidden;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-soft);
 }
 
 .profile-modal-left {
-  background: #23242a;
+  background: rgba(15, 21, 33, 0.95);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -1607,7 +1653,7 @@ onBeforeUnmount(() => {
 .profile-modal-banner {
   height: 120px;
   border-radius: 12px;
-  background: linear-gradient(120deg, #6c6aa8, #8a7bc0);
+  background: linear-gradient(120deg, rgba(47, 210, 180, 0.5), rgba(255, 190, 118, 0.45));
   background-size: cover;
   background-position: center;
 }
@@ -1616,8 +1662,8 @@ onBeforeUnmount(() => {
   width: 88px;
   height: 88px;
   border-radius: 50%;
-  border: 4px solid #23242a;
-  background: #1f1f22;
+  border: 4px solid rgba(15, 21, 33, 0.95);
+  background: rgba(19, 27, 41, 0.85);
   display: grid;
   place-items: center;
   color: var(--text-strong);
@@ -1647,7 +1693,7 @@ onBeforeUnmount(() => {
 }
 
 .profile-modal-section {
-  border-top: 1px solid #2d2e33;
+  border-top: 1px solid var(--border);
   padding-top: 10px;
   display: grid;
   gap: 6px;
@@ -1668,9 +1714,9 @@ onBeforeUnmount(() => {
 .note-input {
   min-height: 72px;
   resize: none;
-  background: #1f1f22;
-  border: 1px solid #33343a;
-  border-radius: 10px;
+  background: rgba(19, 27, 41, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 8px;
   color: var(--text);
   font-size: 12px;
@@ -1691,7 +1737,7 @@ onBeforeUnmount(() => {
 .profile-tabs {
   display: flex;
   gap: 10px;
-  border-bottom: 1px solid #2d2e33;
+  border-bottom: 1px solid var(--border);
   padding-bottom: 8px;
 }
 
@@ -1706,7 +1752,7 @@ onBeforeUnmount(() => {
 
 .tab-btn.active {
   color: var(--text-strong);
-  border-bottom: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent-strong);
 }
 
 .profile-tab-content {
@@ -1717,9 +1763,9 @@ onBeforeUnmount(() => {
 .info-edit {
   margin-top: 10px;
   background: transparent;
-  border: 1px solid #3a3b41;
+  border: 1px solid var(--border);
   color: var(--text-muted);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 6px 10px;
   font-size: 12px;
   cursor: pointer;
@@ -1727,7 +1773,7 @@ onBeforeUnmount(() => {
 
 .info-edit:hover {
   color: var(--text-strong);
-  border-color: #4a4b52;
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .fade-enter-active,
@@ -1743,7 +1789,7 @@ onBeforeUnmount(() => {
 .nickname-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(6, 8, 12, 0.65);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1752,13 +1798,13 @@ onBeforeUnmount(() => {
 
 .nickname-card {
   width: min(420px, 92vw);
-  background: #2a2b30;
-  border: 1px solid #35363b;
-  border-radius: 16px;
-  padding: 16px;
+  background: rgba(19, 27, 41, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
   display: grid;
   gap: 12px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-soft);
 }
 
 .nickname-head {
@@ -1788,9 +1834,9 @@ onBeforeUnmount(() => {
 }
 
 .nickname-field input {
-  background: #1f1f22;
-  border: 1px solid #33343a;
-  border-radius: 10px;
+  background: rgba(19, 27, 41, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 10px 12px;
   color: var(--text);
 }
@@ -1804,14 +1850,14 @@ onBeforeUnmount(() => {
 .link-btn.ghost {
   background: transparent;
   border: none;
-  color: #7aa7ff;
+  color: var(--accent-strong);
   padding: 0;
 }
 
 .info-card {
-  background: #2a2b30;
-  border: 1px solid #33343a;
-  border-radius: 12px;
+  background: rgba(19, 27, 41, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 14px;
   padding: 14px;
 }
 
@@ -1827,13 +1873,14 @@ onBeforeUnmount(() => {
 }
 
 .primary-btn {
-  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
+  background: linear-gradient(120deg, var(--accent), #7fe7d4);
   color: var(--accent-dark);
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 8px 12px;
   cursor: pointer;
   font-weight: 700;
+  box-shadow: 0 10px 20px rgba(47, 210, 180, 0.2);
 }
 
 .modal-close {
@@ -1841,16 +1888,16 @@ onBeforeUnmount(() => {
   top: 12px;
   right: 12px;
   background: transparent;
-  border: 1px solid #33343a;
+  border: 1px solid var(--border);
   color: var(--text-muted);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 6px 10px;
   cursor: pointer;
 }
 
 .modal-close:hover {
   color: var(--text-strong);
-  border-color: #4a4b52;
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 @media (max-width: 720px) {
@@ -1867,23 +1914,23 @@ onBeforeUnmount(() => {
   left: 92px;
   bottom: 96px;
   width: 280px;
-  background: #2a2b30;
-  border: 1px solid #3a3b41;
-  border-radius: 14px;
+  background: rgba(19, 27, 41, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 16px;
   overflow: hidden;
   z-index: 60;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--shadow-soft);
 }
 
 .profile-card-header {
   position: relative;
   height: 88px;
-  background: #3b3d44;
+  background: rgba(25, 33, 48, 0.9);
 }
 
 .profile-banner {
   height: 100%;
-  background: linear-gradient(120deg, #6c6aa8, #8a7bc0);
+  background: linear-gradient(120deg, rgba(47, 210, 180, 0.5), rgba(255, 190, 118, 0.45));
   background-size: cover;
   background-position: center;
 }
@@ -1895,8 +1942,8 @@ onBeforeUnmount(() => {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  border: 4px solid #2a2b30;
-  background: #1f1f22;
+  border: 4px solid rgba(19, 27, 41, 0.95);
+  background: rgba(19, 27, 41, 0.85);
   display: grid;
   place-items: center;
   color: var(--text-strong);
@@ -1929,9 +1976,9 @@ onBeforeUnmount(() => {
 .profile-card-note {
   display: grid;
   gap: 2px;
-  background: #1f1f22;
-  border: 1px solid #35363b;
-  border-radius: 10px;
+  background: rgba(19, 27, 41, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 6px 8px;
 }
 
@@ -1939,7 +1986,7 @@ onBeforeUnmount(() => {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: #9aa0a6;
+  color: var(--text-muted);
 }
 
 .note-value {
@@ -1949,9 +1996,9 @@ onBeforeUnmount(() => {
 
 .note-edit {
   background: transparent;
-  border: 1px solid #3a3b41;
+  border: 1px solid var(--border);
   color: var(--text-muted);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 6px 10px;
   font-size: 12px;
   cursor: pointer;
@@ -1959,7 +2006,7 @@ onBeforeUnmount(() => {
 
 .note-edit:hover {
   color: var(--text-strong);
-  border-color: #4a4b52;
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .status-actions {
@@ -1969,8 +2016,8 @@ onBeforeUnmount(() => {
 }
 
 .chip-btn {
-  background: #1f1f22;
-  border: 1px solid #3a3b41;
+  background: rgba(19, 27, 41, 0.85);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: 999px;
   padding: 4px 8px;
@@ -1980,7 +2027,7 @@ onBeforeUnmount(() => {
 
 .chip-btn:hover {
   color: var(--text-strong);
-  border-color: #4a4b52;
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .profile-card-row {
@@ -1991,19 +2038,19 @@ onBeforeUnmount(() => {
 }
 
 .pill {
-  background: #1f1f22;
-  border: 1px solid #3a3b41;
+  background: rgba(19, 27, 41, 0.85);
+  border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 6px 10px;
   font-size: 12px;
 }
 
 .ghost-btn {
   background: transparent;
-  border: 1px solid #3a3b41;
+  border: 1px solid var(--border);
   color: var(--text-muted);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 6px 10px;
   font-size: 12px;
   cursor: pointer;
@@ -2011,11 +2058,11 @@ onBeforeUnmount(() => {
 
 .ghost-btn:hover {
   color: var(--text-strong);
-  border-color: #4a4b52;
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .profile-card-section {
-  border-top: 1px solid #35363b;
+  border-top: 1px solid var(--border);
   padding-top: 6px;
   display: flex;
   flex-direction: column;
@@ -2034,7 +2081,7 @@ onBeforeUnmount(() => {
 }
 
 .menu-row:hover {
-  background: #35363b;
+  background: rgba(255, 255, 255, 0.08);
 }
 .user-menu-item {
   width: 100%;
@@ -2049,17 +2096,17 @@ onBeforeUnmount(() => {
 }
 
 .user-menu-item:hover {
-  background: #2a2a2f;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .user-menu-item.active::after {
-  content: "✓";
+  content: "OK";
   float: right;
   color: var(--text-muted);
 }
 
 .user-menu-item.danger {
-  color: #ff6b6b;
+  color: #ff8f8f;
 }
 
 .user-menu-label {
@@ -2070,7 +2117,7 @@ onBeforeUnmount(() => {
 
 .user-menu-divider {
   height: 1px;
-  background: #2a2a2e;
+  background: var(--border);
   margin: 4px 6px;
 }
 
@@ -2080,7 +2127,8 @@ onBeforeUnmount(() => {
   padding: 20px;
   border-left: 1px solid var(--border);
   overflow-y: auto;
-  background: var(--bg-elev);
+  background: rgba(14, 19, 30, 0.9);
+  backdrop-filter: blur(16px);
 }
 
 .activity-row {
@@ -2089,7 +2137,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 1px solid var(--accent-dark);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .activity-row:last-child {

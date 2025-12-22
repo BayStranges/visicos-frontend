@@ -1,6 +1,6 @@
 {
   "appId": "com.visicos.app",
-  "appName": "Visicos",
+  "appName": "Nexora",
   "webDir": "dist",
   "bundledWebRuntime": false,
   "server": {
@@ -8,3 +8,4 @@
     "iosScheme": "https"
   }
 }
+

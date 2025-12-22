@@ -1,6 +1,6 @@
 {
-  "name": "Visicos",
-  "short_name": "Visicos",
+  "name": "Nexora",
+  "short_name": "Nexora",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b0b0b",
@@ -14,3 +14,4 @@
     }
   ]
 }
+

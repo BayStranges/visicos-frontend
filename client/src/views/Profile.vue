@@ -173,7 +173,7 @@
 
       <div v-else-if="activeTab === 'Cihazlar'" class="panel-card devices-card">
         <div class="devices-intro">
-          Visicos hesap oturumunun etkin oldugu tum cihazlar burada. Bilinmeyen bir cihaz gorursen sifreni degistir.
+          Nexora hesap oturumunun etkin oldugu tum cihazlar burada. Bilinmeyen bir cihaz gorursen sifreni degistir.
         </div>
 
         <div class="devices-section">
@@ -721,7 +721,7 @@ const overlayMaxUsers = ref(10);
 const overlayLive = ref(null);
 const runningGames = ref([]);
 const overlayPreviewFallback = [
-  { id: 1, name: "m1rcaxdetanirlar", initials: "M1", color: "#5865f2", speaking: true, muted: false },
+  { id: 1, name: "m1rcaxdetanirlar", initials: "M1", color: "#2fd2b4", speaking: true, muted: false },
   { id: 2, name: "Acetaminophen", initials: "AC", color: "#16a34a", speaking: false, muted: true },
   { id: 3, name: "Koyanth", initials: "KO", color: "#0ea5e9", speaking: true, muted: false },
   { id: 4, name: "Scynder", initials: "SC", color: "#f59e0b", speaking: false, muted: false }
@@ -771,7 +771,7 @@ const overlayPreviewUsers = computed(() => {
     id: live.self?.id || "self",
     name: selfName,
     initials: getInitials(selfName),
-    color: "#5865f2",
+    color: "#2fd2b4",
     speaking: live.status === "connected" && !selfMuted,
     muted: selfMuted
   });
@@ -1236,69 +1236,128 @@ const toggleGameDetected = (game) => {
 </script>
 
 <style scoped>
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
 .settings {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: 260px 1fr;
-  background: var(--bg);
+  grid-template-columns: 280px 1fr;
+  background:
+    radial-gradient(1200px 520px at 12% -10%, rgba(47, 210, 180, 0.2), transparent 60%),
+    radial-gradient(900px 640px at 90% 10%, rgba(255, 190, 118, 0.18), transparent 60%),
+    #0b0f14;
   color: var(--text);
-  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-family: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --bg: #0b0f14;
+  --bg-elev: #121826;
+  --bg-elev-2: #151c2b;
+  --text: #e9edf5;
+  --text-strong: #ffffff;
+  --text-muted: #a8b3c7;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --accent: #2fd2b4;
+  --accent-strong: #4ff0cf;
+  --accent-dark: #04211e;
+  --shadow-soft: 0 22px 40px rgba(4, 8, 14, 0.55);
+}
+
+.settings::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10, 13, 20, 0.6), rgba(10, 13, 20, 0.9));
+  pointer-events: none;
+  z-index: 0;
+}
+
+.settings-nav,
+.settings-panel {
+  position: relative;
+  z-index: 1;
 }
 
 .settings-nav {
-  background: var(--bg-elev);
+  background: rgba(14, 19, 30, 0.9);
   border-right: 1px solid var(--border);
-  padding: 20px 16px;
+  padding: 22px 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+  backdrop-filter: blur(16px);
 }
 
 .settings-title {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1.4px;
 }
 
 .settings-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .nav-btn {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
   color: var(--text-muted);
   text-align: left;
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
   cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
 }
 
 .nav-btn.active,
 .nav-btn:hover {
-  background: #1f1f1f;
+  background: rgba(47, 210, 180, 0.12);
+  border-color: rgba(47, 210, 180, 0.45);
   color: var(--text-strong);
+  box-shadow: 0 10px 20px rgba(20, 210, 180, 0.18);
 }
 
 .logout-btn {
   margin-top: auto;
-  background: #2b1313;
-  border: 1px solid var(--accent-strong);
-  color: var(--text-strong);
-  border-radius: 10px;
-  padding: 10px 12px;
+  background: rgba(255, 95, 95, 0.12);
+  border: 1px solid rgba(255, 95, 95, 0.45);
+  color: #ffd6d6;
+  border-radius: 12px;
+  padding: 10px 14px;
   cursor: pointer;
   font-weight: 700;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.logout-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 18px rgba(255, 95, 95, 0.2);
 }
 
 .settings-panel {
-  padding: 24px;
+  padding: 28px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
+}
+
+.settings-panel > * {
+  animation: rise 0.5s ease both;
+}
+
+.settings-panel > *:nth-child(2) {
+  animation-delay: 0.06s;
+}
+
+.settings-panel > *:nth-child(3) {
+  animation-delay: 0.12s;
+}
+
+.settings-panel > *:nth-child(4) {
+  animation-delay: 0.18s;
 }
 
 .panel-header {
@@ -1308,16 +1367,18 @@ const toggleGameDetected = (game) => {
 }
 
 .panel-title {
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
+  font-family: "Fraunces", "Space Grotesk", sans-serif;
+  letter-spacing: 0.2px;
 }
 
 .panel-card {
-  background: var(--bg-elev);
+  background: linear-gradient(160deg, rgba(20, 28, 42, 0.9), rgba(15, 20, 30, 0.95));
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 18px;
-  box-shadow: 0 18px 30px rgba(0,0,0,0.4);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: var(--shadow-soft);
 }
 
 .account-card {
@@ -1362,10 +1423,10 @@ const toggleGameDetected = (game) => {
 }
 
 .account-info {
-  background: #1f1f22;
-  border: 1px solid #2d2e33;
-  border-radius: 12px;
-  padding: 12px;
+  background: rgba(19, 27, 41, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1387,6 +1448,8 @@ const toggleGameDetected = (game) => {
 .info-label {
   font-size: 11px;
   color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
 }
 
 .info-value {
@@ -1399,7 +1462,7 @@ const toggleGameDetected = (game) => {
   flex-direction: column;
   gap: 10px;
   padding-top: 6px;
-  border-top: 1px solid #2d2e33;
+  border-top: 1px solid var(--border);
 }
 
 .section-desc {
@@ -1412,17 +1475,17 @@ const toggleGameDetected = (game) => {
 }
 
 .danger-btn {
-  background: #2b1313;
-  border: 1px solid #5a1d1d;
-  color: #ffd4d4;
-  border-radius: 10px;
+  background: rgba(255, 88, 88, 0.16);
+  border: 1px solid rgba(255, 88, 88, 0.4);
+  color: #ffd6d6;
+  border-radius: 12px;
   padding: 10px 16px;
   cursor: pointer;
   font-weight: 700;
 }
 
 .danger-btn:hover {
-  border-color: #7a2a2a;
+  border-color: rgba(255, 88, 88, 0.6);
 }
 
 .panel-note {
@@ -1440,10 +1503,10 @@ const toggleGameDetected = (game) => {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px;
-  background: #1f1f22;
-  border: 1px solid #2d2e33;
-  border-radius: 12px;
+  padding: 14px;
+  background: rgba(20, 26, 38, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 14px;
 }
 
 .privacy-text {
@@ -1464,12 +1527,12 @@ const toggleGameDetected = (game) => {
 
 .privacy-link {
   font-size: 12px;
-  color: #7aa7ff;
+  color: var(--accent-strong);
 }
 
 .privacy-divider {
   height: 1px;
-  background: #2d2e33;
+  background: var(--border);
 }
 
 .privacy-request {
@@ -1494,7 +1557,7 @@ const toggleGameDetected = (game) => {
   flex-direction: column;
   gap: 10px;
   padding-top: 6px;
-  border-top: 1px solid #2d2e33;
+  border-top: 1px solid var(--border);
 }
 
 .device-row {
@@ -1502,17 +1565,17 @@ const toggleGameDetected = (game) => {
   grid-template-columns: 40px 1fr auto;
   gap: 12px;
   align-items: center;
-  background: #1f1f22;
-  border: 1px solid #2d2e33;
-  border-radius: 12px;
-  padding: 10px;
+  background: rgba(19, 27, 41, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
 }
 
 .device-icon {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #2a2b30;
+  background: rgba(255, 255, 255, 0.06);
   display: grid;
   place-items: center;
   font-size: 12px;
@@ -1547,8 +1610,8 @@ const toggleGameDetected = (game) => {
   font-size: 12px;
   color: var(--text-muted);
   padding: 8px 10px;
-  background: #1f1f22;
-  border: 1px dashed #2d2e33;
+  background: rgba(19, 27, 41, 0.8);
+  border: 1px dashed var(--border);
   border-radius: 10px;
 }
 
@@ -1570,16 +1633,22 @@ const toggleGameDetected = (game) => {
 }
 
 .platform-btn {
-  background: #1f1f22;
-  border: 1px solid #2d2e33;
+  background: rgba(19, 27, 41, 0.8);
+  border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 8px 10px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
   font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.platform-btn:hover {
+  border-color: rgba(47, 210, 180, 0.4);
+  box-shadow: 0 10px 16px rgba(20, 210, 180, 0.12);
 }
 
 .platform-icon {
@@ -1603,9 +1672,9 @@ const toggleGameDetected = (game) => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #1f1f22;
-  border: 1px solid #2d2e33;
-  border-radius: 10px;
+  background: rgba(19, 27, 41, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 6px 8px;
   font-size: 12px;
   color: var(--text);
@@ -1616,10 +1685,10 @@ const toggleGameDetected = (game) => {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  background: #1f1f22;
-  border: 1px solid #2d2e33;
-  border-radius: 12px;
-  padding: 12px;
+  background: rgba(19, 27, 41, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
 }
 
 .connection-left {
@@ -1663,15 +1732,15 @@ const toggleGameDetected = (game) => {
 }
 
 .games-detect {
-  background: #2a2b30;
-  border: 1px solid #33343a;
-  border-radius: 14px;
+  background: rgba(20, 27, 40, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 16px;
   padding: 16px;
 }
 
 .games-detect.running {
-  border-color: #2ecc71;
-  box-shadow: 0 0 0 1px rgba(46, 204, 113, 0.2);
+  border-color: rgba(47, 210, 180, 0.6);
+  box-shadow: 0 0 0 1px rgba(47, 210, 180, 0.2);
 }
 
 .games-detect-title {
@@ -1698,18 +1767,18 @@ const toggleGameDetected = (game) => {
 }
 
 .running-pill {
-  background: #1f1f22;
-  border: 1px solid #2d2e33;
+  background: rgba(19, 27, 41, 0.8);
+  border: 1px solid var(--border);
   border-radius: 999px;
   padding: 4px 10px;
   font-size: 11px;
-  color: #9be7a1;
+  color: var(--accent-strong);
 }
 
 .link-btn {
   background: none;
   border: none;
-  color: #7aa7ff;
+  color: var(--accent-strong);
   cursor: pointer;
   padding: 0;
   font-size: 12px;
@@ -1717,7 +1786,7 @@ const toggleGameDetected = (game) => {
 
 .games-divider {
   height: 1px;
-  background: #2d2e33;
+  background: var(--border);
 }
 
 .games-section {
@@ -1730,8 +1799,8 @@ const toggleGameDetected = (game) => {
   font-size: 12px;
   color: var(--text-muted);
   padding: 10px 12px;
-  background: #1f1f22;
-  border: 1px dashed #2d2e33;
+  background: rgba(19, 27, 41, 0.8);
+  border: 1px dashed var(--border);
   border-radius: 10px;
 }
 
@@ -1745,10 +1814,10 @@ const toggleGameDetected = (game) => {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  background: #2a2b30;
-  border: 1px solid #33343a;
-  border-radius: 12px;
-  padding: 12px;
+  background: rgba(20, 27, 40, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
 }
 
 .game-left {
@@ -1761,8 +1830,8 @@ const toggleGameDetected = (game) => {
   width: 42px;
   height: 42px;
   border-radius: 10px;
-  background: #1f1f22;
-  border: 1px solid #33343a;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
   display: grid;
   place-items: center;
   color: #fff;
@@ -1778,7 +1847,7 @@ const toggleGameDetected = (game) => {
 }
 
 .game-verified {
-  color: #7aa7ff;
+  color: var(--accent-strong);
   font-size: 12px;
 }
 
@@ -1797,8 +1866,8 @@ const toggleGameDetected = (game) => {
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  border: 1px solid #3a3b41;
-  background: #1f1f22;
+  border: 1px solid var(--border);
+  background: rgba(19, 27, 41, 0.8);
   color: var(--text-muted);
   cursor: pointer;
   display: grid;
@@ -1806,14 +1875,14 @@ const toggleGameDetected = (game) => {
 }
 
 .game-icon.active {
-  color: #9be7a1;
-  border-color: #2ecc71;
+  color: var(--accent-strong);
+  border-color: rgba(47, 210, 180, 0.6);
 }
 
 .game-icon.danger {
-  color: #ff9a9a;
-  border-color: #5a2a2a;
-  background: #2b1313;
+  color: #ffb1b1;
+  border-color: rgba(255, 88, 88, 0.4);
+  background: rgba(255, 88, 88, 0.15);
 }
 
 .overlay-card {
@@ -1827,7 +1896,7 @@ const toggleGameDetected = (game) => {
   flex-direction: column;
   gap: 12px;
   padding-top: 6px;
-  border-top: 1px solid #2d2e33;
+  border-top: 1px solid var(--border);
 }
 
 .overlay-row {
@@ -1835,10 +1904,10 @@ const toggleGameDetected = (game) => {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px;
-  background: #2a2b30;
-  border: 1px solid #33343a;
-  border-radius: 12px;
+  padding: 14px;
+  background: rgba(20, 27, 40, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 14px;
 }
 
 .overlay-title {
@@ -1866,10 +1935,10 @@ const toggleGameDetected = (game) => {
 }
 
 .key-pill {
-  background: #1f1f22;
-  border: 1px solid #3a3b41;
+  background: rgba(19, 27, 41, 0.8);
+  border: 1px solid var(--border);
   color: var(--text);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 6px 10px;
   font-size: 12px;
   font-weight: 700;
@@ -1890,10 +1959,10 @@ const toggleGameDetected = (game) => {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: #2a2b30;
-  border: 1px solid #33343a;
-  border-radius: 12px;
-  padding: 12px;
+  background: rgba(20, 27, 40, 0.9);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
 }
 
 .control-label {
@@ -1902,9 +1971,9 @@ const toggleGameDetected = (game) => {
 }
 
 .control-select {
-  background: #1f1f22;
-  border: 1px solid #33343a;
-  border-radius: 10px;
+  background: rgba(19, 27, 41, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 10px 12px;
   color: var(--text);
 }
@@ -1926,10 +1995,10 @@ const toggleGameDetected = (game) => {
 }
 
 .overlay-preview {
-  background: #2a2b30;
-  border: 1px dashed #3a3b41;
-  border-radius: 12px;
-  padding: 12px;
+  background: rgba(17, 24, 36, 0.9);
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1945,9 +2014,9 @@ const toggleGameDetected = (game) => {
 
 .preview-live {
   font-size: 10px;
-  color: #9be7a1;
-  background: rgba(46, 204, 113, 0.15);
-  border: 1px solid rgba(46, 204, 113, 0.4);
+  color: var(--accent-strong);
+  background: rgba(47, 210, 180, 0.15);
+  border: 1px solid rgba(47, 210, 180, 0.4);
   border-radius: 999px;
   padding: 2px 8px;
   text-transform: uppercase;
@@ -1963,15 +2032,15 @@ const toggleGameDetected = (game) => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #1f1f22;
-  border: 1px solid #2d2e33;
-  border-radius: 10px;
+  background: rgba(19, 27, 41, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 6px 8px;
 }
 
 .preview-user.speaking {
-  border-color: #5865f2;
-  box-shadow: 0 0 0 1px rgba(88,101,242,0.4);
+  border-color: rgba(47, 210, 180, 0.7);
+  box-shadow: 0 0 0 1px rgba(47, 210, 180, 0.35);
 }
 
 .preview-avatar {
@@ -1995,17 +2064,17 @@ const toggleGameDetected = (game) => {
   color: var(--text-muted);
   padding: 2px 6px;
   border-radius: 999px;
-  background: #2a2b30;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .preview-status.mute {
-  color: #ff9a9a;
-  background: #3b1f1f;
+  color: #ffb1b1;
+  background: rgba(255, 88, 88, 0.2);
 }
 
 .preview-mic {
-  background: #2a2b30;
-  border: 1px solid #3a3b41;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   border-radius: 8px;
   padding: 4px 8px;
@@ -2014,9 +2083,9 @@ const toggleGameDetected = (game) => {
 }
 
 .preview-mic.muted {
-  color: #ff9a9a;
-  border-color: #5a2a2a;
-  background: #2b1313;
+  color: #ffb1b1;
+  border-color: rgba(255, 88, 88, 0.4);
+  background: rgba(255, 88, 88, 0.2);
 }
 
 .preview-mic.disabled {
@@ -2030,9 +2099,9 @@ const toggleGameDetected = (game) => {
 }
 
 .keybind-display {
-  background: #1f1f22;
-  border: 1px solid #33343a;
-  border-radius: 10px;
+  background: rgba(19, 27, 41, 0.8);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 10px 12px;
   font-size: 12px;
   font-weight: 700;
@@ -2055,7 +2124,7 @@ const toggleGameDetected = (game) => {
 .toggle-ui {
   position: absolute;
   inset: 0;
-  background: #3a3b41;
+  background: rgba(255, 255, 255, 0.18);
   border-radius: 999px;
   transition: background 0.2s ease;
 }
@@ -2068,12 +2137,12 @@ const toggleGameDetected = (game) => {
   top: 3px;
   left: 3px;
   border-radius: 50%;
-  background: #fff;
+  background: #f7fbff;
   transition: transform 0.2s ease;
 }
 
 .toggle input:checked + .toggle-ui {
-  background: #5865f2;
+  background: linear-gradient(120deg, #28d2b6, #5ce7d6);
 }
 
 .toggle input:checked + .toggle-ui::after {
@@ -2083,13 +2152,14 @@ const toggleGameDetected = (game) => {
 .banner-wrap {
   width: 100%;
   height: 120px;
-  border-radius: 14px;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-elev-2);
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: rgba(20, 27, 40, 0.9);
   position: relative;
   overflow: hidden;
   cursor: pointer;
   margin-bottom: 16px;
+  box-shadow: var(--shadow-soft);
 }
 
 .banner-wrap img,
@@ -2105,7 +2175,7 @@ const toggleGameDetected = (game) => {
 }
 
 .banner-fallback {
-  background: linear-gradient(145deg, var(--border-strong), #3a0f0f);
+  background: linear-gradient(145deg, rgba(47, 210, 180, 0.35), rgba(255, 190, 118, 0.25));
 }
 
 .banner-overlay {
@@ -2113,7 +2183,7 @@ const toggleGameDetected = (game) => {
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(0,0,0,0.55);
+  background: rgba(10, 12, 18, 0.6);
   color: var(--text);
   opacity: 0;
   transition: opacity 0.15s ease;
@@ -2133,12 +2203,13 @@ const toggleGameDetected = (game) => {
 .avatar-wrap {
   width: 96px;
   height: 96px;
-  border-radius: 18px;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-elev-2);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: rgba(20, 27, 40, 0.9);
   position: relative;
   overflow: hidden;
   cursor: pointer;
+  box-shadow: var(--shadow-soft);
 }
 
 .avatar-wrap img,
@@ -2153,7 +2224,7 @@ const toggleGameDetected = (game) => {
 }
 
 .avatar-fallback {
-  background: linear-gradient(145deg, var(--border-strong), #3a0f0f);
+  background: linear-gradient(145deg, rgba(47, 210, 180, 0.35), rgba(255, 190, 118, 0.25));
 }
 
 .avatar-overlay {
@@ -2161,7 +2232,7 @@ const toggleGameDetected = (game) => {
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgba(0,0,0,0.55);
+  background: rgba(10, 12, 18, 0.6);
   color: var(--text);
   opacity: 0;
   transition: opacity 0.15s ease;
@@ -2186,9 +2257,9 @@ const toggleGameDetected = (game) => {
 }
 
 input {
-  background: var(--input-bg);
-  border: 1px solid var(--border-strong);
-  border-radius: 10px;
+  background: rgba(19, 27, 41, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 10px 12px;
   color: var(--text);
 }
@@ -2205,13 +2276,20 @@ input {
 }
 
 .primary-btn {
-  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
-  color: var(--accent-dark);
+  background: linear-gradient(120deg, var(--accent), #7fe7d4);
+  color: #04201d;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px 16px;
   cursor: pointer;
   font-weight: 700;
+  box-shadow: 0 14px 26px rgba(47, 210, 180, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 30px rgba(47, 210, 180, 0.3);
 }
 
 .primary-btn:disabled {
@@ -2220,10 +2298,10 @@ input {
 }
 
 .ghost-btn {
-  background: #2a2b30;
-  border: 1px solid #3a3b41;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
   color: var(--text-muted);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 8px 12px;
   cursor: pointer;
   font-weight: 600;
@@ -2237,7 +2315,7 @@ input {
 .edit-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
+  background: rgba(6, 8, 12, 0.65);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2246,10 +2324,10 @@ input {
 
 .edit-card {
   width: min(420px, 92vw);
-  background: #2a2b30;
-  border: 1px solid #35363b;
-  border-radius: 16px;
-  padding: 16px;
+  background: rgba(19, 27, 41, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
   display: grid;
   gap: 12px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
@@ -2261,11 +2339,22 @@ input {
 }
 
 .edit-input {
-  background: #1f1f22;
-  border: 1px solid #33343a;
-  border-radius: 10px;
+  background: rgba(19, 27, 41, 0.85);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   padding: 10px 12px;
   color: var(--text);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .edit-actions {
@@ -2287,3 +2376,4 @@ input {
   }
 }
 </style>
+
