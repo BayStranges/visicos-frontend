@@ -344,6 +344,9 @@
           </button>
         </div>
         <div v-if="showNotifications" class="panel-body">
+          <button v-if="canRequestPush" class="panel-btn" @click="requestPush">
+            Bildirimleri Ac
+          </button>
           <div v-if="notificationDms.length === 0" class="empty">Bildirim yok</div>
           <div v-for="dm in notificationDms" :key="dm._id" class="notification-row">
             <div class="dm-avatar sm">
@@ -452,6 +455,7 @@ import { useRouter } from "vue-router";
 import { useUserStore } from "../store/user";
 import socket from "../socket";
 import { setGlobalMute, setGlobalDeafen } from "../webrtc/voice";
+import { initPushNotifications } from "../push";
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -473,6 +477,9 @@ const notificationsPanel = ref(null);
 const friendsFilter = ref("all");
 const showAddFriend = ref(false);
 const addFriendInput = ref(null);
+const canRequestPush = computed(
+  () => typeof Notification !== "undefined" && Notification.permission === "default"
+);
 const mobileFriendsOpen = ref(false);
 const layoutTouchStart = ref({ x: 0, y: 0 });
 const pinnedIds = ref([]);
@@ -515,6 +522,11 @@ const onNotificationsDocumentClick = (event) => {
   if (panel && !panel.contains(event.target)) {
     showNotifications.value = false;
   }
+};
+
+const requestPush = async () => {
+  if (!userId) return;
+  await initPushNotifications(userId);
 };
 
 const toggleAddFriend = async () => {
