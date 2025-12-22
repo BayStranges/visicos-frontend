@@ -1,7 +1,9 @@
 <template>
   <div v-if="showAppGate" class="app-gate">
     <div class="app-gate-card">
-      <div class="app-gate-logo">V</div>
+      <div class="app-gate-logo">
+        <img src="/logo.svg" alt="Nexora logo" />
+      </div>
       <div class="app-gate-title">Nexora sadece mobil uygulama olarak acilir</div>
       <div class="app-gate-desc">
         Devam etmek icin bu sayfayi ana ekrana ekleyip uygulama olarak ac.
@@ -83,12 +85,18 @@ onBeforeUnmount(() => {
   width: 56px;
   height: 56px;
   border-radius: 16px;
-  background: linear-gradient(145deg, #f7c948, #f29f05);
+  background: transparent;
   color: #0b0b0b;
   font-weight: 800;
   display: grid;
   place-items: center;
   margin: 0 auto;
+}
+
+.app-gate-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .app-gate-title {
