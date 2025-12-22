@@ -2,7 +2,7 @@
   <div class="dm-layout">
     <aside class="servers">
       <div class="logo active" @click="goFriends">
-        <img src="/logo.svg" alt="Nexora logo" />
+        <img src="/logo.png" alt="Nexora logo" />
       </div>
       <div class="server-pill add">+</div>
     </aside>

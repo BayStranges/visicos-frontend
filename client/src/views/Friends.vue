@@ -3,7 +3,7 @@
     <!-- LEFT: Servers (Discord-like) -->
     <aside class="servers">
       <div class="logo">
-        <img src="/logo.svg" alt="Nexora logo" />
+        <img src="/logo.png" alt="Nexora logo" />
       </div>
       <div class="server-pill add">+</div>
     </aside>
