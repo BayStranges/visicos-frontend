@@ -337,7 +337,7 @@
 
     <!-- RIGHT: Friends / add / requests -->
     <section class="friends">
-      <div class="panel">
+      <div class="panel" ref="notificationsPanel">
         <div class="panel-header">
           <button class="panel-btn" @click="showNotifications = !showNotifications" aria-label="Bildirimler">
             <svg class="panel-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -358,6 +358,66 @@
             </div>
             <button class="link-btn" @click="goDm(dm._id)">Open</button>
           </div>
+        </div>
+      </div>
+
+      <div class="friends-toolbar">
+        <button
+          class="friends-filter-btn"
+          :class="{ active: friendsFilter === 'all' }"
+          @click="friendsFilter = 'all'"
+        >
+          Tum Arkadaslar
+        </button>
+        <button
+          class="friends-filter-btn"
+          :class="{ active: friendsFilter === 'online' }"
+          @click="friendsFilter = 'online'"
+        >
+          Aktif Arkadaslar
+        </button>
+        <button
+          class="friends-filter-btn"
+          :class="{ active: friendsFilter === 'offline' }"
+          @click="friendsFilter = 'offline'"
+        >
+          Cevrimdisi Arkadaslar
+        </button>
+        <button class="friends-filter-btn" @click="showAddFriend = !showAddFriend">
+          Arkadas Ekle
+        </button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Arkadaslar</div>
+        <div v-if="filteredFriends.length === 0" class="empty">Kimse yok</div>
+        <div v-for="u in filteredFriends" :key="u._id" class="notification-row">
+          <div class="dm-avatar sm">
+            <img v-if="u.avatar" :src="fullAvatar(u.avatar)" />
+            <span v-else>{{ (u.username || "?").slice(0,1).toUpperCase() }}</span>
+          </div>
+          <div class="notification-meta">
+            <div class="dm-name">{{ u.username }}</div>
+            <div class="dm-last">{{ u.online ? "Aktif" : "Cevrimdisi" }}</div>
+          </div>
+          <button class="link-btn" @click="goDm(u.roomId)">Git</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Arkadas Ekle</div>
+        <div v-if="showAddFriend" class="add-row">
+          <input v-model="username" placeholder="Kullanici adi" />
+          <button @click="sendRequest">Gonder</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Bekleyen Istekler</div>
+        <div v-if="requests.length === 0" class="empty">Istek yok</div>
+        <div v-for="req in requests" :key="req._id" class="request-row">
+          <span>{{ req.sender.username }}</span>
+          <button @click="accept(req._id)">Kabul Et</button>
         </div>
       </div>
     </section>
@@ -411,6 +471,9 @@ const onlineUsers = ref([]);
 const dmQuery = ref("");
 const dmFilter = ref("all");
 const showNotifications = ref(false);
+const notificationsPanel = ref(null);
+const friendsFilter = ref("all");
+const showAddFriend = ref(false);
 const pinnedIds = ref([]);
 const micMuted = ref(false);
 const headphoneMuted = ref(false);
@@ -444,6 +507,14 @@ const nicknameDraft = ref("");
 const rowTouchTimer = ref(null);
 const rowTouchPos = ref({ x: 0, y: 0 });
 const rowTouchDm = ref(null);
+
+const onNotificationsDocumentClick = (event) => {
+  if (!showNotifications.value) return;
+  const panel = notificationsPanel.value;
+  if (panel && !panel.contains(event.target)) {
+    showNotifications.value = false;
+  }
+};
 
 const loadAudioPrefs = () => {
   micMuted.value = localStorage.getItem("visicos_mic_muted") === "1";
@@ -994,6 +1065,30 @@ const activeUsers = computed(() => {
   return list;
 });
 
+const friendsList = computed(() =>
+  dms.value
+    .map((dm) => {
+      const user = getOtherUser(dm);
+      if (!user?._id) return null;
+      return {
+        ...user,
+        roomId: dm._id,
+        online: onlineUsers.value.includes(user._id)
+      };
+    })
+    .filter(Boolean)
+);
+
+const filteredFriends = computed(() => {
+  if (friendsFilter.value === "online") {
+    return friendsList.value.filter((u) => u.online);
+  }
+  if (friendsFilter.value === "offline") {
+    return friendsList.value.filter((u) => !u.online);
+  }
+  return friendsList.value;
+});
+
 const filteredDms = computed(() => {
   const query = dmQuery.value.trim().toLowerCase();
   const filtered = dms.value.filter((dm) => {
@@ -1080,6 +1175,7 @@ onMounted(() => {
   window.addEventListener("click", closeUserMenu);
   window.addEventListener("click", closeProfileCard);
   window.addEventListener("click", closeProfileModal);
+  window.addEventListener("click", onNotificationsDocumentClick);
   window.addEventListener("keydown", onMenuKeydown);
   muteInterval = setInterval(() => {
     muteClock.value = Date.now();
@@ -1096,6 +1192,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("click", closeUserMenu);
   window.removeEventListener("click", closeProfileCard);
   window.removeEventListener("click", closeProfileModal);
+  window.removeEventListener("click", onNotificationsDocumentClick);
   window.removeEventListener("keydown", onMenuKeydown);
   if (muteInterval) clearInterval(muteInterval);
   if (statusInterval) clearInterval(statusInterval);
