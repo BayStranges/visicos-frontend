@@ -381,7 +381,7 @@
         >
           Cevrimdisi Arkadaslar
         </button>
-        <button class="friends-filter-btn" @click="showAddFriend = !showAddFriend">
+        <button class="friends-filter-btn" @click="toggleAddFriend">
           Arkadas Ekle
         </button>
       </div>
@@ -402,10 +402,10 @@
         </div>
       </div>
 
-      <div class="panel">
+      <div v-if="showAddFriend" class="panel">
         <div class="panel-title">Arkadas Ekle</div>
-        <div v-if="showAddFriend" class="add-row">
-          <input v-model="username" placeholder="Kullanici adi" />
+        <div class="add-row">
+          <input ref="addFriendInput" v-model="username" placeholder="Kullanici adi" />
           <button @click="sendRequest">Gonder</button>
         </div>
       </div>
@@ -446,7 +446,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed, nextTick } from "vue";
 import axios from "axios";
 import { useRouter } from "vue-router";
 import { useUserStore } from "../store/user";
@@ -472,6 +472,7 @@ const showNotifications = ref(false);
 const notificationsPanel = ref(null);
 const friendsFilter = ref("all");
 const showAddFriend = ref(false);
+const addFriendInput = ref(null);
 const mobileFriendsOpen = ref(false);
 const layoutTouchStart = ref({ x: 0, y: 0 });
 const pinnedIds = ref([]);
@@ -513,6 +514,14 @@ const onNotificationsDocumentClick = (event) => {
   const panel = notificationsPanel.value;
   if (panel && !panel.contains(event.target)) {
     showNotifications.value = false;
+  }
+};
+
+const toggleAddFriend = async () => {
+  showAddFriend.value = !showAddFriend.value;
+  if (showAddFriend.value) {
+    await nextTick();
+    addFriendInput.value?.focus();
   }
 };
 
