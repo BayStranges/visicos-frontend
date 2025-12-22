@@ -25,15 +25,23 @@
       </button>
     </div>
   </div>
+  <div v-else-if="showPushPrompt" class="push-banner">
+    <div class="push-banner-text">Bildirimleri acmak ister misin?</div>
+    <button class="push-banner-btn" @click="requestPush">Bildirimleri Ac</button>
+  </div>
   <router-view v-else />
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed } from "vue";
+import { useUserStore } from "./store/user";
+import { initPushNotifications, isPushSupported } from "./push";
 
 const showAppGate = ref(false);
 const canInstall = ref(false);
 const deferredPrompt = ref(null);
+const userStore = useUserStore();
+const pushPromptDismissed = ref(false);
 
 const checkStandalone = () => {
   const ua = navigator.userAgent || "";
@@ -42,6 +50,20 @@ const checkStandalone = () => {
     window.matchMedia?.("(display-mode: standalone)")?.matches ||
     window.navigator.standalone === true;
   showAppGate.value = isMobile && !isStandalone;
+};
+
+const showPushPrompt = computed(() => {
+  if (showAppGate.value) return false;
+  if (pushPromptDismissed.value) return false;
+  if (!userStore.user?._id) return false;
+  if (!isPushSupported()) return false;
+  return Notification.permission === "default";
+});
+
+const requestPush = async () => {
+  if (!userStore.user?._id) return;
+  await initPushNotifications(userStore.user._id);
+  pushPromptDismissed.value = true;
 };
 
 const onBeforeInstallPrompt = (event) => {
@@ -177,6 +199,38 @@ onBeforeUnmount(() => {
 
 .app-gate-btn:hover {
   filter: brightness(1.05);
+}
+
+.push-banner {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  background: #16161a;
+  border: 1px solid #2b2b32;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 40;
+  box-shadow: 0 16px 32px rgba(0,0,0,0.35);
+}
+
+.push-banner-text {
+  font-size: 13px;
+  color: #f1f1f1;
+}
+
+.push-banner-btn {
+  border: none;
+  background: linear-gradient(145deg, #f7c948, #ff9f1c);
+  color: #1a1408;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 </style>
 
