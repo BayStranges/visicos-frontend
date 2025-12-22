@@ -2,6 +2,9 @@ import socket from "../socket";
 
 let pc = null;
 let localStream = null;
+let rawStream = null;
+let audioContext = null;
+let audioNodes = null;
 let currentRoomId = null;
 let globalMute = false;
 let globalDeafen = false;
@@ -41,20 +44,66 @@ const applyGlobalState = () => {
   if (audio) audio.muted = globalDeafen;
 };
 
+const buildAudioConstraints = () => ({
+  echoCancellation: true,
+  noiseSuppression: true,
+  autoGainControl: true,
+  channelCount: 1
+});
+
+const buildProcessedStream = async (stream) => {
+  if (!stream) return null;
+  if (!window.AudioContext && !window.webkitAudioContext) return null;
+
+  if (!audioContext) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    audioContext = new Ctx({ latencyHint: "interactive" });
+  }
+
+  if (audioContext.state === "suspended") {
+    try {
+      await audioContext.resume();
+    } catch {}
+  }
+
+  const source = audioContext.createMediaStreamSource(stream);
+  const highpass = audioContext.createBiquadFilter();
+  highpass.type = "highpass";
+  highpass.frequency.value = 120;
+
+  const compressor = audioContext.createDynamicsCompressor();
+  compressor.threshold.value = -50;
+  compressor.knee.value = 30;
+  compressor.ratio.value = 8;
+  compressor.attack.value = 0.003;
+  compressor.release.value = 0.25;
+
+  const gain = audioContext.createGain();
+  gain.gain.value = 1.2;
+
+  const destination = audioContext.createMediaStreamDestination();
+  source.connect(highpass);
+  highpass.connect(compressor);
+  compressor.connect(gain);
+  gain.connect(destination);
+
+  audioNodes = { source, highpass, compressor, gain, destination };
+  return new MediaStream(destination.stream.getAudioTracks());
+};
+
 export const initVoice = async (roomId, { onStateChange, onRemoteTrack } = {}) => {
   currentRoomId = roomId;
   log("initVoice start");
   // Reuse PC but make sure tracks exist
-  if (!localStream) {
+  if (!rawStream) {
     try {
-      localStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
+      rawStream = await navigator.mediaDevices.getUserMedia({
+        audio: buildAudioConstraints(),
         video: false
       });
-      applyGlobalState();
       log("getUserMedia ok", {
-        audioTracks: localStream.getAudioTracks().length,
-        videoTracks: localStream.getVideoTracks().length
+        audioTracks: rawStream.getAudioTracks().length,
+        videoTracks: rawStream.getVideoTracks().length
       });
     } catch (err) {
       log("getUserMedia failed", {
@@ -64,6 +113,20 @@ export const initVoice = async (roomId, { onStateChange, onRemoteTrack } = {}) =
       throw err;
     }
   }
+
+  if (!localStream) {
+    try {
+      const processed = await buildProcessedStream(rawStream);
+      localStream = processed || rawStream;
+    } catch (err) {
+      log("audio processing failed, fallback to raw", {
+        message: err?.message
+      });
+      localStream = rawStream;
+    }
+  }
+
+  applyGlobalState();
 
   if (!pc) {
     pc = new RTCPeerConnection({ iceServers: buildIceServers() });
@@ -170,6 +233,17 @@ export const closeVoice = () => {
   if (localStream) {
     localStream.getTracks().forEach((t) => t.stop());
     localStream = null;
+  }
+  if (rawStream) {
+    rawStream.getTracks().forEach((t) => t.stop());
+    rawStream = null;
+  }
+  if (audioContext) {
+    try {
+      audioContext.close();
+    } catch {}
+    audioContext = null;
+    audioNodes = null;
   }
 
   const audio = document.getElementById("remote-audio");

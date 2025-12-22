@@ -239,7 +239,7 @@
       </label>
 
       <button @click="submit">
-        {{ editingId ? "Save" : "Send" }}
+        {{ editingId ? "Kaydet" : "Gönder" }}
       </button>
     </div>
 
