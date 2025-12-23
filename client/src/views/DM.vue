@@ -260,6 +260,16 @@ import socket from "../socket";
 import { useUserStore } from "../store/user";
 import { initVoice, getPC, closeVoice } from "../webrtc/voice";
 import { tuneOpusSdp } from "../webrtc/opusSdp";
+import {
+  startSfuCall,
+  stopSfuCall,
+  startMic,
+  enableMic,
+  startCamera,
+  stopCamera,
+  startScreen,
+  stopScreen
+} from "../webrtc/sfu";
 
 const logVoice = (...args) => {
   console.log("[dm-voice]", ...args);
@@ -335,6 +345,15 @@ const replyTo = ref(null);
 const editingId = ref(null);
 const callHistory = ref([]);
 const callStartAt = ref(0);
+const sfuActive = ref(false);
+const sfuMuted = ref(false);
+const sfuDeafened = ref(false);
+const sfuVideoOn = ref(false);
+const sfuScreenOn = ref(false);
+const voiceParticipants = ref([]);
+const participantStreams = new Map();
+const remoteAudioEls = new Map();
+const speakingTimers = new Map();
 
 /* ================= TOUCH ================= */
 const touchStartTime = ref(0);
@@ -447,6 +466,107 @@ const reconnect = async () => {
   hangUp();
   await nextTick();
   startCall();
+};
+
+const startGroupCall = async () => {
+  if (!userId || sfuActive.value) return;
+  sfuActive.value = true;
+  sfuMuted.value = false;
+  sfuDeafened.value = false;
+  sfuVideoOn.value = false;
+  sfuScreenOn.value = false;
+  voiceParticipants.value = [];
+
+  const selfProfile = await loadUserProfile(userId);
+  upsertParticipant({
+    userId,
+    username: selfProfile?.username || "Sen",
+    avatar: selfProfile?.avatar || "",
+    speaking: false,
+    muted: sfuMuted.value
+  });
+
+  await startSfuCall({
+    room: roomId,
+    user: userId,
+    onTrack: async ({ userId: producerUserId, kind, stream }) => {
+      let profile = voiceParticipants.value.find((p) => p.userId === producerUserId);
+      if (!profile) {
+        const fetched = await loadUserProfile(producerUserId);
+        profile = {
+          userId: producerUserId,
+          username: fetched?.username || "Kullanici",
+          avatar: fetched?.avatar || ""
+        };
+        upsertParticipant(profile);
+      }
+
+      const entry = participantStreams.get(producerUserId) || {};
+      if (kind === "audio") {
+        entry.audio = stream;
+        attachRemoteAudio(producerUserId, stream);
+        startSpeakingMeter(producerUserId, stream);
+      } else {
+        entry.video = stream;
+      }
+      participantStreams.set(producerUserId, entry);
+    },
+    onProducerClosed: (producerId) => {
+      // cleanup handled by timers/streams maps on leave
+    }
+  });
+
+  await startMic({
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true,
+    channelCount: 1
+  });
+};
+
+const leaveGroupCall = async () => {
+  sfuActive.value = false;
+  sfuMuted.value = false;
+  sfuDeafened.value = false;
+  sfuVideoOn.value = false;
+  sfuScreenOn.value = false;
+
+  for (const key of participantStreams.keys()) {
+    stopSpeakingMeter(key);
+  }
+  participantStreams.clear();
+  for (const audio of remoteAudioEls.values()) {
+    audio.srcObject = null;
+    audio.remove();
+  }
+  remoteAudioEls.clear();
+  voiceParticipants.value = [];
+  await stopSfuCall();
+};
+
+const toggleSfuMute = () => {
+  sfuMuted.value = !sfuMuted.value;
+  enableMic(!sfuMuted.value);
+  upsertParticipant({ userId, muted: sfuMuted.value });
+};
+
+const toggleSfuDeafen = () => {
+  sfuDeafened.value = !sfuDeafened.value;
+  for (const audio of remoteAudioEls.values()) {
+    audio.muted = sfuDeafened.value;
+  }
+};
+
+const toggleSfuCamera = async () => {
+  sfuVideoOn.value = !sfuVideoOn.value;
+  if (sfuVideoOn.value) await startCamera();
+  else await stopCamera();
+};
+
+const toggleSfuScreen = async () => {
+  sfuScreenOn.value = !sfuScreenOn.value;
+  if (sfuScreenOn.value) await startScreen();
+  else await stopScreen();
 };
 
 const createOffer = async () => {
@@ -730,6 +850,66 @@ const closeLightbox = () => {
 const fullAvatar = (url = "") => {
   if (!url) return "";
   return url.startsWith("http") ? url : `https://visicos-backend.onrender.com${url}`;
+};
+
+const upsertParticipant = (payload) => {
+  const idx = voiceParticipants.value.findIndex((p) => p.userId === payload.userId);
+  if (idx >= 0) {
+    voiceParticipants.value[idx] = { ...voiceParticipants.value[idx], ...payload };
+  } else {
+    voiceParticipants.value.push(payload);
+  }
+};
+
+const loadUserProfile = async (id) => {
+  try {
+    const res = await axios.get(`/api/auth/profile/${id}`);
+    return res.data;
+  } catch (err) {
+    return null;
+  }
+};
+
+const attachRemoteAudio = (userId, stream) => {
+  let audio = remoteAudioEls.get(userId);
+  if (!audio) {
+    audio = document.createElement("audio");
+    audio.autoplay = true;
+    audio.playsInline = true;
+    audio.muted = sfuDeafened.value;
+    document.body.appendChild(audio);
+    remoteAudioEls.set(userId, audio);
+  }
+  audio.srcObject = stream;
+};
+
+const startSpeakingMeter = (userId, stream) => {
+  if (!stream) return;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return;
+  const ctx = new Ctx();
+  const source = ctx.createMediaStreamSource(stream);
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 1024;
+  source.connect(analyser);
+  const data = new Float32Array(analyser.fftSize);
+  const timer = setInterval(() => {
+    analyser.getFloatTimeDomainData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i += 1) sum += data[i] * data[i];
+    const rms = Math.sqrt(sum / data.length);
+    const speaking = rms > 0.02;
+    upsertParticipant({ userId, speaking });
+  }, 120);
+  speakingTimers.set(userId, { timer, ctx });
+};
+
+const stopSpeakingMeter = (userId) => {
+  const entry = speakingTimers.get(userId);
+  if (!entry) return;
+  clearInterval(entry.timer);
+  entry.ctx.close().catch(() => {});
+  speakingTimers.delete(userId);
 };
 
 const mentionCandidates = computed(() => {
