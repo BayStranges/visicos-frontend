@@ -1,85 +1,195 @@
 <template>
   <div class="server-page">
-    <header class="server-head">
-      <button class="back-btn" @click="goBack">Back</button>
-      <div class="server-head-title">{{ server?.name || "Server" }}</div>
-    </header>
-
     <div v-if="loading" class="server-state">Loading...</div>
     <div v-else-if="error" class="server-state error">{{ error }}</div>
-    <div v-else class="server-shell">
-      <aside class="channel-panel">
-        <div class="server-card">
-          <div class="server-card-cover" :class="{ empty: !server?.cover }">
-            <img v-if="server?.cover" :src="fullAsset(server.cover)" />
-            <div v-else class="server-card-fallback">
-              {{ (server?.name || "S").slice(0, 1).toUpperCase() }}
+    <div v-else class="server-layout">
+      <aside class="servers">
+        <div class="logo" @click="goFriends">
+          <img src="/logo.png" alt="Nexora logo" />
+        </div>
+        <div
+          v-for="srv in servers"
+          :key="srv._id"
+          class="server-pill"
+          :class="{ active: srv._id === server?._id }"
+          @click="goServer(srv._id)"
+        >
+          <img v-if="srv.cover" :src="fullAsset(srv.cover)" />
+          <span v-else>{{ (srv.name || "?").slice(0, 1).toUpperCase() }}</span>
+        </div>
+        <div class="server-pill add" @click="openCreateServer">+</div>
+      </aside>
+
+      <div class="server-shell">
+        <aside class="channel-panel">
+          <div class="server-card">
+            <div class="server-card-cover" :class="{ empty: !server?.cover }">
+              <img v-if="server?.cover" :src="fullAsset(server.cover)" />
+              <div v-else class="server-card-fallback">
+                {{ (server?.name || "S").slice(0, 1).toUpperCase() }}
+              </div>
+            </div>
+            <div class="server-card-meta">
+              <div class="server-name">{{ server?.name }}</div>
             </div>
           </div>
-          <div class="server-card-meta">
-            <div class="server-name">{{ server?.name }}</div>
-            <div class="server-owner">Owner: {{ server?.owner?.username || "Unknown" }}</div>
-          </div>
-        </div>
 
-        <div class="panel-title">Kanallar</div>
-        <div class="channel-list">
-          <button
-            v-for="ch in server?.channels || []"
-            :key="ch._id"
-            class="channel-item"
-            :class="{ active: selectedChannel?._id === ch._id }"
-            @click="selectChannel(ch)"
-          >
-            <span class="channel-prefix">{{ ch.type === "voice" ? "V" : "#" }}</span>
-            <span class="channel-name">{{ ch.name }}</span>
-          </button>
-          <div v-if="!server?.channels?.length" class="channel-empty">
-            Henuz kanal yok
-          </div>
-        </div>
+          <div class="panel-title">Kategoriler</div>
+          <div class="category-list">
+            <div
+              v-for="cat in server?.categories || []"
+              :key="cat._id"
+              class="category-block"
+            >
+              <div class="category-title">{{ cat.name }}</div>
+              <div class="channel-list">
+                <div
+                  v-for="ch in channelsByCategory(cat._id)"
+                  :key="ch._id"
+                  class="channel-row"
+                >
+                  <button
+                    class="channel-item"
+                    :class="{ active: selectedChannel?._id === ch._id }"
+                    @click="selectChannel(ch)"
+                  >
+                    <span class="channel-prefix">{{ ch.type === "voice" ? "V" : "#" }}</span>
+                    <span class="channel-name">{{ ch.name }}</span>
+                  </button>
+                  <select class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
+                    <option value="">Kategorisiz</option>
+                    <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
+                      {{ c.name }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
 
-        <div class="channel-create">
-          <div class="panel-title">Kanal Olustur</div>
-          <input v-model="newChannelName" placeholder="Kanal adi" />
-          <select v-model="newChannelType">
-            <option value="text">Metin</option>
-            <option value="voice">Sesli</option>
-          </select>
-          <div v-if="channelError" class="channel-error">{{ channelError }}</div>
-          <button class="primary-btn" :disabled="creatingChannel" @click="createChannel">
-            {{ creatingChannel ? "Olusturuluyor..." : "Olustur" }}
-          </button>
-        </div>
-      </aside>
+            <div class="category-block">
+              <div class="category-title">Kategorisiz</div>
+              <div class="channel-list">
+                <div
+                  v-for="ch in channelsByCategory(null)"
+                  :key="ch._id"
+                  class="channel-row"
+                >
+                  <button
+                    class="channel-item"
+                    :class="{ active: selectedChannel?._id === ch._id }"
+                    @click="selectChannel(ch)"
+                  >
+                    <span class="channel-prefix">{{ ch.type === "voice" ? "V" : "#" }}</span>
+                    <span class="channel-name">{{ ch.name }}</span>
+                  </button>
+                  <select class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
+                    <option value="">Kategorisiz</option>
+                    <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
+                      {{ c.name }}
+                    </option>
+                  </select>
+                </div>
+                <div
+                  v-if="!channelsByCategory(null).length && !(server?.channels || []).length"
+                  class="channel-empty"
+                >
+                  Henuz kanal yok
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <main class="channel-main">
-        <div v-if="selectedChannel" class="channel-header">
-          <div class="channel-title">
-            <span class="channel-prefix">{{ selectedChannel.type === "voice" ? "V" : "#" }}</span>
-            {{ selectedChannel.name }}
+          <div class="channel-create">
+            <div class="panel-title">Kategori Olustur</div>
+            <input v-model="newCategoryName" placeholder="Kategori adi" />
+            <div v-if="categoryError" class="channel-error">{{ categoryError }}</div>
+            <button class="primary-btn" :disabled="creatingCategory" @click="createCategory">
+              {{ creatingCategory ? "Olusturuluyor..." : "Olustur" }}
+            </button>
           </div>
-          <div class="channel-type">
-            {{ selectedChannel.type === "voice" ? "Sesli Kanal" : "Metin Kanal" }}
-          </div>
-        </div>
-        <div v-else class="channel-placeholder">
-          Bir kanal sec
-        </div>
-      </main>
 
-      <aside class="members-panel">
-        <div class="panel-title">Aktif Kullanicilar</div>
-        <div v-if="!server?.members?.length" class="channel-empty">Kimse yok</div>
-        <div v-for="u in server?.members || []" :key="u._id" class="member-row">
-          <div class="member-avatar">
-            <img v-if="u.avatar" :src="fullAsset(u.avatar)" />
-            <span v-else>{{ (u.username || "?").slice(0, 1).toUpperCase() }}</span>
+          <div class="channel-create">
+            <div class="panel-title">Kanal Olustur</div>
+            <input v-model="newChannelName" placeholder="Kanal adi" />
+            <select v-model="newChannelType">
+              <option value="text">Metin</option>
+              <option value="voice">Sesli</option>
+            </select>
+            <select v-model="newChannelCategoryId">
+              <option value="">Kategorisiz</option>
+              <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
+                {{ c.name }}
+              </option>
+            </select>
+            <div v-if="channelError" class="channel-error">{{ channelError }}</div>
+            <button class="primary-btn" :disabled="creatingChannel" @click="createChannel">
+              {{ creatingChannel ? "Olusturuluyor..." : "Olustur" }}
+            </button>
           </div>
-          <div class="member-name">{{ u.username }}</div>
-        </div>
-      </aside>
+        </aside>
+
+        <main class="channel-main">
+          <div v-if="selectedChannel" class="channel-header">
+            <div class="channel-title">
+              <span class="channel-prefix">{{ selectedChannel.type === "voice" ? "V" : "#" }}</span>
+              {{ selectedChannel.name }}
+            </div>
+            <div class="channel-type">
+              {{ selectedChannel.type === "voice" ? "Sesli Kanal" : "Metin Kanal" }}
+            </div>
+          </div>
+          <div v-else class="channel-placeholder">
+            Bir kanal sec
+          </div>
+        </main>
+
+        <aside class="members-panel">
+          <div class="panel-title">Aktif Kullanicilar</div>
+          <div v-if="!server?.members?.length" class="channel-empty">Kimse yok</div>
+          <div v-for="u in server?.members || []" :key="u._id" class="member-row">
+            <div class="member-avatar">
+              <img v-if="u.avatar" :src="fullAsset(u.avatar)" />
+              <span v-else>{{ (u.username || "?").slice(0, 1).toUpperCase() }}</span>
+            </div>
+            <div class="member-name">{{ u.username }}</div>
+          </div>
+        </aside>
+      </div>
     </div>
+
+    <transition name="fade">
+      <div v-if="serverModalOpen" class="server-modal" @click="closeCreateServer">
+        <div class="server-card modal-card" @click.stop>
+          <div class="server-card-head">
+            <div class="server-title">Sunucu Olustur</div>
+            <button class="modal-close" @click="closeCreateServer">X</button>
+          </div>
+          <div class="server-field">
+            <label>Sunucu adi</label>
+            <input v-model="serverName" placeholder="Sunucu adi" />
+          </div>
+          <div class="server-field">
+            <label>Kapak</label>
+            <input type="file" accept="image/*" @change="onServerCoverChange" />
+            <input
+              v-model="serverCover"
+              placeholder="Kapak URL (opsiyonel)"
+              @input="onServerCoverUrlInput"
+            />
+          </div>
+          <div v-if="serverCoverPreview" class="server-cover-preview">
+            <img :src="serverCoverPreview" alt="Sunucu kapak" />
+          </div>
+          <div v-if="serverError" class="server-error">{{ serverError }}</div>
+          <div class="server-actions">
+            <button class="ghost-btn" @click="closeCreateServer">Iptal</button>
+            <button class="primary-btn" :disabled="creatingServer" @click="createServer">
+              {{ creatingServer ? "Olusturuluyor..." : "Olustur" }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -94,13 +204,26 @@ const router = useRouter();
 const userStore = useUserStore();
 
 const server = ref(null);
+const servers = ref([]);
 const loading = ref(true);
 const error = ref("");
 const selectedChannel = ref(null);
 const newChannelName = ref("");
 const newChannelType = ref("text");
+const newChannelCategoryId = ref("");
 const channelError = ref("");
 const creatingChannel = ref(false);
+const newCategoryName = ref("");
+const categoryError = ref("");
+const creatingCategory = ref(false);
+const serverModalOpen = ref(false);
+const serverName = ref("");
+const serverCover = ref("");
+const serverCoverFile = ref(null);
+const serverCoverPreview = ref("");
+const serverError = ref("");
+const creatingServer = ref(false);
+let coverObjectUrl = "";
 
 const fullAsset = (url = "") => {
   if (!url) return "";
@@ -123,8 +246,25 @@ const loadServer = async () => {
   }
 };
 
+const loadServers = async () => {
+  const userId = userStore.user?._id;
+  if (!userId) return;
+  try {
+    const res = await axios.get(`/api/servers/list/${userId}`);
+    servers.value = res.data || [];
+  } catch (err) {
+    servers.value = [];
+  }
+};
+
 const selectChannel = (ch) => {
   selectedChannel.value = ch;
+};
+
+const channelsByCategory = (categoryId) => {
+  const list = server.value?.channels || [];
+  if (!categoryId) return list.filter((ch) => !ch.categoryId);
+  return list.filter((ch) => ch.categoryId?.toString() === categoryId?.toString());
 };
 
 const createChannel = async () => {
@@ -137,11 +277,13 @@ const createChannel = async () => {
   try {
     const res = await axios.post(`/api/servers/${route.params.id}/channels`, {
       name: newChannelName.value.trim(),
-      type: newChannelType.value
+      type: newChannelType.value,
+      categoryId: newChannelCategoryId.value || null
     });
     server.value.channels = [...(server.value.channels || []), res.data];
     selectedChannel.value = res.data;
     newChannelName.value = "";
+    newChannelCategoryId.value = "";
   } catch (err) {
     channelError.value = err?.response?.data?.message || "Kanal olusturulamadi";
   } finally {
@@ -149,13 +291,133 @@ const createChannel = async () => {
   }
 };
 
-const goBack = () => router.push("/friends");
+const moveChannel = async (channel, event) => {
+  const value = event.target.value || null;
+  try {
+    const res = await axios.patch(
+      `/api/servers/${route.params.id}/channels/${channel._id}`,
+      { categoryId: value || null }
+    );
+    const idx = server.value.channels.findIndex((ch) => ch._id === channel._id);
+    if (idx >= 0) server.value.channels[idx] = res.data;
+    if (selectedChannel.value?._id === channel._id) {
+      selectedChannel.value = res.data;
+    }
+  } catch (err) {
+    channelError.value = err?.response?.data?.message || "Kanal tasinamadi";
+  }
+};
+
+const createCategory = async () => {
+  if (!newCategoryName.value.trim()) {
+    categoryError.value = "Kategori adi gerekli";
+    return;
+  }
+  categoryError.value = "";
+  creatingCategory.value = true;
+  try {
+    const res = await axios.post(`/api/servers/${route.params.id}/categories`, {
+      name: newCategoryName.value.trim()
+    });
+    server.value.categories = [...(server.value.categories || []), res.data];
+    newCategoryName.value = "";
+  } catch (err) {
+    categoryError.value = err?.response?.data?.message || "Kategori olusturulamadi";
+  } finally {
+    creatingCategory.value = false;
+  }
+};
+
+const openCreateServer = () => {
+  serverError.value = "";
+  serverName.value = "";
+  serverCover.value = "";
+  serverCoverFile.value = null;
+  if (coverObjectUrl) {
+    URL.revokeObjectURL(coverObjectUrl);
+    coverObjectUrl = "";
+  }
+  serverCoverPreview.value = "";
+  serverModalOpen.value = true;
+};
+
+const closeCreateServer = () => {
+  serverModalOpen.value = false;
+  serverError.value = "";
+  if (coverObjectUrl) {
+    URL.revokeObjectURL(coverObjectUrl);
+    coverObjectUrl = "";
+  }
+};
+
+const onServerCoverChange = (event) => {
+  const file = event.target.files?.[0];
+  if (coverObjectUrl) {
+    URL.revokeObjectURL(coverObjectUrl);
+    coverObjectUrl = "";
+  }
+  if (!file) {
+    serverCoverFile.value = null;
+    serverCoverPreview.value = fullAsset(serverCover.value.trim());
+    return;
+  }
+  serverCoverFile.value = file;
+  coverObjectUrl = URL.createObjectURL(file);
+  serverCoverPreview.value = coverObjectUrl;
+};
+
+const onServerCoverUrlInput = () => {
+  if (!serverCoverFile.value) {
+    serverCoverPreview.value = fullAsset(serverCover.value.trim());
+  }
+};
+
+const createServer = async () => {
+  const ownerId = userStore.user?._id;
+  if (!serverName.value.trim()) {
+    serverError.value = "Sunucu adi gerekli";
+    return;
+  }
+  if (!ownerId) {
+    serverError.value = "Kullanici bulunamadi";
+    return;
+  }
+  serverError.value = "";
+  creatingServer.value = true;
+  try {
+    let coverUrl = serverCover.value.trim();
+    if (serverCoverFile.value) {
+      const form = new FormData();
+      form.append("file", serverCoverFile.value);
+      const uploadRes = await axios.post("/api/upload", form, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      coverUrl = uploadRes.data?.url || "";
+    }
+    const res = await axios.post("/api/servers", {
+      name: serverName.value.trim(),
+      cover: coverUrl,
+      ownerId
+    });
+    await loadServers();
+    closeCreateServer();
+    router.push(`/server/${res.data._id}`);
+  } catch (err) {
+    serverError.value = err?.response?.data?.message || "Sunucu olusturulamadi";
+  } finally {
+    creatingServer.value = false;
+  }
+};
+
+const goServer = (id) => router.push(`/server/${id}`);
+const goFriends = () => router.push("/friends");
 
 onMounted(() => {
   if (!userStore.user) {
     router.push("/login");
     return;
   }
+  loadServers();
   loadServer();
 });
 
@@ -164,6 +426,7 @@ watch(
   () => {
     selectedChannel.value = null;
     loadServer();
+    loadServers();
   }
 );
 </script>
@@ -177,30 +440,6 @@ watch(
   flex-direction: column;
 }
 
-.server-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-elev);
-}
-
-.back-btn {
-  background: #1f1f1f;
-  border: 1px solid var(--border-strong);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.server-head-title {
-  font-size: 16px;
-  font-weight: 700;
-}
-
 .server-state {
   padding: 20px;
   color: var(--text-muted);
@@ -208,6 +447,79 @@ watch(
 
 .server-state.error {
   color: #ff9a9a;
+}
+
+.server-layout {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  min-height: 100vh;
+}
+
+.servers {
+  background: var(--bg-elev);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 12px;
+}
+
+.logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, var(--accent-strong), var(--accent));
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 20px;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.server-pill {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--accent-dark);
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  overflow: hidden;
+}
+
+.server-pill img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.server-pill:hover {
+  background: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+.server-pill.active {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 2px rgba(247, 201, 72, 0.35);
+}
+
+.server-pill.add {
+  background: #1f1f1f;
+  color: var(--accent);
+  border: 1px dashed var(--border-soft);
 }
 
 .server-shell {
@@ -238,6 +550,11 @@ watch(
   border-radius: 12px;
   background: var(--bg-elev-2);
   border: 1px solid var(--border);
+}
+
+.server-card.modal-card {
+  background: #2a2b30;
+  border: 1px solid #35363b;
 }
 
 .server-card-cover {
@@ -276,11 +593,6 @@ watch(
   font-weight: 700;
 }
 
-.server-owner {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
 .panel-title {
   font-size: 12px;
   text-transform: uppercase;
@@ -288,11 +600,34 @@ watch(
   color: var(--text-muted);
 }
 
+.category-list {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.category-block {
+  display: grid;
+  gap: 6px;
+}
+
+.category-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
 .channel-list {
   display: grid;
   gap: 6px;
-  overflow-y: auto;
-  min-height: 0;
+}
+
+.channel-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: center;
 }
 
 .channel-item {
@@ -323,6 +658,15 @@ watch(
   font-size: 12px;
   color: var(--text-muted);
   padding: 6px 0;
+}
+
+.channel-move {
+  background: #1f1f22;
+  border: 1px solid #33343a;
+  border-radius: 8px;
+  padding: 4px 6px;
+  color: var(--text);
+  font-size: 11px;
 }
 
 .channel-create {
@@ -357,6 +701,21 @@ watch(
 .primary-btn:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+.ghost-btn {
+  background: transparent;
+  border: 1px solid #3a3b41;
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ghost-btn:hover {
+  color: var(--text-strong);
+  border-color: #4a4b52;
 }
 
 .channel-main {
@@ -429,6 +788,83 @@ watch(
   font-size: 13px;
 }
 
+.server-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+}
+
+.server-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.server-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.server-field {
+  display: grid;
+  gap: 8px;
+}
+
+.server-field label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.server-field input {
+  background: #1f1f22;
+  border: 1px solid #33343a;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+}
+
+.server-cover-preview {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #33343a;
+}
+
+.server-cover-preview img {
+  width: 100%;
+  display: block;
+  height: 160px;
+  object-fit: cover;
+}
+
+.server-error {
+  color: #ff9a9a;
+  font-size: 12px;
+}
+
+.server-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.modal-close {
+  background: transparent;
+  border: 1px solid #33343a;
+  color: var(--text-muted);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: var(--text-strong);
+  border-color: #4a4b52;
+}
+
 @media (max-width: 980px) {
   .server-shell {
     grid-template-columns: 220px 1fr;
@@ -440,12 +876,33 @@ watch(
 }
 
 @media (max-width: 720px) {
-  .server-shell {
-    grid-template-columns: 1fr;
+  .server-layout {
+    grid-template-columns: 64px 1fr;
   }
 
-  .channel-panel {
-    order: 2;
+  .server-shell {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+  }
+
+  .channel-panel,
+  .channel-main,
+  .members-panel {
+    min-width: 100%;
+    scroll-snap-align: start;
+  }
+
+  .server-shell::-webkit-scrollbar {
+    display: none;
+  }
+
+  .logo,
+  .server-pill {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
   }
 }
 </style>
