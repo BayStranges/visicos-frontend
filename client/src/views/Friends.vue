@@ -5,7 +5,16 @@
       <div class="logo">
         <img src="/logo.png" alt="Nexora logo" />
       </div>
-      <div class="server-pill add">+</div>
+      <div
+        v-for="srv in servers"
+        :key="srv._id"
+        class="server-pill"
+        @click="goServer(srv._id)"
+      >
+        <img v-if="srv.cover" :src="fullAsset(srv.cover)" />
+        <span v-else>{{ (srv.name || "?").slice(0, 1).toUpperCase() }}</span>
+      </div>
+      <div class="server-pill add" @click="openCreateServer">+</div>
     </aside>
 
     <!-- MIDDLE: DMs list -->
@@ -322,7 +331,41 @@
           </div>
           <button class="modal-close" @click="closeProfileModal">Close</button>
         </div>
-      </div>
+        </div>
+      </transition>
+
+      <transition name="fade">
+        <div v-if="serverModalOpen" class="server-modal" @click="closeCreateServer">
+          <div class="server-card" @click.stop>
+            <div class="server-card-head">
+              <div class="server-title">Sunucu Olustur</div>
+              <button class="modal-close" @click="closeCreateServer">X</button>
+            </div>
+            <div class="server-field">
+              <label>Sunucu adi</label>
+              <input v-model="serverName" placeholder="Sunucu adi" />
+            </div>
+            <div class="server-field">
+              <label>Kapak</label>
+              <input type="file" accept="image/*" @change="onServerCoverChange" />
+              <input
+                v-model="serverCover"
+                placeholder="Kapak URL (opsiyonel)"
+                @input="onServerCoverUrlInput"
+              />
+            </div>
+            <div v-if="serverCoverPreview" class="server-cover-preview">
+              <img :src="serverCoverPreview" alt="Sunucu kapak" />
+            </div>
+            <div v-if="serverError" class="server-error">{{ serverError }}</div>
+            <div class="server-actions">
+              <button class="ghost-btn" @click="closeCreateServer">Iptal</button>
+              <button class="primary-btn" :disabled="creatingServer" @click="createServer">
+                {{ creatingServer ? "Olusturuluyor..." : "Olustur" }}
+              </button>
+            </div>
+          </div>
+        </div>
       </transition>
 
     </section>
@@ -470,6 +513,7 @@ const username = ref("");
 const requests = ref([]);
 const dms = ref([]);
 const onlineUsers = ref([]);
+const servers = ref([]);
 const dmQuery = ref("");
 const dmFilter = ref("all");
 const showNotifications = ref(false);
@@ -515,6 +559,14 @@ const nicknameDraft = ref("");
 const rowTouchTimer = ref(null);
 const rowTouchPos = ref({ x: 0, y: 0 });
 const rowTouchDm = ref(null);
+const serverModalOpen = ref(false);
+const serverName = ref("");
+const serverCover = ref("");
+const serverCoverFile = ref(null);
+const serverCoverPreview = ref("");
+const serverError = ref("");
+const creatingServer = ref(false);
+let coverObjectUrl = "";
 
 const onNotificationsDocumentClick = (event) => {
   if (!showNotifications.value) return;
@@ -534,6 +586,100 @@ const toggleAddFriend = async () => {
   if (showAddFriend.value) {
     await nextTick();
     addFriendInput.value?.focus();
+  }
+};
+
+const loadServers = async () => {
+  if (!userId) return;
+  try {
+    const res = await axios.get(`/api/servers/list/${userId}`);
+    servers.value = res.data || [];
+  } catch (err) {
+    servers.value = [];
+  }
+};
+
+const goServer = (id) => {
+  router.push(`/server/${id}`);
+};
+
+const openCreateServer = () => {
+  serverError.value = "";
+  serverName.value = "";
+  serverCover.value = "";
+  serverCoverFile.value = null;
+  if (coverObjectUrl) {
+    URL.revokeObjectURL(coverObjectUrl);
+    coverObjectUrl = "";
+  }
+  serverCoverPreview.value = "";
+  serverModalOpen.value = true;
+};
+
+const closeCreateServer = () => {
+  serverModalOpen.value = false;
+  serverError.value = "";
+  if (coverObjectUrl) {
+    URL.revokeObjectURL(coverObjectUrl);
+    coverObjectUrl = "";
+  }
+};
+
+const onServerCoverChange = (event) => {
+  const file = event.target.files?.[0];
+  if (coverObjectUrl) {
+    URL.revokeObjectURL(coverObjectUrl);
+    coverObjectUrl = "";
+  }
+  if (!file) {
+    serverCoverFile.value = null;
+    serverCoverPreview.value = serverCover.value.trim();
+    return;
+  }
+  serverCoverFile.value = file;
+  coverObjectUrl = URL.createObjectURL(file);
+  serverCoverPreview.value = coverObjectUrl;
+};
+
+const onServerCoverUrlInput = () => {
+  if (!serverCoverFile.value) {
+    serverCoverPreview.value = fullAsset(serverCover.value.trim());
+  }
+};
+
+const createServer = async () => {
+  if (!serverName.value.trim()) {
+    serverError.value = "Sunucu adi gerekli";
+    return;
+  }
+  if (!userId) {
+    serverError.value = "Kullanici bulunamadi";
+    return;
+  }
+  serverError.value = "";
+  creatingServer.value = true;
+  try {
+    let coverUrl = serverCover.value.trim();
+    if (serverCoverFile.value) {
+      const form = new FormData();
+      form.append("file", serverCoverFile.value);
+      const uploadRes = await axios.post("/api/upload", form, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      coverUrl = uploadRes.data?.url || "";
+    }
+    const res = await axios.post("/api/servers", {
+      name: serverName.value.trim(),
+      cover: coverUrl,
+      ownerId: userId
+    });
+    await loadServers();
+    closeCreateServer();
+    router.push(`/server/${res.data._id}`);
+  } catch (err) {
+    serverError.value = err?.response?.data?.message || "Sunucu olusturulamadi";
+  } finally {
+    creatingServer.value = false;
   }
 };
 
@@ -1099,10 +1245,12 @@ const closeUserMenu = () => {
   userMenuOpen.value = false;
 };
 
-const fullAvatar = (url) => {
+const fullAsset = (url) => {
   if (!url) return "";
   return url.startsWith("http") ? url : `https://visicos-backend.onrender.com${url}`;
 };
+
+const fullAvatar = (url) => fullAsset(url);
 
 const activeUsers = computed(() => {
   const list = [];
@@ -1200,6 +1348,7 @@ onMounted(() => {
     return;
   }
 
+  loadServers();
   loadAudioPrefs();
   requestNotifications();
   loadProfilePrefs();
@@ -1236,6 +1385,7 @@ onMounted(() => {
   }, 30000);
 });
 
+
 onBeforeUnmount(() => {
   socket.off("new-message");
   socket.off("messages-read");
@@ -1257,3 +1407,85 @@ onBeforeUnmount(() => {
 
 
 
+<style scoped>
+.server-pill img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+.server-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+}
+
+.server-card {
+  width: min(420px, 92vw);
+  background: #2a2b30;
+  border: 1px solid #35363b;
+  border-radius: 16px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+
+.server-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.server-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.server-field {
+  display: grid;
+  gap: 8px;
+}
+
+.server-field label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.server-field input {
+  background: #1f1f22;
+  border: 1px solid #33343a;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+}
+
+.server-cover-preview {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #33343a;
+}
+
+.server-cover-preview img {
+  width: 100%;
+  display: block;
+  height: 160px;
+  object-fit: cover;
+}
+
+.server-error {
+  color: #ff9a9a;
+  font-size: 12px;
+}
+
+.server-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+</style>

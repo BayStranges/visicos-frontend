@@ -3,6 +3,7 @@ import Login from "../views/Login.vue";
 import Register from "../views/Register.vue";
 import DM from "../views/DM.vue";
 import Friends from "../views/Friends.vue";
+import Server from "../views/Server.vue";
 
 const routes = [
   { path: "/login", component: Login },
@@ -10,7 +11,8 @@ const routes = [
   { path: "/", redirect: "/friends" },
   { path: "/dm/:id", component: DM, meta: { requiresAuth: true } },
   { path: "/friends", component: Friends, meta: { requiresAuth: true } },
-  { path: "/profile", component: () => import("../views/Profile.vue"), meta: { requiresAuth: true } }
+  { path: "/profile", component: () => import("../views/Profile.vue"), meta: { requiresAuth: true } },
+  { path: "/server/:id", component: Server, meta: { requiresAuth: true } }
 ];
 
 const isElectron = typeof navigator !== "undefined" && /Electron/i.test(navigator.userAgent || "");
