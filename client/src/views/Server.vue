@@ -22,78 +22,140 @@
 
       <div class="server-shell">
         <aside class="channel-panel">
-          <div class="server-card">
-            <div class="server-card-cover" :class="{ empty: !server?.cover }">
-              <img v-if="server?.cover" :src="fullAsset(server.cover)" />
-              <div v-else class="server-card-fallback">
-                {{ (server?.name || "S").slice(0, 1).toUpperCase() }}
-              </div>
+          <div class="server-header">
+            <div class="server-header-title">{{ server?.name }}</div>
+            <button class="server-drop">v</button>
+          </div>
+
+          <div class="channel-section">
+            <div class="section-header">
+              <span>Metin Kanallari</span>
+              <button class="section-btn" @click="openChannelCreate('text')">+</button>
             </div>
-            <div class="server-card-meta">
-              <div class="server-name">{{ server?.name }}</div>
+            <div class="category-list">
+              <div
+                v-for="cat in server?.categories || []"
+                :key="cat._id"
+                class="category-block"
+              >
+                <div class="category-title">{{ cat.name }}</div>
+                <div class="channel-list">
+                  <div
+                    v-for="ch in channelsByCategoryAndType(cat._id, 'text')"
+                    :key="ch._id"
+                    class="channel-row"
+                  >
+                    <button
+                      class="channel-item"
+                      :class="{ active: selectedChannel?._id === ch._id }"
+                      @click="selectChannel(ch)"
+                    >
+                      <span class="channel-prefix">#</span>
+                      <span class="channel-name">{{ ch.name }}</span>
+                    </button>
+                    <select class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
+                      <option value="">Kategorisiz</option>
+                      <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
+                        {{ c.name }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div class="category-block">
+                <div class="category-title">Kategorisiz</div>
+                <div class="channel-list">
+                  <div
+                    v-for="ch in channelsByCategoryAndType(null, 'text')"
+                    :key="ch._id"
+                    class="channel-row"
+                  >
+                    <button
+                      class="channel-item"
+                      :class="{ active: selectedChannel?._id === ch._id }"
+                      @click="selectChannel(ch)"
+                    >
+                      <span class="channel-prefix">#</span>
+                      <span class="channel-name">{{ ch.name }}</span>
+                    </button>
+                    <select class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
+                      <option value="">Kategorisiz</option>
+                      <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
+                        {{ c.name }}
+                      </option>
+                    </select>
+                  </div>
+                  <div
+                    v-if="!channelsByCategoryAndType(null, 'text').length && !channelsByCategoryAndType(null, 'voice').length && !(server?.channels || []).length"
+                    class="channel-empty"
+                  >
+                    Henuz kanal yok
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="panel-title">Kategoriler</div>
-          <div class="category-list">
-            <div
-              v-for="cat in server?.categories || []"
-              :key="cat._id"
-              class="category-block"
-            >
-              <div class="category-title">{{ cat.name }}</div>
-              <div class="channel-list">
-                <div
-                  v-for="ch in channelsByCategory(cat._id)"
-                  :key="ch._id"
-                  class="channel-row"
-                >
-                  <button
-                    class="channel-item"
-                    :class="{ active: selectedChannel?._id === ch._id }"
-                    @click="selectChannel(ch)"
+          <div class="channel-section">
+            <div class="section-header">
+              <span>Ses Kanallari</span>
+              <button class="section-btn" @click="openChannelCreate('voice')">+</button>
+            </div>
+            <div class="category-list">
+              <div
+                v-for="cat in server?.categories || []"
+                :key="cat._id"
+                class="category-block"
+              >
+                <div class="category-title">{{ cat.name }}</div>
+                <div class="channel-list">
+                  <div
+                    v-for="ch in channelsByCategoryAndType(cat._id, 'voice')"
+                    :key="ch._id"
+                    class="channel-row"
                   >
-                    <span class="channel-prefix">{{ ch.type === "voice" ? "V" : "#" }}</span>
-                    <span class="channel-name">{{ ch.name }}</span>
-                  </button>
-                  <select class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
-                    <option value="">Kategorisiz</option>
-                    <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
-                      {{ c.name }}
-                    </option>
-                  </select>
+                    <button
+                      class="channel-item"
+                      :class="{ active: selectedChannel?._id === ch._id }"
+                      @click="selectChannel(ch)"
+                    >
+                      <span class="channel-prefix">V</span>
+                      <span class="channel-name">{{ ch.name }}</span>
+                    </button>
+                    <select class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
+                      <option value="">Kategorisiz</option>
+                      <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
+                        {{ c.name }}
+                      </option>
+                    </select>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="category-block">
-              <div class="category-title">Kategorisiz</div>
-              <div class="channel-list">
-                <div
-                  v-for="ch in channelsByCategory(null)"
-                  :key="ch._id"
-                  class="channel-row"
-                >
-                  <button
-                    class="channel-item"
-                    :class="{ active: selectedChannel?._id === ch._id }"
-                    @click="selectChannel(ch)"
+              <div class="category-block">
+                <div class="category-title">Kategorisiz</div>
+                <div class="channel-list">
+                  <div
+                    v-for="ch in channelsByCategoryAndType(null, 'voice')"
+                    :key="ch._id"
+                    class="channel-row"
                   >
-                    <span class="channel-prefix">{{ ch.type === "voice" ? "V" : "#" }}</span>
-                    <span class="channel-name">{{ ch.name }}</span>
-                  </button>
-                  <select class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
-                    <option value="">Kategorisiz</option>
-                    <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
-                      {{ c.name }}
-                    </option>
-                  </select>
-                </div>
-                <div
-                  v-if="!channelsByCategory(null).length && !(server?.channels || []).length"
-                  class="channel-empty"
-                >
-                  Henuz kanal yok
+                    <button
+                      class="channel-item"
+                      :class="{ active: selectedChannel?._id === ch._id }"
+                      @click="selectChannel(ch)"
+                    >
+                      <span class="channel-prefix">V</span>
+                      <span class="channel-name">{{ ch.name }}</span>
+                    </button>
+                    <select class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
+                      <option value="">Kategorisiz</option>
+                      <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
+                        {{ c.name }}
+                      </option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -110,7 +172,7 @@
 
           <div class="channel-create">
             <div class="panel-title">Kanal Olustur</div>
-            <input v-model="newChannelName" placeholder="Kanal adi" />
+            <input ref="newChannelInput" v-model="newChannelName" placeholder="Kanal adi" />
             <select v-model="newChannelType">
               <option value="text">Metin</option>
               <option value="voice">Sesli</option>
@@ -231,7 +293,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { useUserStore } from "../store/user";
@@ -263,6 +325,7 @@ const serverCoverPreview = ref("");
 const serverError = ref("");
 const creatingServer = ref(false);
 let coverObjectUrl = "";
+const newChannelInput = ref(null);
 const channelMessages = ref([]);
 const messageText = ref("");
 const messagesLoading = ref(false);
@@ -315,10 +378,22 @@ const selectChannel = (ch) => {
   }
 };
 
-const channelsByCategory = (categoryId) => {
+const channelsByCategoryAndType = (categoryId, type) => {
   const list = server.value?.channels || [];
-  if (!categoryId) return list.filter((ch) => !ch.categoryId);
-  return list.filter((ch) => ch.categoryId?.toString() === categoryId?.toString());
+  return list.filter((ch) => {
+    const sameType = ch.type === type;
+    const sameCategory = categoryId
+      ? ch.categoryId?.toString() === categoryId?.toString()
+      : !ch.categoryId;
+    return sameType && sameCategory;
+  });
+};
+
+const openChannelCreate = (type) => {
+  newChannelType.value = type;
+  nextTick(() => {
+    newChannelInput.value?.focus();
+  });
 };
 
 const cleanupAudio = () => {
@@ -705,6 +780,29 @@ watch(
   min-height: 0;
 }
 
+.server-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #1f1f22;
+  border: 1px solid #2a2a2e;
+}
+
+.server-header-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.server-drop {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+}
+
 .server-card {
   display: grid;
   gap: 10px;
@@ -760,6 +858,38 @@ watch(
   text-transform: uppercase;
   letter-spacing: 0.4px;
   color: var(--text-muted);
+}
+
+.channel-section {
+  display: grid;
+  gap: 8px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+}
+
+.section-btn {
+  background: transparent;
+  border: 1px solid #2a2a2e;
+  color: var(--text-muted);
+  border-radius: 6px;
+  width: 20px;
+  height: 20px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.section-btn:hover {
+  color: var(--text-strong);
+  border-color: #3a3a3f;
 }
 
 .category-list {
