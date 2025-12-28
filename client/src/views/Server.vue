@@ -904,6 +904,8 @@ watch(
   gap: 10px;
   overflow-y: auto;
   min-height: 0;
+  flex: 1;
+  padding-bottom: 8px;
 }
 
 .channel-message {
@@ -949,6 +951,10 @@ watch(
   display: flex;
   gap: 8px;
   align-items: center;
+  position: sticky;
+  bottom: 0;
+  padding-top: 8px;
+  background: var(--bg-elev-2);
 }
 
 .channel-input input {
@@ -995,12 +1001,11 @@ watch(
 }
 
 .member-row {
-  display: grid;
-  grid-template-columns: 32px 1fr;
-  gap: 8px;
+  display: flex;
   align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px solid #1b1b1f;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 10px;
 }
 
 .member-row:last-child {
@@ -1008,8 +1013,8 @@ watch(
 }
 
 .member-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #1f1f22;
   display: grid;
@@ -1017,6 +1022,7 @@ watch(
   color: var(--accent);
   font-weight: 700;
   overflow: hidden;
+  position: relative;
 }
 
 .member-avatar img {
@@ -1027,6 +1033,24 @@ watch(
 
 .member-name {
   font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.member-row:hover {
+  background: #1f1f22;
+}
+
+.member-avatar::after {
+  content: "";
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2ecc71;
+  border: 2px solid var(--bg-elev);
 }
 
 .server-modal {
