@@ -993,10 +993,7 @@ const closeLightbox = () => {
   lightbox.value.src = null;
 };
 
-const fullAvatar = (url = "") => {
-  if (!url) return "";
-  return url.startsWith("http") ? url : `https://visicos-backend.onrender.com${url}`;
-};
+const fullAvatar = (url = "") => fullAsset(url);
 
 const upsertParticipant = (payload) => {
   const idx = voiceParticipants.value.findIndex((p) => p.userId === payload.userId);
@@ -1572,5 +1569,6 @@ onBeforeUnmount(() => {
   cursor: default;
 }
 </style>
+
 
 
