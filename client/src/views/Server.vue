@@ -138,6 +138,43 @@
               {{ selectedChannel.type === "voice" ? "Sesli Kanal" : "Metin Kanal" }}
             </div>
           </div>
+          <div v-if="selectedChannel && selectedChannel.type === 'text'" class="channel-chat">
+            <div v-if="messagesLoading" class="channel-empty">Yukleniyor...</div>
+            <div v-else-if="!channelMessages.length" class="channel-empty">Henuz mesaj yok</div>
+            <div v-else class="channel-messages">
+              <div v-for="msg in channelMessages" :key="msg._id" class="channel-message">
+                <div class="message-avatar">
+                  <img v-if="msg.sender?.avatar" :src="fullAsset(msg.sender.avatar)" />
+                  <span v-else>{{ (msg.sender?.username || "?").slice(0, 1).toUpperCase() }}</span>
+                </div>
+                <div class="message-body">
+                  <div class="message-meta">{{ msg.sender?.username || "User" }}</div>
+                  <div class="message-text">{{ msg.content }}</div>
+                </div>
+              </div>
+            </div>
+            <div class="channel-input">
+              <input
+                v-model="messageText"
+                placeholder="Mesaj yaz..."
+                @keydown.enter.prevent="sendChannelMessage"
+              />
+              <button class="primary-btn" @click="sendChannelMessage">Gonder</button>
+            </div>
+          </div>
+          <div v-else-if="selectedChannel && selectedChannel.type === 'voice'" class="voice-panel">
+            <div class="voice-info">
+              {{ voiceConnected && voiceChannelId === selectedChannel._id
+                ? "Baglisin"
+                : "Sesli kanala baglan" }}
+            </div>
+            <button
+              class="primary-btn"
+              @click="voiceConnected && voiceChannelId === selectedChannel._id ? leaveVoiceChannel() : joinVoiceChannel(selectedChannel)"
+            >
+              {{ voiceConnected && voiceChannelId === selectedChannel._id ? "Ayril" : "Baglan" }}
+            </button>
+          </div>
           <div v-else class="channel-placeholder">
             Bir kanal sec
           </div>
@@ -194,10 +231,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { useUserStore } from "../store/user";
+import socket from "../socket";
+import { startSfuCall, stopSfuCall, startMic } from "../webrtc/sfu";
 
 const route = useRoute();
 const router = useRouter();
@@ -224,6 +263,13 @@ const serverCoverPreview = ref("");
 const serverError = ref("");
 const creatingServer = ref(false);
 let coverObjectUrl = "";
+const channelMessages = ref([]);
+const messageText = ref("");
+const messagesLoading = ref(false);
+const currentChannelId = ref("");
+const voiceConnected = ref(false);
+const voiceChannelId = ref("");
+const audioEls = new Map();
 
 const fullAsset = (url = "") => {
   if (!url) return "";
@@ -238,6 +284,9 @@ const loadServer = async () => {
     server.value = res.data;
     if (server.value?.channels?.length && !selectedChannel.value) {
       selectedChannel.value = server.value.channels[0];
+      if (selectedChannel.value?.type === "text") {
+        joinTextChannel(selectedChannel.value._id);
+      }
     }
   } catch (err) {
     error.value = err?.response?.data?.message || "Server not found";
@@ -259,12 +308,115 @@ const loadServers = async () => {
 
 const selectChannel = (ch) => {
   selectedChannel.value = ch;
+  if (ch?.type === "text") {
+    joinTextChannel(ch._id);
+  } else {
+    leaveTextChannel();
+  }
 };
 
 const channelsByCategory = (categoryId) => {
   const list = server.value?.channels || [];
   if (!categoryId) return list.filter((ch) => !ch.categoryId);
   return list.filter((ch) => ch.categoryId?.toString() === categoryId?.toString());
+};
+
+const cleanupAudio = () => {
+  for (const el of audioEls.values()) {
+    try {
+      el.pause();
+      el.srcObject = null;
+    } catch {}
+  }
+  audioEls.clear();
+};
+
+const ensureSocket = () => {
+  if (!socket.connected) socket.connect();
+};
+
+const loadChannelMessages = async (channelId) => {
+  messagesLoading.value = true;
+  try {
+    const res = await axios.get(
+      `/api/servers/${route.params.id}/channels/${channelId}/messages?limit=200`
+    );
+    channelMessages.value = res.data || [];
+  } catch (err) {
+    channelMessages.value = [];
+  } finally {
+    messagesLoading.value = false;
+  }
+};
+
+const joinTextChannel = async (channelId) => {
+  if (!channelId) return;
+  ensureSocket();
+  if (currentChannelId.value && currentChannelId.value !== channelId) {
+    socket.emit("leave-channel", { channelId: currentChannelId.value });
+  }
+  currentChannelId.value = channelId;
+  socket.emit("join-channel", { channelId, userId: userStore.user?._id });
+  await loadChannelMessages(channelId);
+};
+
+const leaveTextChannel = () => {
+  if (currentChannelId.value) {
+    socket.emit("leave-channel", { channelId: currentChannelId.value });
+  }
+  currentChannelId.value = "";
+  channelMessages.value = [];
+};
+
+const sendChannelMessage = () => {
+  const content = messageText.value.trim();
+  if (!content || !selectedChannel.value) return;
+  ensureSocket();
+  socket.emit("send-channel-message", {
+    serverId: route.params.id,
+    channelId: selectedChannel.value._id,
+    senderId: userStore.user?._id,
+    content
+  });
+  messageText.value = "";
+};
+
+const handleChannelMessage = (message) => {
+  if (!message?.channel) return;
+  if (message.channel.toString() !== currentChannelId.value) return;
+  channelMessages.value.push(message);
+};
+
+const joinVoiceChannel = async (channel) => {
+  if (!channel) return;
+  if (voiceConnected.value && voiceChannelId.value === channel._id) return;
+  if (voiceConnected.value) {
+    await leaveVoiceChannel();
+  }
+  voiceConnected.value = true;
+  voiceChannelId.value = channel._id;
+  await startSfuCall({
+    room: channel._id,
+    user: userStore.user?._id,
+    onTrack: ({ userId, stream }) => {
+      const key = `${userId}-${channel._id}-${stream.id}`;
+      if (audioEls.has(key)) return;
+      const audio = document.createElement("audio");
+      audio.autoplay = true;
+      audio.srcObject = stream;
+      audioEls.set(key, audio);
+    },
+    onProducerClosed: () => {}
+  });
+  await startMic();
+};
+
+const leaveVoiceChannel = async () => {
+  if (!voiceConnected.value) return;
+  voiceConnected.value = false;
+  voiceChannelId.value = "";
+  cleanupAudio();
+  await stopSfuCall();
 };
 
 const createChannel = async () => {
@@ -417,13 +569,23 @@ onMounted(() => {
     router.push("/login");
     return;
   }
+  ensureSocket();
+  socket.on("channel-message", handleChannelMessage);
   loadServers();
   loadServer();
+});
+
+onBeforeUnmount(() => {
+  socket.off("channel-message", handleChannelMessage);
+  leaveTextChannel();
+  leaveVoiceChannel();
 });
 
 watch(
   () => route.params.id,
   () => {
+    leaveTextChannel();
+    leaveVoiceChannel();
     selectedChannel.value = null;
     loadServer();
     loadServers();
@@ -727,6 +889,85 @@ watch(
   flex-direction: column;
   gap: 12px;
   min-height: 0;
+}
+
+.channel-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  flex: 1;
+}
+
+.channel-messages {
+  display: grid;
+  gap: 10px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.channel-message {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.message-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #1f1f22;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.message-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.message-body {
+  display: grid;
+  gap: 4px;
+}
+
+.message-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.message-text {
+  font-size: 14px;
+}
+
+.channel-input {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.channel-input input {
+  flex: 1;
+  background: #1f1f22;
+  border: 1px solid #33343a;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--text);
+}
+
+.voice-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.voice-info {
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 .channel-header {

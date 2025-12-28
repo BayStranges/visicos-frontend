@@ -17,6 +17,7 @@
     </aside>
 
     <div class="dm-wrapper" :class="darkMode">
+      <audio ref="ringtoneAudio" src="/zilsesi.mp3" preload="auto" loop></audio>
 
     <!-- HEADER -->
     <div class="dm-header">
@@ -468,6 +469,7 @@ const fullAsset = (url = "") => {
 const messages = ref([]);
 const text = ref("");
 const inputRef = ref(null);
+const ringtoneAudio = ref(null);
 const mentionOpen = ref(false);
 const mentionQuery = ref("");
 const mentionIndex = ref(0);
@@ -569,6 +571,10 @@ const hangUp = () => {
   callStartAt.value = 0;
   logVoice("hangUp");
   closeVoice();
+  if (ringtoneAudio.value) {
+    ringtoneAudio.value.pause();
+    ringtoneAudio.value.currentTime = 0;
+  }
   inCall.value = false;
   muted.value = false;
   callStatus.value = "hazýr";
@@ -1284,6 +1290,20 @@ watch(
   () => updateOverlayState(),
   { immediate: true }
 );
+watch(
+  ringing,
+  (value) => {
+    const audio = ringtoneAudio.value;
+    if (!audio) return;
+    if (value) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  }
+);
 
 
 /* ================= MOUNT ================= */
@@ -1425,6 +1445,10 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   clearOverlayState();
   closeVoice();
+  if (ringtoneAudio.value) {
+    ringtoneAudio.value.pause();
+    ringtoneAudio.value.currentTime = 0;
+  }
 
   socket.off("receive-message");
   socket.off("typing");
@@ -1569,6 +1593,10 @@ onBeforeUnmount(() => {
   cursor: default;
 }
 </style>
+
+
+
+
 
 
 
