@@ -8,8 +8,13 @@ import { createPinia } from "pinia";
 import { useUserStore } from "./store/user";
 import { useDmStore } from "./store/dm";
 import { initPushNotifications } from "./push";
+import { API_BASE_URL } from "./config";
 
-axios.defaults.baseURL = "https://visicos-backend.onrender.com";
+axios.defaults.baseURL = API_BASE_URL;
+const bootToken = localStorage.getItem("token");
+if (bootToken) {
+  axios.defaults.headers.common.Authorization = `Bearer ${bootToken}`;
+}
 
 const app = createApp(App);
 

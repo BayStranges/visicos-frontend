@@ -494,6 +494,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed, nextTick } from "vue";
 import axios from "axios";
+import { ASSET_BASE_URL } from "../config";
 import { useRouter } from "vue-router";
 import { useUserStore } from "../store/user";
 import socket from "../socket";
@@ -1247,7 +1248,7 @@ const closeUserMenu = () => {
 
 const fullAsset = (url) => {
   if (!url) return "";
-  return url.startsWith("http") ? url : `https://visicos-backend.onrender.com${url}`;
+  return url.startsWith("http") ? url : `${ASSET_BASE_URL}${url}`;
 };
 
 const fullAvatar = (url) => fullAsset(url);

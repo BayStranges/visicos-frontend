@@ -1,19 +1,40 @@
 import { defineStore } from "pinia";
+import axios from "axios";
 
 export const useUserStore = defineStore("user", {
   state: () => ({
-    user: JSON.parse(localStorage.getItem("user")) || null
+    user: JSON.parse(localStorage.getItem("user")) || null,
+    token: localStorage.getItem("token") || null
   }),
 
   actions: {
-    setUser(user) {
+    setUser(user, token) {
       this.user = user;
       localStorage.setItem("user", JSON.stringify(user));
+      if (token) {
+        this.token = token;
+        localStorage.setItem("token", token);
+        axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+      }
+    },
+
+    setToken(token) {
+      this.token = token;
+      if (token) {
+        localStorage.setItem("token", token);
+        axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+      } else {
+        localStorage.removeItem("token");
+        delete axios.defaults.headers.common.Authorization;
+      }
     },
 
     logout() {
       this.user = null;
+      this.token = null;
       localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      delete axios.defaults.headers.common.Authorization;
     }
   }
 });

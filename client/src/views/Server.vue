@@ -296,6 +296,7 @@
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
+import { ASSET_BASE_URL } from "../config";
 import { useUserStore } from "../store/user";
 import socket from "../socket";
 import { startSfuCall, stopSfuCall, startMic } from "../webrtc/sfu";
@@ -336,7 +337,7 @@ const audioEls = new Map();
 
 const fullAsset = (url = "") => {
   if (!url) return "";
-  return url.startsWith("http") ? url : `https://visicos-backend.onrender.com${url}`;
+  return url.startsWith("http") ? url : `${ASSET_BASE_URL}${url}`;
 };
 
 const loadServer = async () => {

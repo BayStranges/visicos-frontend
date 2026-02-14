@@ -299,6 +299,7 @@
 import { ref, onMounted, onBeforeUnmount, nextTick, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
+import { ASSET_BASE_URL } from "../config";
 import socket from "../socket";
 import { useUserStore } from "../store/user";
 import { initVoice, getPC, closeVoice } from "../webrtc/voice";
@@ -464,7 +465,7 @@ const createServer = async () => {
 
 const fullAsset = (url = "") => {
   if (!url) return "";
-  return url.startsWith("http") ? url : `https://visicos-backend.onrender.com${url}`;
+  return url.startsWith("http") ? url : `${ASSET_BASE_URL}${url}`;
 };
 const messages = ref([]);
 const text = ref("");
@@ -983,7 +984,7 @@ const extractFileName = (content = "") => {
 
 const extractImageUrl = (content = "") => {
   const match = content.match(/(\/uploads\/\S+)/);
-  return match ? `https://visicos-backend.onrender.com${match[1]}` : "";
+  return match ? `${ASSET_BASE_URL}${match[1]}` : "";
 };
 
 const openFile = (content) => window.open(extractImageUrl(content), "_blank");
@@ -1400,7 +1401,7 @@ onMounted(async () => {
     ringing.value = false;
     callAccepted.value = false;
     pendingOffer.value = null;
-    pendingCandidates.value = [];
+    pendingRemoteCandidates.value = [];
   });
 
   socket.on("call-accepted", async () => {

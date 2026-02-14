@@ -718,6 +718,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from "vue";
 import axios from "axios";
+import { ASSET_BASE_URL } from "../config";
 import { useUserStore } from "../store/user";
 import { useRouter } from "vue-router";
 import { initPushNotifications } from "../push";
@@ -748,7 +749,7 @@ const editModalOpen = ref(false);
 const editField = ref("");
 const editValue = ref("");
 
-const mediaBaseUrl = "https://visicos-backend.onrender.com";
+const mediaBaseUrl = ASSET_BASE_URL;
 const resolveMediaUrl = (value) => {
   if (!value) return "";
   if (value.startsWith("http")) return value;
@@ -1156,7 +1157,7 @@ const onFile = async (e) => {
   loading.value = true;
   try {
     const res = await axios.post("/api/upload", form);
-    preview.value = `https://visicos-backend.onrender.com${res.data.url}`;
+    preview.value = `${ASSET_BASE_URL}${res.data.url}`;
   } finally {
     loading.value = false;
   }
@@ -1171,7 +1172,7 @@ const onBannerFile = async (e) => {
   loading.value = true;
   try {
     const res = await axios.post("/api/upload", form);
-    bannerPreview.value = `https://visicos-backend.onrender.com${res.data.url}`;
+    bannerPreview.value = `${ASSET_BASE_URL}${res.data.url}`;
   } finally {
     loading.value = false;
   }
