@@ -24,10 +24,12 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const user = JSON.parse(localStorage.getItem("user") || "null");
+  const token = localStorage.getItem("token");
 
-  if (to.meta.requiresAuth && !user) {
+  if (to.meta.requiresAuth && (!user || !token)) {
+    if (user && !token) localStorage.removeItem("user");
     next("/login");
-  } else if ((to.path === "/login" || to.path === "/register") && user) {
+  } else if ((to.path === "/login" || to.path === "/register") && user && token) {
     next("/friends");
   } else {
     next();

@@ -1190,7 +1190,7 @@ const save = async () => {
     if (preview.value) payload.avatar = preview.value;
     if (bannerPreview.value) payload.banner = bannerPreview.value;
     const res = await axios.put(`/api/auth/profile/${user._id}`, payload);
-    userStore.setUser(res.data);
+    userStore.setUser(res.data, userStore.token);
     alert("Profil guncellendi");
   } catch (e) {
     console.error(e);
@@ -1222,7 +1222,7 @@ const saveEdit = async () => {
     const payload = {};
     payload[field] = value;
     const res = await axios.put(`/api/auth/profile/${user._id}`, payload);
-    userStore.setUser(res.data);
+    userStore.setUser(res.data, userStore.token);
     displayName.value = res.data.displayName || "";
     username.value = res.data.username || "";
     email.value = res.data.email || "";

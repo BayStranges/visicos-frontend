@@ -47,7 +47,7 @@ const register = async () => {
     });
 
     // kayıt oldu → otomatik login
-    userStore.setUser(res.data);
+    userStore.setUser(user, token);
 
     socket.connect();
     socket.emit("user-online", res.data._id);

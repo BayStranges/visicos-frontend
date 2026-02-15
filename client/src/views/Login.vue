@@ -44,7 +44,7 @@ const login = async () => {
     });
 
     // 🔐 kullanıcıyı kaydet
-    userStore.setUser(res.data);
+    userStore.setUser(user, token);
 
     // 🔌 socket bağla (autoConnect:false olduğu için)
     socket.connect();
