@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import axios from "axios";
+import { setSocketAuthToken } from "../socket";
 
 export const useUserStore = defineStore("user", {
   state: () => ({
@@ -15,6 +16,7 @@ export const useUserStore = defineStore("user", {
         this.token = token;
         localStorage.setItem("token", token);
         axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+        setSocketAuthToken(token);
       }
     },
 
@@ -23,9 +25,11 @@ export const useUserStore = defineStore("user", {
       if (token) {
         localStorage.setItem("token", token);
         axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+        setSocketAuthToken(token);
       } else {
         localStorage.removeItem("token");
         delete axios.defaults.headers.common.Authorization;
+        setSocketAuthToken("");
       }
     },
 
@@ -35,6 +39,7 @@ export const useUserStore = defineStore("user", {
       localStorage.removeItem("user");
       localStorage.removeItem("token");
       delete axios.defaults.headers.common.Authorization;
+      setSocketAuthToken("");
     }
   }
 });

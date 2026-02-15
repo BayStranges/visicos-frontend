@@ -3,7 +3,7 @@ import axios from "axios";
 import App from "./App.vue";
 import "./style.css";
 import router from "./router";
-import socket from "./socket";
+import socket, { setSocketAuthToken } from "./socket";
 import { createPinia } from "pinia";
 import { useUserStore } from "./store/user";
 import { useDmStore } from "./store/dm";
@@ -14,6 +14,7 @@ axios.defaults.baseURL = API_BASE_URL;
 const bootToken = localStorage.getItem("token");
 if (bootToken) {
   axios.defaults.headers.common.Authorization = `Bearer ${bootToken}`;
+  setSocketAuthToken(bootToken);
 }
 
 const app = createApp(App);
