@@ -61,13 +61,22 @@
           </div>
         </div>
         <div class="dm-sidebar-actions">
-          <button class="dm-mini-btn" @click="toggleMute" :disabled="!inCall" title="Mikrofon">
-            {{ muted ? "Mik Ac" : "Mik Kapat" }}
+          <button class="dm-icon-btn" @click="toggleMute" :disabled="!inCall" title="Mikrofon">
+            <svg class="dm-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
+              <path d="M5 12a1 1 0 0 1 2 0 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V21a1 1 0 1 1-2 0v-2.08A7 7 0 0 1 5 12Z" />
+            </svg>
           </button>
-          <button class="dm-mini-btn danger" @click="hangUp" :disabled="!inCall" title="Aramayi bitir">
-            Bitir
+          <button class="dm-icon-btn danger" @click="hangUp" :disabled="!inCall" title="Aramayi bitir">
+            <svg class="dm-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7.2 15.4a15.2 15.2 0 0 1 9.6 0l2-2a1 1 0 0 0-.2-1.56A12.6 12.6 0 0 0 12 10a12.6 12.6 0 0 0-6.6 1.84 1 1 0 0 0-.2 1.56l2 2Z" />
+            </svg>
           </button>
-          <button class="dm-mini-btn" @click="goProfile" title="Profil">Profil</button>
+          <button class="dm-icon-btn" @click="goProfile" title="Profil">
+            <svg class="dm-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.5 3.5a6.7 6.7 0 0 0-.09-1l2.05-1.6-2-3.46-2.5 1a7.8 7.8 0 0 0-1.73-1l-.38-2.7H9.15l-.38 2.7c-.6.22-1.18.56-1.73 1l-2.5-1-2 3.46 2.05 1.6a6.7 6.7 0 0 0 0 2l-2.05 1.6 2 3.46 2.5-1c.55.44 1.13.78 1.73 1l.38 2.7h5.7l.38-2.7c.6-.22 1.18-.56 1.73-1l2.5 1 2-3.46-2.05-1.6c.06-.33.09-.66.09-1Z" />
+            </svg>
+          </button>
         </div>
       </div>
     </aside>
@@ -2035,6 +2044,10 @@ watch(
   padding: 10px;
   display: grid;
   gap: 8px;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
 }
 
 .dm-sidebar-me {
@@ -2067,31 +2080,40 @@ watch(
 }
 
 .dm-sidebar-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  display: inline-flex;
+  justify-content: flex-end;
   gap: 6px;
 }
 
-.dm-mini-btn {
+.dm-icon-btn {
   border: 1px solid rgba(112, 160, 220, 0.28);
   background: rgba(21, 37, 57, 0.78);
   color: #d4e9ff;
-  border-radius: 9px;
-  padding: 6px 8px;
-  font-size: 11px;
-  font-weight: 700;
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
 }
 
-.dm-mini-btn:disabled {
+.dm-icon-btn:disabled {
   opacity: 0.55;
   cursor: default;
 }
 
-.dm-mini-btn.danger {
+.dm-icon-btn.danger {
   border-color: rgba(201, 94, 101, 0.38);
   background: rgba(72, 28, 32, 0.72);
   color: #ffc5c8;
+}
+
+.dm-icon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
 }
 
 .call-bar {

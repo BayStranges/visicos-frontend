@@ -1567,19 +1567,22 @@ onBeforeUnmount(() => {
 
 .dm-list {
   position: relative;
-  padding-bottom: 90px !important;
+  padding-bottom: 82px !important;
 }
 
 .dm-profile {
   position: absolute !important;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   min-height: 62px;
   background: rgba(11, 18, 29, 0.95) !important;
-  border: 1px solid rgba(106, 157, 218, 0.24) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 10px 24px rgba(7, 13, 24, 0.35) !important;
+  border-top: 1px solid rgba(106, 157, 218, 0.24) !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
   padding: 10px 10px !important;
 }
 
@@ -1643,9 +1646,9 @@ onBeforeUnmount(() => {
 
 @media (max-width: 700px) {
   .dm-profile {
-    left: 6px;
-    right: 6px;
-    bottom: 6px;
+    left: 0;
+    right: 0;
+    bottom: 0;
   }
 }
 </style>
