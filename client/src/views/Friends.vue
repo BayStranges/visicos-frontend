@@ -20,39 +20,16 @@
     <!-- MIDDLE: DMs list -->
     <section class="dm-list">
       <div class="dm-header">
-        <span>Mesajlar</span>
+        <span>Direkt Mesajlar</span>
         <button class="mobile-friends-btn" @click.stop="toggleFriendsPanel">Arkadaslar</button>
       </div>
       <div class="dm-tools">
         <input
           v-model="dmQuery"
           class="dm-search"
-          placeholder="Search DMs"
+          placeholder="Sohbet bul ya da baslat"
           @click.stop
         />
-        <div class="dm-filters">
-          <button
-            class="filter-btn"
-            :class="{ active: dmFilter === 'all' }"
-            @click.stop="setFilter('all')"
-          >
-            All
-          </button>
-          <button
-            class="filter-btn"
-            :class="{ active: dmFilter === 'online' }"
-            @click.stop="setFilter('online')"
-          >
-            Online
-          </button>
-          <button
-            class="filter-btn"
-            :class="{ active: dmFilter === 'offline' }"
-            @click.stop="setFilter('offline')"
-          >
-            Offline
-          </button>
-        </div>
       </div>
       <div
         v-for="dm in filteredDms"
@@ -1569,6 +1546,23 @@ onBeforeUnmount(() => {
 .member-row:hover,
 .menu-row:hover {
   background: rgba(51, 93, 146, 0.2);
+}
+
+.dm-header {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 12px;
+  color: #a9c4e6;
+}
+
+.dm-tools {
+  padding-top: 10px;
+}
+
+.dm-search {
+  background: rgba(19, 33, 51, 0.8);
+  border-color: rgba(112, 160, 220, 0.3);
+  color: #d5e8ff;
 }
 
 .dm-list {
