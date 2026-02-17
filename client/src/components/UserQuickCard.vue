@@ -14,8 +14,6 @@
 
       <div class="quick-name">{{ username || "Kullanici" }}</div>
       <div class="quick-handle">{{ handleText }}</div>
-      <div class="quick-badge">{{ badgeText }}</div>
-
       <div class="quick-block">
         <button class="quick-row" @click="emit('editProfile')">Oyun Koleksiyonu</button>
       </div>
@@ -44,8 +42,7 @@ const props = defineProps({
   avatar: { type: String, default: "" },
   banner: { type: String, default: "" },
   isOnline: { type: Boolean, default: false },
-  dndEnabled: { type: Boolean, default: false },
-  badgeText: { type: String, default: "XRD" }
+  dndEnabled: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(["close", "editProfile", "toggleDnd", "switchAccount", "copyId"]);
@@ -88,15 +85,15 @@ const bannerStyle = computed(() =>
   position: absolute;
   left: 14px;
   top: 58px;
-  width: 70px;
-  height: 70px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   border: 5px solid #f0f1f3;
   background: #d6d9df;
   overflow: hidden;
   display: grid;
   place-items: center;
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 800;
 }
 
@@ -110,8 +107,8 @@ const bannerStyle = computed(() =>
   position: absolute;
   right: 1px;
   bottom: 2px;
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
   border: 3px solid #f0f1f3;
   background: #25b861;
@@ -122,7 +119,7 @@ const bannerStyle = computed(() =>
 }
 
 .quick-class-row {
-  padding: 8px 14px 0 94px;
+  padding: 8px 14px 0 88px;
 }
 
 .quick-class-btn {
@@ -133,11 +130,11 @@ const bannerStyle = computed(() =>
   border-radius: 999px;
   padding: 8px 10px;
   text-align: left;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .quick-name {
-  font-size: 38px;
+  font-size: 36px;
   font-weight: 900;
   line-height: 1;
   padding: 8px 14px 0;
@@ -146,19 +143,8 @@ const bannerStyle = computed(() =>
 .quick-handle {
   padding: 2px 14px 0;
   color: #656a73;
-  font-size: 30px;
+  font-size: 24px;
   font-weight: 700;
-}
-
-.quick-badge {
-  margin: 8px 14px 0;
-  display: inline-block;
-  font-size: 16px;
-  font-weight: 700;
-  background: #ececf0;
-  border: 1px solid #d1d4da;
-  border-radius: 8px;
-  padding: 2px 8px;
 }
 
 .quick-block {
@@ -176,7 +162,7 @@ const bannerStyle = computed(() =>
   background: transparent;
   color: #4f5561;
   padding: 13px 12px;
-  font-size: 28px;
+  font-size: 15px;
   cursor: pointer;
 }
 
