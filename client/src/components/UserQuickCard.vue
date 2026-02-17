@@ -5,7 +5,7 @@
       <div class="quick-avatar">
         <img v-if="avatar" :src="avatar" alt="avatar" />
         <span v-else>{{ (username || "?").slice(0, 1).toUpperCase() }}</span>
-        <span class="quick-dot" :class="{ offline: !isOnline }"></span>
+        <span class="quick-dot" :class="quickDotClass"></span>
       </div>
 
       <div class="quick-class-row">
@@ -77,6 +77,12 @@ const presenceLabel = computed(() => {
   if (props.presenceStatus === "invisible") return "Gorunmez";
   return "Cevrim ici";
 });
+const quickDotClass = computed(() => {
+  if (props.presenceStatus === "idle") return "idle";
+  if (props.presenceStatus === "dnd") return "dnd";
+  if (props.presenceStatus === "invisible") return "invisible";
+  return props.isOnline ? "online" : "offline";
+});
 
 const setPresence = (status) => {
   emit("setPresence", status);
@@ -140,11 +146,27 @@ const setPresence = (status) => {
   height: 14px;
   border-radius: 50%;
   border: 3px solid #f0f1f3;
-  background: #25b861;
+  background: #23a55a;
 }
 
 .quick-dot.offline {
-  background: #d14646;
+  background: #80848e;
+}
+
+.quick-dot.online {
+  background: #23a55a;
+}
+
+.quick-dot.idle {
+  background: #f0b232;
+}
+
+.quick-dot.dnd {
+  background: #f23f43;
+}
+
+.quick-dot.invisible {
+  background: #80848e;
 }
 
 .quick-class-row {
@@ -256,8 +278,8 @@ const setPresence = (status) => {
   display: inline-block;
 }
 
-.presence-dot.online { background: #2ea869; }
-.presence-dot.idle { background: #f0b34d; }
-.presence-dot.dnd { background: #d94b4b; }
-.presence-dot.invisible { background: #8b909b; }
+.presence-dot.online { background: #23a55a; }
+.presence-dot.idle { background: #f0b232; }
+.presence-dot.dnd { background: #f23f43; }
+.presence-dot.invisible { background: #80848e; }
 </style>

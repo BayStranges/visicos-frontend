@@ -26,6 +26,11 @@
             <div class="server-header-title">{{ server?.name }}</div>
             <button class="server-drop">v</button>
           </div>
+          <div class="server-hero">
+            <img v-if="server?.cover" :src="fullAsset(server.cover)" />
+            <div v-else class="server-hero-fallback">{{ (server?.name || "S").slice(0, 1).toUpperCase() }}</div>
+            <div class="server-hero-name">{{ server?.name }}</div>
+          </div>
           <div v-if="inviteStatus" class="invite-status">{{ inviteStatus }}</div>
 
           <div class="channel-section">
@@ -180,7 +185,10 @@
                   <span v-else>{{ (msg.sender?.username || "?").slice(0, 1).toUpperCase() }}</span>
                 </div>
                 <div class="message-body">
-                  <div class="message-meta">{{ msg.sender?.username || "User" }}</div>
+                  <div class="message-meta">
+                    <span class="message-author">{{ msg.sender?.username || "User" }}</span>
+                    <span class="message-time">{{ formatMessageTime(msg.createdAt) }}</span>
+                  </div>
                   <div class="message-text">{{ msg.content }}</div>
                 </div>
               </div>
@@ -524,6 +532,13 @@ const audioEls = new Map();
 const fullAsset = (url = "") => {
   if (!url) return "";
   return url.startsWith("http") ? url : `${ASSET_BASE_URL}${url}`;
+};
+
+const formatMessageTime = (value) => {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
 };
 
 const loadServer = async () => {
@@ -2074,15 +2089,15 @@ watch(
 <style scoped>
 .server-page,
 .server-layout {
-  --accent: #7ac2ff;
-  --accent-strong: #3b8de8;
-  --accent-dark: #102841;
-  --border: #2d4764;
-  --border-strong: #416289;
-  --border-soft: #5078a6;
-  background:
-    radial-gradient(780px 360px at 58% -20%, rgba(82, 157, 255, 0.16), transparent 62%),
-    #0c131c;
+  --accent: #5865f2;
+  --accent-strong: #7983f5;
+  --accent-dark: #24273b;
+  --border: #252832;
+  --border-strong: #2f3340;
+  --border-soft: #373c4b;
+  --text: #dbdee1;
+  --text-muted: #949ba4;
+  background: #313338;
 }
 
 .channel-panel,
@@ -2096,31 +2111,31 @@ watch(
 .channel-input input,
 .server-card,
 .server-field input {
-  border-color: rgba(99, 151, 216, 0.36) !important;
+  border-color: #252832 !important;
 }
 
 .channel-panel,
 .members-panel,
 .channel-main,
 .server-card {
-  box-shadow: 0 20px 44px rgba(7, 14, 27, 0.34);
+  box-shadow: none;
 }
 
 .channel-item.active,
 .channel-item:hover,
 .member-row:hover {
-  background: rgba(76, 130, 197, 0.2);
+  background: #404249;
 }
 
 .primary-btn {
-  background: linear-gradient(135deg, #76beff, #3a8eea) !important;
-  color: #08203b !important;
+  background: #5865f2 !important;
+  color: #fff !important;
 }
 
 .server-shell {
   gap: 0;
   padding: 0;
-  grid-template-columns: 300px 1fr 260px;
+  grid-template-columns: 280px 1fr 250px;
 }
 
 .channel-panel,
@@ -2141,16 +2156,68 @@ watch(
   position: relative;
   padding: 0 0 82px;
   overflow: hidden;
+  background: #2b2d31;
 }
 
 .server-header {
   border-left: none;
   border-right: none;
   border-top: none;
-  border-bottom: 1px solid rgba(99, 151, 216, 0.36) !important;
+  border-bottom: 1px solid #252832 !important;
   border-radius: 0;
-  background: #121b28;
+  background: #2b2d31;
   padding: 14px 16px;
+}
+
+.server-header-title {
+  color: #f2f3f5;
+}
+
+.server-drop {
+  color: #b5bac1;
+}
+
+.server-hero {
+  height: 140px;
+  margin: 0 0 8px;
+  overflow: hidden;
+  position: relative;
+  border-bottom: 1px solid #252832;
+  background: #1e1f22;
+}
+
+.server-hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.server-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 52%, rgba(0, 0, 0, 0.62) 100%);
+}
+
+.server-hero-fallback {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 44px;
+  font-weight: 800;
+  background: linear-gradient(140deg, #5865f2, #23262f);
+}
+
+.server-hero-name {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+  z-index: 1;
 }
 
 .server-header-actions {
@@ -2172,7 +2239,7 @@ watch(
 .invite-status {
   margin: 8px 12px 0;
   font-size: 12px;
-  color: #9fc6ec;
+  color: #b5bac1;
 }
 
 .server-context-menu {
@@ -2535,7 +2602,46 @@ watch(
 }
 
 .channel-section:first-of-type {
-  padding-top: 12px;
+  padding-top: 0;
+}
+
+.section-head-btn {
+  color: #949ba4;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.category-list {
+  gap: 14px;
+}
+
+.category-title {
+  color: #949ba4;
+}
+
+.category-title:hover {
+  color: #dbdee1;
+}
+
+.channel-item {
+  border-radius: 6px;
+  color: #949ba4;
+}
+
+.channel-name {
+  color: inherit;
+  font-weight: 600;
+}
+
+.channel-item.active .channel-name,
+.channel-item:hover .channel-name {
+  color: #f2f3f5;
+}
+
+.voice-channel-member {
+  color: #b5bac1;
 }
 
 .channel-header {
@@ -2543,6 +2649,9 @@ watch(
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  background: #313338;
+  border-bottom: 1px solid #252832;
+  padding: 0 16px 10px;
 }
 
 .channel-head-right {
@@ -2553,16 +2662,16 @@ watch(
 
 .channel-search {
   width: min(340px, 34vw);
-  background: #0b1420;
-  border: 1px solid rgba(99, 151, 216, 0.36);
+  background: #1e1f22;
+  border: 1px solid #1e1f22;
   border-radius: 10px;
   padding: 9px 12px;
-  color: var(--text);
+  color: #dcddde;
 }
 
 .channel-search:focus {
   outline: none;
-  border-color: rgba(122, 194, 255, 0.72);
+  border-color: #5865f2;
 }
 
 .server-userbar {
@@ -2576,8 +2685,8 @@ watch(
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  background: #121a26;
-  border-top: 1px solid rgba(99, 151, 216, 0.36);
+  background: #232428;
+  border-top: 1px solid #1d1f23;
 }
 
 .userbar-avatar {
@@ -2585,10 +2694,10 @@ watch(
   height: 36px;
   border-radius: 10px;
   overflow: hidden;
-  background: #162132;
+  background: #111214;
   display: grid;
   place-items: center;
-  color: #c8e4ff;
+  color: #f2f3f5;
   font-weight: 700;
   position: relative;
 }
@@ -2606,12 +2715,12 @@ watch(
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  border: 2px solid #121a26;
-  background: #2ecc71;
+  border: 2px solid #232428;
+  background: #23a55a;
 }
 
 .userbar-dot.offline {
-  background: #7b8796;
+  background: #80848e;
 }
 
 .userbar-meta {
@@ -2621,12 +2730,12 @@ watch(
 .userbar-name {
   font-size: 14px;
   font-weight: 700;
-  color: #d5ebff;
+  color: #fff;
 }
 
 .userbar-status {
   font-size: 11px;
-  color: #9bb8d5;
+  color: #949ba4;
 }
 
 .userbar-actions {
@@ -2638,9 +2747,9 @@ watch(
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid rgba(99, 151, 216, 0.42);
-  background: #162234;
-  color: #cbe6ff;
+  border: 1px solid #2d3138;
+  background: #2b2d31;
+  color: #b5bac1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2648,8 +2757,93 @@ watch(
 }
 
 .userbar-icon.off {
-  color: #8ea4bc;
-  background: #111b29;
+  color: #7f8289;
+  background: #1f2125;
+}
+
+.channel-main {
+  background: #313338;
+}
+
+.channel-messages {
+  gap: 2px;
+}
+
+.channel-message {
+  grid-template-columns: 42px 1fr;
+  gap: 12px;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.channel-message:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.message-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #1e1f22;
+}
+
+.message-body {
+  gap: 2px;
+}
+
+.message-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.message-author {
+  color: #f2f3f5;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.message-time {
+  color: #949ba4;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.message-text {
+  color: #dbdee1;
+  font-size: 15px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.members-panel {
+  background: #2b2d31;
+}
+
+.panel-title {
+  color: #949ba4;
+}
+
+.member-name {
+  color: #dbdee1;
+}
+
+.member-row.offline .member-name {
+  color: #949ba4;
+}
+
+.member-avatar {
+  background: #1e1f22;
+}
+
+.member-avatar::after {
+  background: #23a55a;
+  border-color: #2b2d31;
+}
+
+.member-row.offline .member-avatar::after {
+  background: #80848e;
 }
 
 .userbar-icon svg {
