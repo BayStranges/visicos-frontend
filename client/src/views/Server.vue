@@ -22,9 +22,9 @@
 
       <div class="server-shell">
         <aside class="channel-panel" @contextmenu.prevent="openServerMenu">
-          <div class="server-header">
+          <div class="server-header" @click="openServerMenuFromHeader">
             <div class="server-header-title">{{ server?.name }}</div>
-            <button class="server-drop">v</button>
+            <button class="server-drop" @click.stop="openServerMenuFromHeader">v</button>
           </div>
           <div v-if="inviteStatus" class="invite-status">{{ inviteStatus }}</div>
 
@@ -298,15 +298,52 @@
       :style="{ left: `${serverMenuPos.x}px`, top: `${serverMenuPos.y}px` }"
       @click.stop
     >
+      <button class="menu-item" :disabled="!isOwner" @click="createInviteCode">
+        <span>Sunucuya Davet Et</span>
+        <span class="menu-item-icon">+</span>
+      </button>
+      <button class="menu-item" :disabled="!isOwner" @click="openServerSettings">
+        <span>Sunucu Ayarlari</span>
+        <span class="menu-item-icon">*</span>
+      </button>
+      <button class="menu-item" :disabled="!isOwner" @click="createChannelFromMenu">
+        <span>Kanal Olustur</span>
+        <span class="menu-item-icon">+</span>
+      </button>
+      <button class="menu-item" :disabled="!isOwner" @click="createCategoryFromMenu">
+        <span>Kategori Olustur</span>
+        <span class="menu-item-icon">+</span>
+      </button>
+      <button class="menu-item" :disabled="!isOwner" @click="createEventFromMenu">
+        <span>Etkinlik Olustur</span>
+        <span class="menu-item-icon">+</span>
+      </button>
+      <button class="menu-item" @click="openAppDirectory">
+        <span>Uygulama Dizini</span>
+        <span class="menu-item-icon">o</span>
+      </button>
+      <div class="menu-divider"></div>
+      <button class="menu-item" @click="openNotificationSettings">
+        <span>Bildirim Ayarlari</span>
+        <span class="menu-item-icon">o</span>
+      </button>
+      <button class="menu-item" @click="openPrivacySettings">
+        <span>Gizlilik Ayarlari</span>
+        <span class="menu-item-icon">o</span>
+      </button>
+      <div class="menu-divider"></div>
+      <button class="menu-item" @click="editServerProfile">
+        <span>Sunucu Basina Profilini Duzenle</span>
+        <span class="menu-item-icon">/</span>
+      </button>
       <button class="menu-check" @click="toggleHideMutedChannels">
         <span>Sust. Kanallari Gizle</span>
         <span class="menu-check-box" :class="{ checked: hideMutedChannels }"></span>
       </button>
-      <div class="menu-divider"></div>
-      <button v-if="isOwner" class="menu-item" @click="createChannelFromMenu">Kanal Olustur</button>
-      <button v-if="isOwner" class="menu-item" @click="createCategoryFromMenu">Kategori Olustur</button>
-      <button v-if="isOwner" class="menu-item" @click="createInviteCode">Sunucuya Davet Et</button>
-      <button v-if="isOwner" class="menu-item danger" @click="deleteServer">Sunucuyu Sil</button>
+      <button v-if="isOwner" class="menu-item danger" @click="deleteServer">
+        <span>Sunucuyu Sil</span>
+        <span class="menu-item-icon">x</span>
+      </button>
     </div>
 
     <div
@@ -531,11 +568,21 @@ const channelDraftPrivate = ref(false);
 const channelDraftContextLabel = ref("Kategorisiz kategorisinde");
 const categoryDraftName = ref("");
 const categoryDraftPrivate = ref(false);
+const serverNotificationsMuted = ref(false);
+const serverPrivacyTight = ref(false);
+const serverProfileNick = ref("");
 const audioEls = new Map();
 
 const fullAsset = (url = "") => {
   if (!url) return "";
   return url.startsWith("http") ? url : `${ASSET_BASE_URL}${url}`;
+};
+
+const loadServerMenuPrefs = (serverId) => {
+  if (!serverId) return;
+  serverNotificationsMuted.value = localStorage.getItem(`visicos_srv_notify_${serverId}`) === "1";
+  serverPrivacyTight.value = localStorage.getItem(`visicos_srv_privacy_${serverId}`) === "1";
+  serverProfileNick.value = localStorage.getItem(`visicos_srv_nick_${serverId}`) || "";
 };
 
 const formatMessageMetaTime = (value) => {
@@ -576,6 +623,7 @@ const loadServer = async () => {
   try {
     const res = await axios.get(`/api/servers/${route.params.id}`);
     server.value = res.data;
+    loadServerMenuPrefs(server.value?._id || route.params.id);
     if (server.value?.channels?.length && !selectedChannel.value) {
       selectedChannel.value = server.value.channels[0];
       if (selectedChannel.value?.type === "text") {
@@ -765,6 +813,16 @@ const openServerMenu = (event) => {
     return;
   }
   serverMenuPos.value = { x: event.clientX, y: event.clientY };
+  serverMenuOpen.value = true;
+};
+
+const openServerMenuFromHeader = (event) => {
+  const rect = event?.currentTarget?.getBoundingClientRect?.();
+  if (rect) {
+    serverMenuPos.value = { x: Math.round(rect.left + 8), y: Math.round(rect.bottom + 6) };
+  } else {
+    serverMenuPos.value = { x: 120, y: 80 };
+  }
   serverMenuOpen.value = true;
 };
 
@@ -1258,6 +1316,85 @@ const createInviteCode = async () => {
   } catch (err) {
     inviteStatus.value = err?.response?.data?.message || "Davet olusturulamadi";
   }
+  closeServerMenu();
+};
+
+const openServerSettings = async () => {
+  if (!isOwner.value || !server.value?._id) return;
+  const nextName = window.prompt("Sunucu adi", server.value?.name || "");
+  if (nextName === null) {
+    closeServerMenu();
+    return;
+  }
+  const trimmed = nextName.trim();
+  if (!trimmed) {
+    closeServerMenu();
+    return;
+  }
+  try {
+    const res = await axios.patch(`/api/servers/${server.value._id}`, { name: trimmed });
+    server.value = res.data;
+    servers.value = (servers.value || []).map((srv) =>
+      srv._id === res.data._id ? { ...srv, name: res.data.name, cover: res.data.cover } : srv
+    );
+    inviteStatus.value = "Sunucu ayarlari guncellendi";
+  } catch (err) {
+    inviteStatus.value = err?.response?.data?.message || "Sunucu ayarlari guncellenemedi";
+  } finally {
+    closeServerMenu();
+  }
+};
+
+const createEventFromMenu = () => {
+  if (!isOwner.value) return;
+  channelDraftType.value = "voice";
+  channelDraftName.value = "etkinlik";
+  channelDraftPrivate.value = false;
+  channelDraftContextLabel.value = "Kategorisiz kategorisinde";
+  channelCreateOpen.value = true;
+  closeServerMenu();
+};
+
+const openAppDirectory = () => {
+  try {
+    window.open("https://discord.com/app-directory", "_blank", "noopener");
+  } catch {}
+  closeServerMenu();
+};
+
+const openNotificationSettings = () => {
+  const serverId = server.value?._id || route.params.id;
+  if (!serverId) return;
+  serverNotificationsMuted.value = !serverNotificationsMuted.value;
+  localStorage.setItem(`visicos_srv_notify_${serverId}`, serverNotificationsMuted.value ? "1" : "0");
+  inviteStatus.value = serverNotificationsMuted.value
+    ? "Bildirimler bu sunucu icin susturuldu"
+    : "Bildirimler bu sunucu icin acildi";
+  closeServerMenu();
+};
+
+const openPrivacySettings = () => {
+  const serverId = server.value?._id || route.params.id;
+  if (!serverId) return;
+  serverPrivacyTight.value = !serverPrivacyTight.value;
+  localStorage.setItem(`visicos_srv_privacy_${serverId}`, serverPrivacyTight.value ? "1" : "0");
+  inviteStatus.value = serverPrivacyTight.value
+    ? "Gizlilik seviyesi yuksek olarak ayarlandi"
+    : "Gizlilik seviyesi normal olarak ayarlandi";
+  closeServerMenu();
+};
+
+const editServerProfile = () => {
+  const serverId = server.value?._id || route.params.id;
+  if (!serverId) return;
+  const next = window.prompt("Sunucuya ozel gorunen adin", serverProfileNick.value || userStore.user?.username || "");
+  if (next === null) {
+    closeServerMenu();
+    return;
+  }
+  serverProfileNick.value = next.trim();
+  localStorage.setItem(`visicos_srv_nick_${serverId}`, serverProfileNick.value);
+  inviteStatus.value = "Sunucu profili guncellendi";
   closeServerMenu();
 };
 
@@ -2337,13 +2474,13 @@ watch(
 
 .server-context-menu {
   position: fixed;
-  min-width: 220px;
-  background: #1f2023;
-  border: 1px solid #3a3b40;
-  border-radius: 10px;
+  min-width: 280px;
+  background: #2e3138;
+  border: 1px solid #444850;
+  border-radius: 12px;
   padding: 8px;
   z-index: 120;
-  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 18px 34px rgba(0, 0, 0, 0.52);
 }
 
 .menu-check,
@@ -2351,7 +2488,7 @@ watch(
   width: 100%;
   border: none;
   background: transparent;
-  color: #d9dce1;
+  color: #e5e7eb;
   text-align: left;
   padding: 9px 10px;
   font-size: 14px;
@@ -2365,13 +2502,35 @@ watch(
   justify-content: space-between;
 }
 
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.menu-item-icon {
+  color: #b7bcc7;
+  font-size: 13px;
+  line-height: 1;
+}
+
 .menu-check:hover,
 .menu-item:hover {
-  background: #2b2d32;
+  background: #3a3e47;
 }
 
 .menu-item.danger {
   color: #ff7b7b;
+}
+
+.menu-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.menu-item:disabled:hover {
+  background: transparent;
 }
 
 .menu-check-box {
