@@ -1973,13 +1973,16 @@ watch(
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 12px;
+  align-items: center;
 }
 
 .call-stage-head {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 10px;
+  width: 100%;
+  text-align: center;
 }
 
 .call-stage-title {
@@ -1994,6 +1997,7 @@ watch(
   align-items: center;
   justify-content: center;
   gap: 34px;
+  width: 100%;
 }
 
 .stage-user {
@@ -2074,6 +2078,7 @@ watch(
   justify-content: center;
   width: fit-content;
   margin: 0 auto 2px;
+  justify-self: center;
 }
 
 .call-btn.ok {
