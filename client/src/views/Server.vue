@@ -21,22 +21,16 @@
       </aside>
 
       <div class="server-shell">
-        <aside class="channel-panel">
+        <aside class="channel-panel" @contextmenu.prevent="openServerMenu">
           <div class="server-header">
             <div class="server-header-title">{{ server?.name }}</div>
-            <div class="server-header-actions">
-              <button v-if="isOwner" class="server-invite-btn" @click="createInviteCode">
-                Davet
-              </button>
-              <button class="server-drop">v</button>
-            </div>
+            <button class="server-drop">v</button>
           </div>
           <div v-if="inviteStatus" class="invite-status">{{ inviteStatus }}</div>
 
           <div class="channel-section">
             <div class="section-header">
               <span>Metin Kanallari</span>
-              <button class="section-btn" @click="openChannelCreate('text')">+</button>
             </div>
             <div class="category-list">
               <div
@@ -59,7 +53,7 @@
                       <span class="channel-prefix">#</span>
                       <span class="channel-name">{{ ch.name }}</span>
                     </button>
-                    <select class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
+                    <select v-if="isOwner" class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
                       <option value="">Kategorisiz</option>
                       <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
                         {{ c.name }}
@@ -85,7 +79,7 @@
                       <span class="channel-prefix">#</span>
                       <span class="channel-name">{{ ch.name }}</span>
                     </button>
-                    <select class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
+                    <select v-if="isOwner" class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
                       <option value="">Kategorisiz</option>
                       <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
                         {{ c.name }}
@@ -106,7 +100,6 @@
           <div class="channel-section">
             <div class="section-header">
               <span>Ses Kanallari</span>
-              <button class="section-btn" @click="openChannelCreate('voice')">+</button>
             </div>
             <div class="category-list">
               <div
@@ -129,7 +122,7 @@
                       <span class="channel-prefix">V</span>
                       <span class="channel-name">{{ ch.name }}</span>
                     </button>
-                    <select class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
+                    <select v-if="isOwner" class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
                       <option value="">Kategorisiz</option>
                       <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
                         {{ c.name }}
@@ -155,7 +148,7 @@
                       <span class="channel-prefix">V</span>
                       <span class="channel-name">{{ ch.name }}</span>
                     </button>
-                    <select class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
+                    <select v-if="isOwner" class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
                       <option value="">Kategorisiz</option>
                       <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
                         {{ c.name }}
@@ -165,34 +158,6 @@
                 </div>
               </div>
             </div>
-          </div>
-
-          <div class="channel-create">
-            <div class="panel-title">Kategori Olustur</div>
-            <input v-model="newCategoryName" placeholder="Kategori adi" />
-            <div v-if="categoryError" class="channel-error">{{ categoryError }}</div>
-            <button class="primary-btn" :disabled="creatingCategory" @click="createCategory">
-              {{ creatingCategory ? "Olusturuluyor..." : "Olustur" }}
-            </button>
-          </div>
-
-          <div class="channel-create">
-            <div class="panel-title">Kanal Olustur</div>
-            <input ref="newChannelInput" v-model="newChannelName" placeholder="Kanal adi" />
-            <select v-model="newChannelType">
-              <option value="text">Metin</option>
-              <option value="voice">Sesli</option>
-            </select>
-            <select v-model="newChannelCategoryId">
-              <option value="">Kategorisiz</option>
-              <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
-                {{ c.name }}
-              </option>
-            </select>
-            <div v-if="channelError" class="channel-error">{{ channelError }}</div>
-            <button class="primary-btn" :disabled="creatingChannel" @click="createChannel">
-              {{ creatingChannel ? "Olusturuluyor..." : "Olustur" }}
-            </button>
           </div>
 
           <div class="server-userbar">
@@ -288,6 +253,104 @@
       </div>
     </div>
 
+    <div
+      v-if="serverMenuOpen"
+      class="server-context-menu"
+      :style="{ left: `${serverMenuPos.x}px`, top: `${serverMenuPos.y}px` }"
+      @click.stop
+    >
+      <button class="menu-check" @click="toggleHideMutedChannels">
+        <span>Sust. Kanallari Gizle</span>
+        <span class="menu-check-box" :class="{ checked: hideMutedChannels }"></span>
+      </button>
+      <div class="menu-divider"></div>
+      <button v-if="isOwner" class="menu-item" @click="createChannelFromMenu">Kanal Olustur</button>
+      <button v-if="isOwner" class="menu-item" @click="createCategoryFromMenu">Kategori Olustur</button>
+      <button v-if="isOwner" class="menu-item" @click="createInviteCode">Sunucuya Davet Et</button>
+    </div>
+
+    <transition name="fade">
+      <div v-if="channelCreateOpen" class="create-modal" @click="closeChannelModal">
+        <div class="create-card" @click.stop>
+          <div class="create-head">
+            <div class="create-title">Kanal Olustur</div>
+            <button class="create-close" @click="closeChannelModal">X</button>
+          </div>
+
+          <div class="create-section">
+            <label class="create-label">Kanal Turu</label>
+            <div class="channel-type-list">
+              <button class="channel-type-item" :class="{ active: channelDraftType === 'text' }" @click="channelDraftType = 'text'">
+                <span class="channel-type-radio"></span>
+                <span class="channel-type-main"># Metin</span>
+                <span class="channel-type-sub">Mesajlar, resimler, GIF'ler</span>
+              </button>
+              <button class="channel-type-item" :class="{ active: channelDraftType === 'voice' }" @click="channelDraftType = 'voice'">
+                <span class="channel-type-radio"></span>
+                <span class="channel-type-main">V Ses</span>
+                <span class="channel-type-sub">Birlikte sesli gorusme</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="create-section">
+            <label class="create-label">Kanal Adi</label>
+            <input v-model="channelDraftName" class="create-input" placeholder="yeni-kanal" />
+          </div>
+
+          <div class="create-toggle-row">
+            <div class="create-toggle-text">
+              <div class="toggle-title">Ozel Kanal</div>
+              <div class="toggle-sub">Sadece secili uyeler gorebilir</div>
+            </div>
+            <button class="toggle-btn" :class="{ on: channelDraftPrivate }" @click="channelDraftPrivate = !channelDraftPrivate"></button>
+          </div>
+
+          <div v-if="channelError" class="create-error">{{ channelError }}</div>
+
+          <div class="create-actions">
+            <button class="create-cancel" @click="closeChannelModal">Iptal</button>
+            <button class="create-submit" :disabled="creatingChannel" @click="submitChannelModal">
+              {{ creatingChannel ? "Olusturuluyor..." : "Kanal Olustur" }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <transition name="fade">
+      <div v-if="categoryCreateOpen" class="create-modal" @click="closeCategoryModal">
+        <div class="create-card" @click.stop>
+          <div class="create-head">
+            <div class="create-title">Kategori Olustur</div>
+            <button class="create-close" @click="closeCategoryModal">X</button>
+          </div>
+
+          <div class="create-section">
+            <label class="create-label">Kategori Adi</label>
+            <input v-model="categoryDraftName" class="create-input" placeholder="Yeni Kategori" />
+          </div>
+
+          <div class="create-toggle-row">
+            <div class="create-toggle-text">
+              <div class="toggle-title">Ozel Kategori</div>
+              <div class="toggle-sub">Bagli kanallar icin ayni izinler uygulanir</div>
+            </div>
+            <button class="toggle-btn" :class="{ on: categoryDraftPrivate }" @click="categoryDraftPrivate = !categoryDraftPrivate"></button>
+          </div>
+
+          <div v-if="categoryError" class="create-error">{{ categoryError }}</div>
+
+          <div class="create-actions">
+            <button class="create-cancel" @click="closeCategoryModal">Iptal</button>
+            <button class="create-submit" :disabled="creatingCategory" @click="submitCategoryModal">
+              {{ creatingCategory ? "Olusturuluyor..." : "Kategori Olustur" }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <transition name="fade">
       <div v-if="serverModalOpen" class="server-modal" @click="closeCreateServer">
         <div class="server-card modal-card" @click.stop>
@@ -325,7 +388,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import { computed, ref, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { ASSET_BASE_URL } from "../config";
@@ -358,7 +421,6 @@ const serverCoverPreview = ref("");
 const serverError = ref("");
 const creatingServer = ref(false);
 let coverObjectUrl = "";
-const newChannelInput = ref(null);
 const channelMessages = ref([]);
 const messageText = ref("");
 const messagesLoading = ref(false);
@@ -368,6 +430,16 @@ const voiceChannelId = ref("");
 const selfMute = ref(false);
 const selfDeaf = ref(false);
 const inviteStatus = ref("");
+const hideMutedChannels = ref(false);
+const serverMenuOpen = ref(false);
+const serverMenuPos = ref({ x: 0, y: 0 });
+const channelCreateOpen = ref(false);
+const categoryCreateOpen = ref(false);
+const channelDraftName = ref("");
+const channelDraftType = ref("text");
+const channelDraftPrivate = ref(false);
+const categoryDraftName = ref("");
+const categoryDraftPrivate = ref(false);
 const audioEls = new Map();
 
 const fullAsset = (url = "") => {
@@ -439,11 +511,29 @@ const channelsByCategoryAndType = (categoryId, type) => {
   });
 };
 
-const openChannelCreate = (type) => {
-  newChannelType.value = type;
-  nextTick(() => {
-    newChannelInput.value?.focus();
-  });
+const openServerMenu = (event) => {
+  if (!isOwner.value) return;
+  serverMenuPos.value = { x: event.clientX, y: event.clientY };
+  serverMenuOpen.value = true;
+};
+
+const closeServerMenu = () => {
+  serverMenuOpen.value = false;
+};
+
+const toggleHideMutedChannels = () => {
+  hideMutedChannels.value = !hideMutedChannels.value;
+  closeServerMenu();
+};
+
+const closeChannelModal = () => {
+  channelCreateOpen.value = false;
+  channelError.value = "";
+};
+
+const closeCategoryModal = () => {
+  categoryCreateOpen.value = false;
+  categoryError.value = "";
 };
 
 const cleanupAudio = () => {
@@ -547,7 +637,7 @@ const leaveVoiceChannel = async () => {
 const createChannel = async () => {
   if (!newChannelName.value.trim()) {
     channelError.value = "Kanal adi gerekli";
-    return;
+    return false;
   }
   channelError.value = "";
   creatingChannel.value = true;
@@ -561,11 +651,31 @@ const createChannel = async () => {
     selectedChannel.value = res.data;
     newChannelName.value = "";
     newChannelCategoryId.value = "";
+    return true;
   } catch (err) {
     channelError.value = err?.response?.data?.message || "Kanal olusturulamadi";
+    return false;
   } finally {
     creatingChannel.value = false;
   }
+};
+
+const createChannelFromMenu = async () => {
+  if (!isOwner.value) return;
+  channelDraftName.value = "";
+  channelDraftType.value = "text";
+  channelDraftPrivate.value = false;
+  channelCreateOpen.value = true;
+  closeServerMenu();
+};
+
+const submitChannelModal = async () => {
+  if (!isOwner.value) return;
+  newChannelName.value = channelDraftName.value.trim();
+  newChannelType.value = channelDraftType.value;
+  newChannelCategoryId.value = "";
+  const ok = await createChannel();
+  if (ok) closeChannelModal();
 };
 
 const moveChannel = async (channel, event) => {
@@ -588,7 +698,7 @@ const moveChannel = async (channel, event) => {
 const createCategory = async () => {
   if (!newCategoryName.value.trim()) {
     categoryError.value = "Kategori adi gerekli";
-    return;
+    return false;
   }
   categoryError.value = "";
   creatingCategory.value = true;
@@ -598,11 +708,28 @@ const createCategory = async () => {
     });
     server.value.categories = [...(server.value.categories || []), res.data];
     newCategoryName.value = "";
+    return true;
   } catch (err) {
     categoryError.value = err?.response?.data?.message || "Kategori olusturulamadi";
+    return false;
   } finally {
     creatingCategory.value = false;
   }
+};
+
+const createCategoryFromMenu = async () => {
+  if (!isOwner.value) return;
+  categoryDraftName.value = "";
+  categoryDraftPrivate.value = false;
+  categoryCreateOpen.value = true;
+  closeServerMenu();
+};
+
+const submitCategoryModal = async () => {
+  if (!isOwner.value) return;
+  newCategoryName.value = categoryDraftName.value.trim();
+  const ok = await createCategory();
+  if (ok) closeCategoryModal();
 };
 
 const openCreateServer = () => {
@@ -711,6 +838,7 @@ const createInviteCode = async () => {
   } catch (err) {
     inviteStatus.value = err?.response?.data?.message || "Davet olusturulamadi";
   }
+  closeServerMenu();
 };
 
 onMounted(() => {
@@ -720,12 +848,14 @@ onMounted(() => {
   }
   ensureSocket();
   socket.on("channel-message", handleChannelMessage);
+  document.addEventListener("click", closeServerMenu);
   loadServers();
   loadServer();
 });
 
 onBeforeUnmount(() => {
   socket.off("channel-message", handleChannelMessage);
+  document.removeEventListener("click", closeServerMenu);
   leaveTextChannel();
   leaveVoiceChannel();
 });
@@ -1478,6 +1608,262 @@ watch(
   margin: 8px 12px 0;
   font-size: 12px;
   color: #9fc6ec;
+}
+
+.server-context-menu {
+  position: fixed;
+  min-width: 220px;
+  background: #1f2023;
+  border: 1px solid #3a3b40;
+  border-radius: 10px;
+  padding: 8px;
+  z-index: 120;
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.5);
+}
+
+.menu-check,
+.menu-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #d9dce1;
+  text-align: left;
+  padding: 9px 10px;
+  font-size: 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.menu-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.menu-check:hover,
+.menu-item:hover {
+  background: #2b2d32;
+}
+
+.menu-check-box {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1px solid #8a8f9a;
+  background: #202227;
+}
+
+.menu-check-box.checked {
+  background: #5c7fb4;
+  border-color: #5c7fb4;
+}
+
+.menu-divider {
+  height: 1px;
+  margin: 6px 2px;
+  background: #3a3b40;
+}
+
+.create-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 130;
+}
+
+.create-card {
+  width: min(520px, 92vw);
+  background: #f1f2f5;
+  color: #2f3136;
+  border-radius: 14px;
+  border: 1px solid #d5d8de;
+  padding: 18px 20px;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.45);
+  display: grid;
+  gap: 14px;
+}
+
+.create-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.create-title {
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -0.7px;
+}
+
+.create-close {
+  border: none;
+  background: transparent;
+  color: #636771;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.create-section {
+  display: grid;
+  gap: 8px;
+}
+
+.create-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4f5563;
+}
+
+.create-input {
+  width: 100%;
+  background: #fff;
+  color: #2f3136;
+  border: 2px solid #5a66ff;
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 16px;
+}
+
+.create-input:focus {
+  outline: none;
+}
+
+.channel-type-list {
+  display: grid;
+  gap: 8px;
+}
+
+.channel-type-item {
+  width: 100%;
+  border: 1px solid #d8dbe2;
+  border-radius: 10px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  column-gap: 10px;
+  row-gap: 2px;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.channel-type-item.active {
+  border-color: #5a66ff;
+  box-shadow: 0 0 0 2px rgba(90, 102, 255, 0.2);
+}
+
+.channel-type-radio {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #a8adbb;
+  margin-top: 3px;
+}
+
+.channel-type-item.active .channel-type-radio {
+  border-color: #5a66ff;
+  background: radial-gradient(circle at center, #5a66ff 45%, transparent 46%);
+}
+
+.channel-type-main {
+  font-size: 20px;
+  font-weight: 800;
+  color: #2f3136;
+}
+
+.channel-type-sub {
+  grid-column: 2;
+  font-size: 13px;
+  color: #6d7280;
+}
+
+.create-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.toggle-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.toggle-sub {
+  font-size: 12px;
+  color: #6d7280;
+}
+
+.toggle-btn {
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #b7bdc9;
+  background: #d7dbe4;
+  position: relative;
+  cursor: pointer;
+}
+
+.toggle-btn::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #616573;
+  transition: transform 0.16s ease;
+}
+
+.toggle-btn.on {
+  background: #5a66ff;
+  border-color: #5a66ff;
+}
+
+.toggle-btn.on::after {
+  transform: translateX(19px);
+  background: #fff;
+}
+
+.create-error {
+  color: #c23a3a;
+  font-size: 12px;
+}
+
+.create-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.create-cancel,
+.create-submit {
+  border: none;
+  border-radius: 10px;
+  padding: 11px 12px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.create-cancel {
+  background: #e3e5ea;
+  color: #33363d;
+}
+
+.create-submit {
+  background: #9fa8ef;
+  color: #fff;
+  font-weight: 700;
+}
+
+.create-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .channel-section,
