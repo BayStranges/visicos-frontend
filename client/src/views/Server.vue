@@ -179,7 +179,11 @@
             <div v-if="messagesLoading" class="channel-empty">Yukleniyor...</div>
             <div v-else-if="!channelMessages.length" class="channel-empty">Henuz mesaj yok</div>
             <div v-else class="channel-messages">
-              <div v-for="msg in channelMessages" :key="msg._id" class="channel-message">
+              <template v-for="(msg, idx) in channelMessages" :key="msg._id">
+                <div v-if="shouldShowMessageTimeBreak(idx)" class="message-time-break">
+                  {{ formatMessageTime(msg.createdAt) }}
+                </div>
+                <div class="channel-message">
                 <div class="message-avatar">
                   <img v-if="msg.sender?.avatar" :src="fullAsset(msg.sender.avatar)" />
                   <span v-else>{{ (msg.sender?.username || "?").slice(0, 1).toUpperCase() }}</span>
@@ -187,11 +191,11 @@
                 <div class="message-body">
                   <div class="message-meta">
                     <span class="message-author">{{ msg.sender?.username || "User" }}</span>
-                    <span class="message-time">{{ formatMessageTime(msg.createdAt) }}</span>
                   </div>
                   <div class="message-text">{{ msg.content }}</div>
                 </div>
               </div>
+              </template>
             </div>
             <div class="channel-input">
               <input
@@ -539,6 +543,23 @@ const formatMessageTime = (value) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+};
+
+const shouldShowMessageTimeBreak = (index) => {
+  if (index <= 0) return false;
+  const list = channelMessages.value || [];
+  const prev = list[index - 1]?.createdAt;
+  const current = list[index]?.createdAt;
+  if (!prev || !current) return false;
+  const prevDate = new Date(prev);
+  const currentDate = new Date(current);
+  if (Number.isNaN(prevDate.getTime()) || Number.isNaN(currentDate.getTime())) return false;
+  return (
+    prevDate.getFullYear() !== currentDate.getFullYear() ||
+    prevDate.getMonth() !== currentDate.getMonth() ||
+    prevDate.getDate() !== currentDate.getDate() ||
+    prevDate.getHours() !== currentDate.getHours()
+  );
 };
 
 const loadServer = async () => {
@@ -2089,15 +2110,15 @@ watch(
 <style scoped>
 .server-page,
 .server-layout {
-  --accent: #5865f2;
-  --accent-strong: #7983f5;
-  --accent-dark: #24273b;
-  --border: #252832;
-  --border-strong: #2f3340;
-  --border-soft: #373c4b;
-  --text: #dbdee1;
-  --text-muted: #949ba4;
-  background: #313338;
+  --accent: #7ac2ff;
+  --accent-strong: #3b8de8;
+  --accent-dark: #102841;
+  --border: #2d4764;
+  --border-strong: #416289;
+  --border-soft: #5078a6;
+  background:
+    radial-gradient(780px 360px at 58% -20%, rgba(82, 157, 255, 0.16), transparent 62%),
+    #0c131c;
 }
 
 .channel-panel,
@@ -2111,31 +2132,31 @@ watch(
 .channel-input input,
 .server-card,
 .server-field input {
-  border-color: #252832 !important;
+  border-color: rgba(99, 151, 216, 0.36) !important;
 }
 
 .channel-panel,
 .members-panel,
 .channel-main,
 .server-card {
-  box-shadow: none;
+  box-shadow: 0 20px 44px rgba(7, 14, 27, 0.34);
 }
 
 .channel-item.active,
 .channel-item:hover,
 .member-row:hover {
-  background: #404249;
+  background: rgba(76, 130, 197, 0.2);
 }
 
 .primary-btn {
-  background: #5865f2 !important;
-  color: #fff !important;
+  background: linear-gradient(135deg, #76beff, #3a8eea) !important;
+  color: #08203b !important;
 }
 
 .server-shell {
   gap: 0;
   padding: 0;
-  grid-template-columns: 280px 1fr 250px;
+  grid-template-columns: 300px 1fr 260px;
 }
 
 .channel-panel,
@@ -2156,25 +2177,24 @@ watch(
   position: relative;
   padding: 0 0 82px;
   overflow: hidden;
-  background: #2b2d31;
 }
 
 .server-header {
   border-left: none;
   border-right: none;
   border-top: none;
-  border-bottom: 1px solid #252832 !important;
+  border-bottom: 1px solid rgba(99, 151, 216, 0.36) !important;
   border-radius: 0;
-  background: #2b2d31;
+  background: #121b28;
   padding: 14px 16px;
 }
 
 .server-header-title {
-  color: #f2f3f5;
+  color: var(--text);
 }
 
 .server-drop {
-  color: #b5bac1;
+  color: var(--text-muted);
 }
 
 .server-hero {
@@ -2182,8 +2202,8 @@ watch(
   margin: 0 0 8px;
   overflow: hidden;
   position: relative;
-  border-bottom: 1px solid #252832;
-  background: #1e1f22;
+  border-bottom: 1px solid rgba(99, 151, 216, 0.36);
+  background: #121b28;
 }
 
 .server-hero img {
@@ -2207,7 +2227,7 @@ watch(
   color: #fff;
   font-size: 44px;
   font-weight: 800;
-  background: linear-gradient(140deg, #5865f2, #23262f);
+  background: linear-gradient(140deg, #60b6ff, #1a2f47);
 }
 
 .server-hero-name {
@@ -2239,7 +2259,7 @@ watch(
 .invite-status {
   margin: 8px 12px 0;
   font-size: 12px;
-  color: #b5bac1;
+  color: #9fc6ec;
 }
 
 .server-context-menu {
@@ -2649,9 +2669,9 @@ watch(
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: #313338;
-  border-bottom: 1px solid #252832;
-  padding: 0 16px 10px;
+  background: transparent;
+  border-bottom: none;
+  padding: 0;
 }
 
 .channel-head-right {
@@ -2662,16 +2682,16 @@ watch(
 
 .channel-search {
   width: min(340px, 34vw);
-  background: #1e1f22;
-  border: 1px solid #1e1f22;
+  background: #0b1420;
+  border: 1px solid rgba(99, 151, 216, 0.36);
   border-radius: 10px;
   padding: 9px 12px;
-  color: #dcddde;
+  color: var(--text);
 }
 
 .channel-search:focus {
   outline: none;
-  border-color: #5865f2;
+  border-color: rgba(122, 194, 255, 0.72);
 }
 
 .server-userbar {
@@ -2685,8 +2705,8 @@ watch(
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
-  background: #232428;
-  border-top: 1px solid #1d1f23;
+  background: #121a26;
+  border-top: 1px solid rgba(99, 151, 216, 0.36);
 }
 
 .userbar-avatar {
@@ -2694,10 +2714,10 @@ watch(
   height: 36px;
   border-radius: 10px;
   overflow: hidden;
-  background: #111214;
+  background: #162132;
   display: grid;
   place-items: center;
-  color: #f2f3f5;
+  color: #c8e4ff;
   font-weight: 700;
   position: relative;
 }
@@ -2715,12 +2735,12 @@ watch(
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  border: 2px solid #232428;
-  background: #23a55a;
+  border: 2px solid #121a26;
+  background: #2ecc71;
 }
 
 .userbar-dot.offline {
-  background: #80848e;
+  background: #7b8796;
 }
 
 .userbar-meta {
@@ -2730,12 +2750,12 @@ watch(
 .userbar-name {
   font-size: 14px;
   font-weight: 700;
-  color: #fff;
+  color: #d5ebff;
 }
 
 .userbar-status {
   font-size: 11px;
-  color: #949ba4;
+  color: #9bb8d5;
 }
 
 .userbar-actions {
@@ -2747,9 +2767,9 @@ watch(
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid #2d3138;
-  background: #2b2d31;
-  color: #b5bac1;
+  border: 1px solid rgba(99, 151, 216, 0.42);
+  background: #162234;
+  color: #cbe6ff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2757,22 +2777,22 @@ watch(
 }
 
 .userbar-icon.off {
-  color: #7f8289;
-  background: #1f2125;
+  color: #8ea4bc;
+  background: #111b29;
 }
 
 .channel-main {
-  background: #313338;
+  background: var(--bg-elev-2);
 }
 
 .channel-messages {
-  gap: 2px;
+  gap: 0;
 }
 
 .channel-message {
   grid-template-columns: 42px 1fr;
   gap: 12px;
-  padding: 2px 8px;
+  padding: 0 8px;
   border-radius: 8px;
 }
 
@@ -2798,48 +2818,46 @@ watch(
 }
 
 .message-author {
-  color: #f2f3f5;
+  color: var(--text-strong);
   font-size: 16px;
   font-weight: 700;
   line-height: 1.2;
 }
 
-.message-time {
-  color: #949ba4;
-  font-size: 12px;
-  font-weight: 500;
-}
-
 .message-text {
-  color: #dbdee1;
+  color: var(--text);
   font-size: 15px;
   line-height: 1.45;
   white-space: pre-wrap;
 }
 
+.message-time-break {
+  margin: 6px 0 2px;
+  padding-left: 62px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
 .members-panel {
-  background: #2b2d31;
+  background: var(--bg-elev);
 }
 
 .panel-title {
-  color: #949ba4;
+  color: var(--text-muted);
 }
 
 .member-name {
-  color: #dbdee1;
-}
-
-.member-row.offline .member-name {
-  color: #949ba4;
+  color: var(--text);
 }
 
 .member-avatar {
-  background: #1e1f22;
+  background: #1f1f22;
 }
 
 .member-avatar::after {
-  background: #23a55a;
-  border-color: #2b2d31;
+  background: #2ecc71;
+  border-color: var(--bg-elev);
 }
 
 .member-row.offline .member-avatar::after {
