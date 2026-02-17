@@ -1623,12 +1623,17 @@ onBeforeUnmount(() => {
 }
 
 .dm-profile .icon-btn {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
   background: rgba(21, 37, 57, 0.78);
   border: 1px solid rgba(112, 160, 220, 0.24);
   color: #d4e9ff;
+}
+
+.dm-profile .icon {
+  width: 18px;
+  height: 18px;
 }
 
 .dm-profile .icon-btn:hover {
