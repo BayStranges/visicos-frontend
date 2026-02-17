@@ -179,11 +179,7 @@
             <div v-if="messagesLoading" class="channel-empty">Yukleniyor...</div>
             <div v-else-if="!channelMessages.length" class="channel-empty">Henuz mesaj yok</div>
             <div v-else class="channel-messages">
-              <template v-for="(msg, idx) in channelMessages" :key="msg._id">
-                <div v-if="shouldShowMessageTimeBreak(idx)" class="message-time-break">
-                  {{ formatMessageTime(msg.createdAt) }}
-                </div>
-                <div class="channel-message">
+              <div v-for="msg in channelMessages" :key="msg._id" class="channel-message">
                 <div class="message-avatar">
                   <img v-if="msg.sender?.avatar" :src="fullAsset(msg.sender.avatar)" />
                   <span v-else>{{ (msg.sender?.username || "?").slice(0, 1).toUpperCase() }}</span>
@@ -191,11 +187,18 @@
                 <div class="message-body">
                   <div class="message-meta">
                     <span class="message-author">{{ msg.sender?.username || "User" }}</span>
+                    <span class="message-time">{{ formatMessageMetaTime(msg.createdAt) }}</span>
                   </div>
-                  <div class="message-text">{{ msg.content }}</div>
+                  <div class="message-text">
+                    <template v-for="(line, lineIndex) in splitMessageLines(msg.content)" :key="`${msg._id}-line-${lineIndex}`">
+                      <template v-for="(part, partIndex) in splitMentionParts(line)" :key="`${msg._id}-line-${lineIndex}-part-${partIndex}`">
+                        <span :class="{ mention: part.mention }">{{ part.text }}</span>
+                      </template>
+                      <br v-if="lineIndex < splitMessageLines(msg.content).length - 1" />
+                    </template>
+                  </div>
                 </div>
               </div>
-              </template>
             </div>
             <div class="channel-input">
               <input
@@ -538,28 +541,36 @@ const fullAsset = (url = "") => {
   return url.startsWith("http") ? url : `${ASSET_BASE_URL}${url}`;
 };
 
-const formatMessageTime = (value) => {
+const formatMessageMetaTime = (value) => {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  const now = new Date();
+  const oneDay = 24 * 60 * 60 * 1000;
+  const delta = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
+    new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const clock = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  if (delta === 0) return clock;
+  if (delta === oneDay) return `dun ${clock}`;
+  return `${date.toLocaleDateString("tr-TR")} ${clock}`;
 };
 
-const shouldShowMessageTimeBreak = (index) => {
-  if (index <= 0) return false;
-  const list = channelMessages.value || [];
-  const prev = list[index - 1]?.createdAt;
-  const current = list[index]?.createdAt;
-  if (!prev || !current) return false;
-  const prevDate = new Date(prev);
-  const currentDate = new Date(current);
-  if (Number.isNaN(prevDate.getTime()) || Number.isNaN(currentDate.getTime())) return false;
-  return (
-    prevDate.getFullYear() !== currentDate.getFullYear() ||
-    prevDate.getMonth() !== currentDate.getMonth() ||
-    prevDate.getDate() !== currentDate.getDate() ||
-    prevDate.getHours() !== currentDate.getHours()
-  );
+const splitMessageLines = (content = "") => `${content || ""}`.split("\n");
+
+const splitMentionParts = (line = "") => {
+  const parts = [];
+  const regex = /(@[^\s]+)/g;
+  let last = 0;
+  let match = regex.exec(line);
+  while (match) {
+    if (match.index > last) parts.push({ text: line.slice(last, match.index), mention: false });
+    parts.push({ text: match[0], mention: true });
+    last = match.index + match[0].length;
+    match = regex.exec(line);
+  }
+  if (last < line.length) parts.push({ text: line.slice(last), mention: false });
+  if (!parts.length) parts.push({ text: line, mention: false });
+  return parts;
 };
 
 const loadServer = async () => {
@@ -2818,25 +2829,31 @@ watch(
 }
 
 .message-author {
-  color: var(--text-strong);
-  font-size: 16px;
+  color: #67d08b;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.2;
 }
 
+.message-time {
+  color: #8f9ab0;
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .message-text {
   color: var(--text);
-  font-size: 15px;
-  line-height: 1.45;
+  font-size: 16px;
+  line-height: 1.38;
   white-space: pre-wrap;
 }
 
-.message-time-break {
-  margin: 6px 0 2px;
-  padding-left: 62px;
-  font-size: 11px;
-  color: var(--text-muted);
-  line-height: 1;
+.message-text .mention {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: rgba(88, 101, 242, 0.24);
+  color: #c9d2ff;
 }
 
 .members-panel {
