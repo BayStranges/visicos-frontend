@@ -49,36 +49,64 @@
 
     <!-- CALL BAR -->
     <div v-if="inCall || ringing || callStatus !== 'hazır'" class="call-bar">
-      <div class="call-left">
-        <div class="call-avatar">
-          <img v-if="otherUserAvatar" :src="fullAvatar(otherUserAvatar)" />
-          <span v-else>{{ otherUser?.[0]?.toUpperCase() || "?" }}</span>
+      <div class="call-stage-head">
+        <div class="call-stage-title">{{ otherUser }} ile sesli gorusme</div>
+        <div class="call-sub discord">
+          <span class="call-chip" :class="`chip-${callStatusClass}`">{{ callStatusLabel }}</span>
+          <span v-if="inCall" class="call-chip chip-time">{{ callDurationLabel }}</span>
         </div>
-        <div class="call-meta">
-          <div class="call-title">{{ otherUser }} ile arama</div>
-          <div class="call-sub discord">
-            <span class="call-chip" :class="`chip-${callStatusClass}`">
-              {{ callStatusLabel }}
-            </span>
-            <span v-if="inCall" class="call-chip chip-time">{{ callDurationLabel }}</span>
+      </div>
+
+      <div class="call-stage-users">
+        <div class="stage-user">
+          <div class="call-avatar stage">
+            <img v-if="otherUserAvatar" :src="fullAvatar(otherUserAvatar)" />
+            <span v-else>{{ otherUser?.[0]?.toUpperCase() || "?" }}</span>
           </div>
+          <div class="stage-name">{{ otherUser }}</div>
+        </div>
+        <div class="stage-user">
+          <div class="call-avatar stage me">
+            <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
+            <span v-else>{{ userStore.user?.username?.[0]?.toUpperCase() || "?" }}</span>
+          </div>
+          <div class="stage-name">{{ userStore.user?.username || "Sen" }}</div>
         </div>
       </div>
-      <div class="call-controls" v-if="ringing">
-        <button class="call-btn ok" @click="acceptCall">Kabul Et</button>
-        <button class="call-btn danger" @click="rejectCall">Reddet</button>
+
+      <div class="call-controls dock" v-if="ringing">
+        <button class="call-icon icon-accept" @click="acceptCall" title="Kabul Et" aria-label="Kabul Et">
+          <svg class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6.6 10.8a15.6 15.6 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24c1.1.36 2.3.56 3.6.56a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.6 21 3 13.4 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.26.2 2.46.56 3.6a1 1 0 0 1-.24 1Z" />
+          </svg>
+        </button>
+        <button class="call-icon end" @click="rejectCall" title="Reddet" aria-label="Reddet">
+          <svg class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7.2 15.4a15.2 15.2 0 0 1 9.6 0l2-2a1 1 0 0 0-.2-1.56A12.6 12.6 0 0 0 12 10a12.6 12.6 0 0 0-6.6 1.84 1 1 0 0 0-.2 1.56l2 2Z" />
+          </svg>
+        </button>
       </div>
-      <div class="call-controls" v-else>
+      <div class="call-controls dock" v-else>
         <button class="call-icon" @click="toggleMute" :title="muted ? 'Mikrofonu ac' : 'Mikrofonu kapat'">
-          {{ muted ? "Mik Ac" : "Mik Kapat" }}
+          <svg v-if="!muted" class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 14a3 3 0 0 0 3-3V7a3 3 0 0 0-6 0v4a3 3 0 0 0 3 3Z" />
+            <path d="M5 11a1 1 0 1 1 2 0 5 5 0 1 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V21a1 1 0 1 1-2 0v-3.08A7 7 0 0 1 5 11Z" />
+          </svg>
+          <svg v-else class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M16 11V8a4 4 0 1 0-8 0v3a3.94 3.94 0 0 0 .65 2.19l1.45-1.45A2 2 0 0 1 10 11V8a2 2 0 1 1 4 0v1Z" />
+            <path d="M3.7 3.7a1 1 0 0 1 1.4 0L20.3 18.9a1 1 0 0 1-1.4 1.4L15.8 17.2A7 7 0 0 1 13 17.92V21a1 1 0 1 1-2 0v-3.08A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 5 5c.56 0 1.1-.09 1.6-.26L3.7 5.1a1 1 0 0 1 0-1.4Z" />
+          </svg>
         </button>
         <button class="call-icon end" @click="hangUp" title="Aramayi bitir">Bitir</button>
         <button
-          class="call-btn reconnect"
+          class="call-icon icon-reconnect"
           v-if="callStatus === 'koptu' || callStatus === 'başarısız'"
           @click="reconnect"
+          title="Yeniden Baglan"
         >
-          Yeniden Bağlan
+          <svg class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 5a7 7 0 0 1 6.66 4.8 1 1 0 1 1-1.9.62A5 5 0 1 0 16 15h-2.4a1 1 0 1 1 0-2H18a1 1 0 0 1 1 1v4.4a1 1 0 1 1-2 0v-1.5A7 7 0 1 1 12 5Z" />
+          </svg>
         </button>
       </div>
     </div>
@@ -1714,12 +1742,61 @@ onBeforeUnmount(() => {
 }
 
 .call-bar {
-  padding: 10px 14px;
-  border-radius: 12px;
+  min-height: 220px;
+  padding: 16px 18px;
+  border-radius: 14px;
   margin: 8px 12px 0;
-  background: linear-gradient(160deg, rgba(20, 35, 56, 0.9), rgba(15, 28, 46, 0.92));
-  border: 1px solid rgba(105, 160, 225, 0.35);
-  box-shadow: 0 14px 28px rgba(6, 14, 27, 0.28);
+  background: linear-gradient(180deg, rgba(8, 12, 18, 0.98), rgba(12, 17, 26, 0.95));
+  border: 1px solid rgba(91, 124, 164, 0.28);
+  box-shadow: 0 18px 34px rgba(5, 11, 20, 0.38);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 12px;
+}
+
+.call-stage-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.call-stage-title {
+  color: #e9f2ff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.call-stage-users {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+}
+
+.stage-user {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.call-avatar.stage {
+  width: 86px;
+  height: 86px;
+  border-radius: 50%;
+  border: 2px solid rgba(102, 146, 197, 0.45);
+  background: rgba(15, 22, 34, 0.95);
+}
+
+.call-avatar.stage.me {
+  border-color: rgba(136, 180, 232, 0.7);
+}
+
+.stage-name {
+  font-size: 12px;
+  color: #c7d8ee;
+  font-weight: 600;
 }
 
 .call-sub.discord {
@@ -1768,6 +1845,16 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 
+.call-controls.dock {
+  background: rgba(11, 17, 26, 0.86);
+  border: 1px solid rgba(88, 124, 168, 0.3);
+  border-radius: 12px;
+  padding: 8px;
+  justify-content: center;
+  width: fit-content;
+  margin: 0 auto;
+}
+
 .call-btn.ok {
   background: linear-gradient(135deg, #57d990, #32ad70) !important;
   color: #0f2e1e !important;
@@ -1784,10 +1871,10 @@ onBeforeUnmount(() => {
 }
 
 .call-icon {
-  border-radius: 999px;
-  min-width: 94px;
-  height: 34px;
-  padding: 0 12px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1798,7 +1885,28 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
+.icon-glyph {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.call-icon.icon-accept {
+  border-color: rgba(101, 201, 150, 0.6);
+  background: rgba(27, 65, 44, 0.8);
+  color: #b8ffd6;
+}
+
+.call-icon.icon-reconnect {
+  border-color: rgba(136, 180, 232, 0.6);
+  background: rgba(26, 50, 82, 0.8);
+  color: #d5e9ff;
+}
+
 .call-icon.end {
+  width: auto;
+  min-width: 84px;
+  padding: 0 14px;
   border-color: rgba(212, 108, 108, 0.6);
   background: rgba(77, 29, 33, 0.8);
   color: #ffc7c7;
@@ -1807,7 +1915,22 @@ onBeforeUnmount(() => {
 @media (max-width: 700px) {
   .call-bar {
     margin: 8px 8px 0;
-    padding: 10px;
+    min-height: 190px;
+    padding: 12px;
+  }
+
+  .call-stage-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .call-stage-users {
+    gap: 14px;
+  }
+
+  .call-avatar.stage {
+    width: 70px;
+    height: 70px;
   }
 
   .call-controls {
