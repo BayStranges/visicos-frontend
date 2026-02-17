@@ -16,11 +16,39 @@
       <div class="server-pill add" @click="openCreateServer">+</div>
     </aside>
 
+    <aside class="dm-sidebar">
+      <div class="dm-sidebar-head">
+        <div class="dm-sidebar-title">Direkt Mesajlar</div>
+        <button class="dm-sidebar-home" @click="goFriends">Arkadaslar</button>
+      </div>
+      <div class="dm-sidebar-list">
+        <div v-if="dmsLoading" class="dm-sidebar-empty">Yukleniyor...</div>
+        <div v-else-if="dms.length === 0" class="dm-sidebar-empty">DM yok</div>
+        <button
+          v-for="dm in dms"
+          :key="dm._id"
+          class="dm-sidebar-row"
+          :class="{ active: dm._id === roomId }"
+          @click="goDm(dm._id)"
+        >
+          <div class="dm-sidebar-avatar">
+            <img v-if="getOtherUser(dm)?.avatar" :src="fullAvatar(getOtherUser(dm).avatar)" />
+            <span v-else>{{ (getOtherUser(dm)?.username || '?').slice(0, 1).toUpperCase() }}</span>
+          </div>
+          <div class="dm-sidebar-meta">
+            <div class="dm-sidebar-name">{{ getDisplayName(dm) }}</div>
+            <div class="dm-sidebar-last">{{ dm.lastMessage?.content || "Mesaj yok" }}</div>
+          </div>
+          <div v-if="dm.unreadCount > 0" class="dm-sidebar-badge">{{ dm.unreadCount }}</div>
+        </button>
+      </div>
+    </aside>
+
     <div class="dm-wrapper" :class="darkMode">
       <audio ref="ringtoneAudio" src="/zilsesi.mp3" preload="auto" loop></audio>
 
     <!-- HEADER -->
-    <div class="dm-header">
+    <div v-if="!isCallOverlayVisible" class="dm-header">
       <div class="profile-head">
         <div class="ph-avatar">
           <img v-if="otherUserAvatar" :src="fullAvatar(otherUserAvatar)" />
@@ -48,7 +76,7 @@
     </div>
 
     <!-- CALL BAR -->
-    <div v-if="inCall || ringing || callStatus !== 'hazır'" class="call-bar">
+    <div v-if="isCallOverlayVisible" class="call-bar">
       <div class="call-stage-head">
         <div class="call-stage-title">{{ otherUser }} ile sesli gorusme</div>
         <div class="call-sub discord">
@@ -372,11 +400,16 @@ const userStore = useUserStore();
 
 const goFriends = () => router.push("/friends");
 const goServer = (id) => router.push(`/server/${id}`);
+const goDm = (id) => {
+  if (!id || id === roomId.value) return;
+  if (isCallOverlayVisible.value) return;
+  router.push(`/dm/${id}`);
+};
 
 const userId = userStore.user?._id;
-const roomId = route.params.id;
+const roomId = ref(route.params.id);
 
-const historyKey = () => `visicos_call_history_${roomId}`;
+const historyKey = () => `visicos_call_history_${roomId.value}`;
 
 const loadCallHistory = () => {
   const raw = localStorage.getItem(historyKey()) || "[]";
@@ -526,6 +559,8 @@ const participantStreams = new Map();
 const remoteAudioEls = new Map();
 const speakingTimers = new Map();
 const servers = ref([]);
+const dms = ref([]);
+const dmsLoading = ref(false);
 const serverModalOpen = ref(false);
 const serverName = ref("");
 const serverCover = ref("");
@@ -574,21 +609,21 @@ const pendingRemoteCandidates = ref([]);
 const overlayStorageKey = "visicos_voice_overlay";
 
 const startCall = async () => {
-  logVoice("startCall click", { roomId, userId });
+  logVoice("startCall click", { roomId: roomId.value, userId });
   isCaller.value = true;
   inCall.value = false;
   callStatus.value = "aranıyor";
   callStartAt.value = Date.now();
   addCallEntry("outgoing");
 
-  await initVoice(roomId, {
+  await initVoice(roomId.value, {
     onStateChange: (s) => handlePcState(s),
     onRemoteTrack: () => handlePcState("connected")
   });
 
   logVoice("start-call emit");
   socket.emit("start-call", {
-    roomId,
+    roomId: roomId.value,
     from: userStore.user?.username || "Arayan"
   });
 
@@ -616,7 +651,7 @@ const hangUp = () => {
   pendingOffer.value = null;
   pendingRemoteCandidates.value = [];
   logVoice("call-ended emit");
-  socket.emit("call-ended", roomId);
+  socket.emit("call-ended", roomId.value);
 };
 
 const toggleMute = () => {
@@ -652,6 +687,19 @@ const reconnect = async () => {
   startCall();
 };
 
+const loadDms = async () => {
+  if (!userId) return;
+  dmsLoading.value = true;
+  try {
+    const res = await axios.get(`/api/dm/list/${userId}`);
+    dms.value = res.data || [];
+  } catch (err) {
+    dms.value = [];
+  } finally {
+    dmsLoading.value = false;
+  }
+};
+
 const startGroupCall = async () => {
   if (!userId || sfuActive.value) return;
   sfuActive.value = true;
@@ -671,7 +719,7 @@ const startGroupCall = async () => {
   });
 
   await startSfuCall({
-    room: roomId,
+    room: roomId.value,
     user: userId,
     onTrack: async ({ userId: producerUserId, kind, stream }) => {
       let profile = voiceParticipants.value.find((p) => p.userId === producerUserId);
@@ -758,7 +806,7 @@ const createOffer = async () => {
   callStatus.value = "bağlanıyor";
   inCall.value = true;
 
-  const pc = await initVoice(roomId, {
+  const pc = await initVoice(roomId.value, {
     onStateChange: (s) => handlePcState(s),
     onRemoteTrack: () => handlePcState("connected")
   });
@@ -772,7 +820,7 @@ const createOffer = async () => {
   await pc.setLocalDescription(offer);
 
   logVoice("webrtc-offer emit");
-  socket.emit("webrtc-offer", { roomId, offer });
+  socket.emit("webrtc-offer", { roomId: roomId.value, offer });
 };
 
 const handleIncomingOffer = async (offer) => {
@@ -781,7 +829,7 @@ const handleIncomingOffer = async (offer) => {
   inCall.value = true;
   callStatus.value = "bağlanıyor";
 
-  const pc = await initVoice(roomId, {
+  const pc = await initVoice(roomId.value, {
     onStateChange: (s) => handlePcState(s),
     onRemoteTrack: () => handlePcState("connected")
   });
@@ -799,7 +847,7 @@ const handleIncomingOffer = async (offer) => {
   await pc.setLocalDescription(answer);
 
   logVoice("webrtc-answer emit");
-  socket.emit("webrtc-answer", { roomId, answer });
+  socket.emit("webrtc-answer", { roomId: roomId.value, answer });
 };
 
 const acceptCall = async () => {
@@ -811,9 +859,9 @@ const acceptCall = async () => {
   callStatus.value = "bağlanıyor";
 
   logVoice("call-accepted emit");
-  socket.emit("call-accepted", { roomId });
+  socket.emit("call-accepted", { roomId: roomId.value });
 
-  await initVoice(roomId, {
+  await initVoice(roomId.value, {
     onStateChange: (s) => handlePcState(s),
     onRemoteTrack: () => handlePcState("connected")
   });
@@ -836,7 +884,7 @@ const rejectCall = () => {
   pendingOffer.value = null;
   pendingRemoteCandidates.value = [];
   logVoice("call-rejected emit");
-  socket.emit("call-rejected", { roomId });
+  socket.emit("call-rejected", { roomId: roomId.value });
 };
 
 const buildOverlayPayload = () => {
@@ -853,7 +901,7 @@ const buildOverlayPayload = () => {
   return {
     active: inCall.value || ringing.value,
     status,
-    roomId,
+    roomId: roomId.value,
     updatedAt: Date.now(),
     self: {
       id: userId,
@@ -928,6 +976,15 @@ const formatTime = (t) =>
   new Date(t).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
 
 const otherUserAvatar = ref("");
+
+const getOtherUser = (dm) => {
+  return dm?.users?.find((u) => u?._id !== userId) || null;
+};
+
+const getDisplayName = (dm) => {
+  const other = getOtherUser(dm);
+  return other?.username || "Bilinmeyen Kullanici";
+};
 
 const computeOtherUser = () => {
   const other = messages.value.find(m => m?.sender?._id && m.sender._id !== userId);
@@ -1199,7 +1256,7 @@ const onInputKeydown = (event) => {
 
 /* ================= API ================= */
 const loadMessages = async () => {
-  const res = await axios.get(`/api/dm/${roomId}/${userId}`);
+  const res = await axios.get(`/api/dm/${roomId.value}/${userId}`);
   messages.value = res.data || [];
   computeOtherUser();
 
@@ -1220,7 +1277,7 @@ const submit = () => {
 
 const send = () => {
   socket.emit("send-message", {
-    roomId,
+    roomId: roomId.value,
     senderId: userId,
     content: text.value,
     replyTo: replyTo.value
@@ -1239,7 +1296,7 @@ const uploadFile = async (e) => {
   const res = await axios.post("/api/upload", form);
 
   socket.emit("send-message", {
-    roomId,
+    roomId: roomId.value,
     senderId: userId,
     content: `${res.data.url}`
   });
@@ -1259,11 +1316,11 @@ const toggleTheme = () => {
 let typingTimeout;
 const handleTyping = () => {
   updateMentionState();
-  socket.emit("typing", { roomId, username: userStore.user.username });
+  socket.emit("typing", { roomId: roomId.value, username: userStore.user.username });
 
   clearTimeout(typingTimeout);
   typingTimeout = setTimeout(() => {
-    socket.emit("stop-typing", roomId);
+    socket.emit("stop-typing", roomId.value);
   }, 700);
 };
 
@@ -1308,6 +1365,10 @@ const callStatusClass = computed(() => {
   if (callStatus.value === "koptu" || callStatus.value === "başarısız" || callStatus.value === "reddedildi") return "bad";
   return "idle";
 });
+
+const isCallOverlayVisible = computed(
+  () => inCall.value || ringing.value || callStatus.value !== "hazır"
+);
 
 const callDurationLabel = computed(() => {
   if (!inCall.value || !callStartAt.value) return "00:00";
@@ -1372,6 +1433,7 @@ onMounted(async () => {
   }
 
   loadServers();
+  loadDms();
 
   if (!socket.connected) socket.connect();
   [
@@ -1381,6 +1443,7 @@ onMounted(async () => {
     "message-deleted",
     "message-edited",
     "message-reacted",
+    "messages-read",
     "webrtc-offer",
     "webrtc-answer",
     "webrtc-ice",
@@ -1395,13 +1458,13 @@ onMounted(async () => {
 
   window.addEventListener("click", closeMenu);
 
-  socket.emit("join-dm", { roomId, userId });
+  socket.emit("join-dm", { roomId: roomId.value, userId });
   await loadMessages();
   loadCallHistory();
   if (route.query.call === "1") {
     await nextTick();
     startCall();
-    router.replace({ path: `/dm/${roomId}` });
+    router.replace({ path: `/dm/${roomId.value}` });
   }
 
   await nextTick();
@@ -1490,6 +1553,11 @@ onMounted(async () => {
     computeOtherUser();
     scrollBottomIfNeeded();
     notifyMessage(msg);
+    loadDms();
+  });
+
+  socket.on("messages-read", () => {
+    loadDms();
   });
 
   socket.on("typing", (u) => (typingUser.value = u));
@@ -1536,6 +1604,7 @@ onBeforeUnmount(() => {
   socket.off("message-deleted");
   socket.off("message-edited");
   socket.off("message-reacted");
+  socket.off("messages-read");
   if (!shouldKeepCallAlive) {
     socket.off("webrtc-offer");
     socket.off("webrtc-answer");
@@ -1550,6 +1619,25 @@ onBeforeUnmount(() => {
   window.removeEventListener("click", closeMenu);
   if (list.value) list.value.removeEventListener("scroll", onScroll);
 });
+
+watch(
+  () => route.params.id,
+  async (nextId, prevId) => {
+    if (!nextId || nextId === prevId) return;
+    roomId.value = nextId;
+    closeMenu();
+    messages.value = [];
+    typingUser.value = "";
+    replyTo.value = null;
+    editingId.value = null;
+    hasNewMessage.value = false;
+    isAtBottom.value = true;
+    socket.emit("join-dm", { roomId: roomId.value, userId });
+    await loadMessages();
+    loadCallHistory();
+    loadDms();
+  }
+);
 </script>
 
 
@@ -1741,11 +1829,143 @@ onBeforeUnmount(() => {
   background: rgba(51, 93, 146, 0.2);
 }
 
+.dm-layout {
+  grid-template-columns: 80px 260px 1fr;
+}
+
+.dm-sidebar {
+  background: rgba(14, 23, 35, 0.94);
+  border-right: 1px solid rgba(106, 157, 218, 0.28);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+}
+
+.dm-sidebar-head {
+  padding: 14px 12px;
+  border-bottom: 1px solid rgba(106, 157, 218, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dm-sidebar-title {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #a9c4e6;
+  font-weight: 700;
+}
+
+.dm-sidebar-home {
+  border: 1px solid rgba(112, 160, 220, 0.34);
+  background: rgba(22, 36, 56, 0.7);
+  color: #cde3ff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.dm-sidebar-list {
+  padding: 8px;
+  overflow-y: auto;
+  display: grid;
+  gap: 6px;
+}
+
+.dm-sidebar-empty {
+  color: #99afcb;
+  font-size: 12px;
+  padding: 8px;
+}
+
+.dm-sidebar-row {
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dm-sidebar-row:hover {
+  background: rgba(43, 77, 120, 0.26);
+}
+
+.dm-sidebar-row.active {
+  border-color: rgba(126, 178, 240, 0.48);
+  background: rgba(52, 95, 148, 0.32);
+}
+
+.dm-sidebar-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(24, 38, 58, 0.85);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  color: #b7d6fb;
+}
+
+.dm-sidebar-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dm-sidebar-meta {
+  min-width: 0;
+}
+
+.dm-sidebar-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e7f2ff;
+}
+
+.dm-sidebar-last {
+  font-size: 11px;
+  color: #9db4d0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dm-sidebar-badge {
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: #3d8fe9;
+  color: #eaf4ff;
+}
+
+.dm-wrapper {
+  min-width: 0;
+}
+
 .call-bar {
   min-height: 220px;
   padding: 16px 18px;
   border-radius: 14px;
-  margin: 8px 12px 0;
+  width: min(760px, calc(100% - 24px));
+  margin: 10px auto 0;
   background: linear-gradient(180deg, rgba(8, 12, 18, 0.98), rgba(12, 17, 26, 0.95));
   border: 1px solid rgba(91, 124, 164, 0.28);
   box-shadow: 0 18px 34px rgba(5, 11, 20, 0.38);
@@ -1913,6 +2133,14 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 700px) {
+  .dm-layout {
+    grid-template-columns: 56px 1fr !important;
+  }
+
+  .dm-sidebar {
+    display: none;
+  }
+
   .call-bar {
     margin: 8px 8px 0;
     min-height: 190px;
