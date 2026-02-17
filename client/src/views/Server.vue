@@ -222,17 +222,49 @@
             </div>
           </div>
           <div v-else-if="selectedChannel && selectedChannel.type === 'voice'" class="voice-panel">
-            <div class="voice-info">
-              {{ voiceConnected && voiceChannelId === selectedChannel._id
-                ? "Baglisin"
-                : "Sesli kanala baglan" }}
+            <div class="voice-top">
+              <div class="voice-top-title">{{ selectedChannel.name }} ile sesli gorusme</div>
+              <div class="voice-top-badge" :class="{ live: voiceConnected && voiceChannelId === selectedChannel._id }">
+                {{ voiceConnected && voiceChannelId === selectedChannel._id ? "Bagli" : "Beklemede" }}
+              </div>
             </div>
-            <button
-              class="primary-btn"
-              @click="voiceConnected && voiceChannelId === selectedChannel._id ? leaveVoiceChannel() : joinVoiceChannel(selectedChannel)"
-            >
-              {{ voiceConnected && voiceChannelId === selectedChannel._id ? "Ayril" : "Baglan" }}
-            </button>
+
+            <div class="voice-stage">
+              <div class="voice-card me">
+                <div class="voice-avatar">
+                  <img v-if="userStore.user?.avatar" :src="fullAsset(userStore.user.avatar)" />
+                  <span v-else>{{ (userStore.user?.username || "?").slice(0, 1).toUpperCase() }}</span>
+                </div>
+                <div class="voice-name">{{ userStore.user?.username || "Sen" }}</div>
+              </div>
+              <div class="voice-card activity">
+                <div class="voice-activity-title">Aktivite alani</div>
+                <div class="voice-activity-sub">Sesli sohbete davet et veya aktivite sec</div>
+                <div class="voice-activity-actions">
+                  <button class="voice-ghost-btn">Sesli Sohbete Davet Et</button>
+                  <button class="voice-ghost-btn">Aktivite Sec</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="voice-controls">
+              <button class="voice-ctrl-btn" :class="{ off: selfMute }" @click="selfMute = !selfMute" title="Mikrofon">
+                <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 0 1 0-2h2v-3.07A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 10 0Z" /></svg>
+              </button>
+              <button class="voice-ctrl-btn" title="Video">
+                <svg viewBox="0 0 24 24"><path d="M17 10.5V7a2 2 0 0 0-2-2H5A2 2 0 0 0 3 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3.5l4 3V7.5l-4 3Z" /></svg>
+              </button>
+              <button class="voice-ctrl-btn" title="Ekran">
+                <svg viewBox="0 0 24 24"><path d="M3 5h18v12H3V5Zm7 14h4v2h-4v-2Z" /></svg>
+              </button>
+              <button
+                class="voice-ctrl-btn danger"
+                @click="voiceConnected && voiceChannelId === selectedChannel._id ? leaveVoiceChannel() : joinVoiceChannel(selectedChannel)"
+                :title="voiceConnected && voiceChannelId === selectedChannel._id ? 'Bitir' : 'Baglan'"
+              >
+                <svg viewBox="0 0 24 24"><path d="M4 10.5c5.2-4.7 10.8-4.7 16 0l-1.8 2.2a14.7 14.7 0 0 0-12.4 0L4 10.5Z" /></svg>
+              </button>
+            </div>
           </div>
           <div v-else class="channel-placeholder">
             Bir kanal sec
@@ -1302,12 +1334,162 @@ watch(
 
 .voice-panel {
   display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 14px;
+  min-height: 0;
+  flex: 1;
+}
+
+.voice-top {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-.voice-info {
+.voice-top-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #d8ebff;
+}
+
+.voice-top-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #d8e6ff;
+  background: #283447;
+  border: 1px solid #3f516d;
+  border-radius: 999px;
+  padding: 4px 9px;
+}
+
+.voice-top-badge.live {
+  background: #2a3e2d;
+  border-color: #4f9a5c;
+  color: #b8efc0;
+}
+
+.voice-stage {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  min-height: 0;
+}
+
+.voice-card {
+  border: 1px solid rgba(99, 151, 216, 0.36);
+  border-radius: 10px;
+  background: #090f17;
+  min-height: 360px;
+  position: relative;
+  overflow: hidden;
+}
+
+.voice-card.me {
+  display: grid;
+  place-items: center;
+  background: #a4a1de;
+}
+
+.voice-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #1e2330;
+  display: grid;
+  place-items: center;
+  color: #d4e7ff;
+  font-size: 34px;
+  font-weight: 800;
+}
+
+.voice-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.voice-name {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 8px;
+}
+
+.voice-card.activity {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  background: radial-gradient(120% 120% at 50% 0%, #402457 0%, #090f17 62%);
+}
+
+.voice-activity-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #e2e7ff;
+}
+
+.voice-activity-sub {
   font-size: 13px;
-  color: var(--text-muted);
+  color: #b8bfd8;
+}
+
+.voice-activity-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.voice-ghost-btn {
+  border: 1px solid #3f4f68;
+  background: #1b2331;
+  color: #e2e8ff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.voice-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding-bottom: 2px;
+}
+
+.voice-ctrl-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid #3d4f68;
+  background: #1c2737;
+  color: #d5e8ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.voice-ctrl-btn.off {
+  color: #8ea4bc;
+  background: #182030;
+}
+
+.voice-ctrl-btn.danger {
+  background: #c93d50;
+  border-color: #c93d50;
+  color: #fff;
+}
+
+.voice-ctrl-btn svg {
+  width: 21px;
+  height: 21px;
+  fill: currentColor;
 }
 
 .channel-header {
@@ -2021,6 +2203,19 @@ watch(
   .channel-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .voice-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .voice-card {
+    min-height: 240px;
+  }
+
+  .voice-activity-actions {
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }
 </style>
