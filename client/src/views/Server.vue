@@ -37,6 +37,10 @@
                 v-for="cat in server?.categories || []"
                 :key="cat._id"
                 class="category-block"
+                :class="{ 'drop-target': isOwner && dragOverKey === `text-${cat._id}` }"
+                @dragover.prevent="onCategoryDragOver(`text-${cat._id}`)"
+                @dragleave="onCategoryDragLeave(`text-${cat._id}`)"
+                @drop.prevent="onCategoryDrop(cat._id, 'text')"
               >
                 <div class="category-title">{{ cat.name }}</div>
                 <div class="channel-list">
@@ -44,6 +48,9 @@
                     v-for="ch in channelsByCategoryAndType(cat._id, 'text')"
                     :key="ch._id"
                     class="channel-row"
+                    :draggable="isOwner"
+                    @dragstart="onChannelDragStart(ch)"
+                    @dragend="onChannelDragEnd"
                   >
                     <button
                       class="channel-item"
@@ -53,23 +60,26 @@
                       <span class="channel-prefix">#</span>
                       <span class="channel-name">{{ ch.name }}</span>
                     </button>
-                    <select v-if="isOwner" class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
-                      <option value="">Kategorisiz</option>
-                      <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
-                        {{ c.name }}
-                      </option>
-                    </select>
                   </div>
                 </div>
               </div>
 
-              <div class="category-block">
+              <div
+                class="category-block"
+                :class="{ 'drop-target': isOwner && dragOverKey === 'text-uncat' }"
+                @dragover.prevent="onCategoryDragOver('text-uncat')"
+                @dragleave="onCategoryDragLeave('text-uncat')"
+                @drop.prevent="onCategoryDrop(null, 'text')"
+              >
                 <div class="category-title">Kategorisiz</div>
                 <div class="channel-list">
                   <div
                     v-for="ch in channelsByCategoryAndType(null, 'text')"
                     :key="ch._id"
                     class="channel-row"
+                    :draggable="isOwner"
+                    @dragstart="onChannelDragStart(ch)"
+                    @dragend="onChannelDragEnd"
                   >
                     <button
                       class="channel-item"
@@ -79,12 +89,6 @@
                       <span class="channel-prefix">#</span>
                       <span class="channel-name">{{ ch.name }}</span>
                     </button>
-                    <select v-if="isOwner" class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
-                      <option value="">Kategorisiz</option>
-                      <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
-                        {{ c.name }}
-                      </option>
-                    </select>
                   </div>
                   <div
                     v-if="!channelsByCategoryAndType(null, 'text').length && !channelsByCategoryAndType(null, 'voice').length && !(server?.channels || []).length"
@@ -106,6 +110,10 @@
                 v-for="cat in server?.categories || []"
                 :key="cat._id"
                 class="category-block"
+                :class="{ 'drop-target': isOwner && dragOverKey === `voice-${cat._id}` }"
+                @dragover.prevent="onCategoryDragOver(`voice-${cat._id}`)"
+                @dragleave="onCategoryDragLeave(`voice-${cat._id}`)"
+                @drop.prevent="onCategoryDrop(cat._id, 'voice')"
               >
                 <div class="category-title">{{ cat.name }}</div>
                 <div class="channel-list">
@@ -113,6 +121,9 @@
                     v-for="ch in channelsByCategoryAndType(cat._id, 'voice')"
                     :key="ch._id"
                     class="channel-row"
+                    :draggable="isOwner"
+                    @dragstart="onChannelDragStart(ch)"
+                    @dragend="onChannelDragEnd"
                   >
                     <button
                       class="channel-item"
@@ -122,23 +133,26 @@
                       <span class="channel-prefix">V</span>
                       <span class="channel-name">{{ ch.name }}</span>
                     </button>
-                    <select v-if="isOwner" class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
-                      <option value="">Kategorisiz</option>
-                      <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
-                        {{ c.name }}
-                      </option>
-                    </select>
                   </div>
                 </div>
               </div>
 
-              <div class="category-block">
+              <div
+                class="category-block"
+                :class="{ 'drop-target': isOwner && dragOverKey === 'voice-uncat' }"
+                @dragover.prevent="onCategoryDragOver('voice-uncat')"
+                @dragleave="onCategoryDragLeave('voice-uncat')"
+                @drop.prevent="onCategoryDrop(null, 'voice')"
+              >
                 <div class="category-title">Kategorisiz</div>
                 <div class="channel-list">
                   <div
                     v-for="ch in channelsByCategoryAndType(null, 'voice')"
                     :key="ch._id"
                     class="channel-row"
+                    :draggable="isOwner"
+                    @dragstart="onChannelDragStart(ch)"
+                    @dragend="onChannelDragEnd"
                   >
                     <button
                       class="channel-item"
@@ -148,12 +162,6 @@
                       <span class="channel-prefix">V</span>
                       <span class="channel-name">{{ ch.name }}</span>
                     </button>
-                    <select v-if="isOwner" class="channel-move" :value="ch.categoryId || ''" @change="moveChannel(ch, $event)">
-                      <option value="">Kategorisiz</option>
-                      <option v-for="c in server?.categories || []" :key="c._id" :value="c._id">
-                        {{ c.name }}
-                      </option>
-                    </select>
                   </div>
                 </div>
               </div>
@@ -480,6 +488,9 @@ const inviteStatus = ref("");
 const hideMutedChannels = ref(false);
 const serverMenuOpen = ref(false);
 const serverMenuPos = ref({ x: 0, y: 0 });
+const draggingChannelId = ref("");
+const draggingChannelType = ref("");
+const dragOverKey = ref("");
 const profileCardOpen = ref(false);
 const dndEnabled = ref(localStorage.getItem("visicos_dnd") === "1");
 const channelCreateOpen = ref(false);
@@ -727,8 +738,7 @@ const submitChannelModal = async () => {
   if (ok) closeChannelModal();
 };
 
-const moveChannel = async (channel, event) => {
-  const value = event.target.value || null;
+const updateChannelCategory = async (channel, value) => {
   try {
     const res = await axios.patch(
       `/api/servers/${route.params.id}/channels/${channel._id}`,
@@ -742,6 +752,38 @@ const moveChannel = async (channel, event) => {
   } catch (err) {
     channelError.value = err?.response?.data?.message || "Kanal tasinamadi";
   }
+};
+
+const onChannelDragStart = (channel) => {
+  if (!isOwner.value) return;
+  draggingChannelId.value = channel?._id || "";
+  draggingChannelType.value = channel?.type || "";
+};
+
+const onChannelDragEnd = () => {
+  draggingChannelId.value = "";
+  draggingChannelType.value = "";
+  dragOverKey.value = "";
+};
+
+const onCategoryDragOver = (key) => {
+  if (!isOwner.value || !draggingChannelId.value) return;
+  dragOverKey.value = key;
+};
+
+const onCategoryDragLeave = (key) => {
+  if (dragOverKey.value === key) dragOverKey.value = "";
+};
+
+const onCategoryDrop = async (categoryId, type) => {
+  if (!isOwner.value || !draggingChannelId.value) return;
+  const channel = (server.value?.channels || []).find((ch) => ch._id === draggingChannelId.value);
+  if (!channel || channel.type !== type) {
+    onChannelDragEnd();
+    return;
+  }
+  await updateChannelCategory(channel, categoryId || null);
+  onChannelDragEnd();
 };
 
 const createCategory = async () => {
@@ -1179,6 +1221,12 @@ watch(
   gap: 6px;
 }
 
+.category-block.drop-target {
+  outline: 1px dashed rgba(122, 194, 255, 0.75);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
 .category-title {
   font-size: 12px;
   font-weight: 700;
@@ -1195,6 +1243,14 @@ watch(
   grid-template-columns: 1fr auto;
   gap: 6px;
   align-items: center;
+}
+
+.channel-row[draggable="true"] {
+  cursor: grab;
+}
+
+.channel-row[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 .channel-item {
