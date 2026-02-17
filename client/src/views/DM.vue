@@ -1,4 +1,4 @@
-<template>
+ï»¿<template>
   <div class="dm-layout">
     <aside class="servers">
       <div class="logo active" @click="goFriends">
@@ -29,7 +29,7 @@
         <div class="ph-meta">
           <div class="ph-name">{{ otherUser }}</div>
           <div class="status" :class="isOnline ? 'online' : 'offline'">
-            {{ typingUser ? 'yazýyor...' : isOnline ? 'online' : 'offline' }}
+            {{ typingUser ? 'yazÄ±yor...' : isOnline ? 'online' : 'offline' }}
           </div>
           <div v-if="lastCallLabel" class="call-history">
             Last call: {{ lastCallLabel }}
@@ -38,9 +38,9 @@
       </div>
 
       <div class="header-actions">
-        <button class="theme-btn" @click="toggleTheme">??</button>
-        <button class="call-btn" @click="startCall" :disabled="inCall">?? Sesli Ara</button>
-        <button class="call-btn danger" @click="hangUp" v-if="inCall">??</button>
+        <button class="theme-btn" @click="toggleTheme">Tema</button>
+        <button class="call-btn" @click="startCall" :disabled="inCall">Sesli Ara</button>
+        <button class="call-btn danger" @click="hangUp" v-if="inCall">Bitir</button>
         <button class="call-btn" @click="toggleMute" v-if="inCall">
           {{ muted ? "Unmute" : "Mute" }}
         </button>
@@ -48,7 +48,7 @@
     </div>
 
     <!-- CALL BAR -->
-    <div v-if="inCall || ringing || callStatus !== 'hazýr'" class="call-bar">
+    <div v-if="inCall || ringing || callStatus !== 'hazÄ±r'" class="call-bar">
       <div class="call-left">
         <div class="call-avatar">
           <img v-if="otherUserAvatar" :src="fullAvatar(otherUserAvatar)" />
@@ -70,13 +70,13 @@
         <button class="call-icon" @click="toggleMute" :title="muted ? 'Unmute' : 'Mute'">
           {{ muted ? "Unmute" : "Mute" }}
         </button>
-        <button class="call-icon end" @click="hangUp" title="Aramayý bitir">??</button>
+        <button class="call-icon end" @click="hangUp" title="Aramayi bitir">X</button>
         <button
           class="call-btn"
-          v-if="callStatus === 'koptu' || callStatus === 'baþarýsýz'"
+          v-if="callStatus === 'koptu' || callStatus === 'baÅŸarÄ±sÄ±z'"
           @click="reconnect"
         >
-          Yeniden Baðlan
+          Yeniden BaÄŸlan
         </button>
       </div>
     </div>
@@ -88,29 +88,29 @@
   :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
 >
   <div class="cm-reactions">
-    <span @click="react(contextMenu.msg._id, '??')">??</span>
-    <span @click="react(contextMenu.msg._id, '??')">??</span>
-    <span @click="react(contextMenu.msg._id, '??')">??</span>
-    <span @click="react(contextMenu.msg._id, '??')">??</span>
+    <span @click="react(contextMenu.msg._id, ':)')">:)</span>
+    <span @click="react(contextMenu.msg._id, '<3')">&lt;3</span>
+    <span @click="react(contextMenu.msg._id, 'GG')">GG</span>
+    <span @click="react(contextMenu.msg._id, '+1')">+1</span>
   </div>
 
   <!-- REPLY -->
   <div @click="setReply(contextMenu.msg); closeMenu()">
-    ?? Yanýtla
+    Yanitla
   </div>
 
   <div
     v-if="contextMenu.msg.sender._id === userId"
     @click="startEdit(contextMenu.msg); closeMenu()"
   >
-    ?? Düzenle
+    Duzenle
   </div>
 
   <div
     v-if="contextMenu.msg.sender._id === userId"
     @click="deleteMessage(contextMenu.msg._id); closeMenu()"
   >
-    ??? Sil
+    Sil
   </div>
 </div>
 
@@ -122,7 +122,7 @@
         class="new-message-btn"
         @click="scrollToBottom"
       >
-        ? Yeni mesaj
+        Yeni mesaj
       </button>
 
       <div
@@ -175,7 +175,7 @@
               <div class="file-icon">{{ fileIcon(msg.content) }}</div>
               <div class="file-info">
                 <div class="file-name">{{ extractFileName(msg.content) }}</div>
-                <div class="file-sub">Dosyayý aç</div>
+                <div class="file-sub">DosyayÄ± aÃ§</div>
               </div>
             </div>
 
@@ -188,7 +188,7 @@
             <span v-if="msg.sender._id === userId" class="read">
               {{ (msg.readBy?.length || 0) > 1 ? "Read" : "Sent" }}
             </span>
-            <span v-if="msg.edited" class="edited">(düzenlendi)</span>
+            <span v-if="msg.edited" class="edited">(dÃ¼zenlendi)</span>
           </div>
 
           <div v-if="msg.reactions?.length" class="reactions">
@@ -205,7 +205,7 @@
 
     <!-- TYPING -->
     <div v-if="typingUser" class="typing">
-      {{ typingUser }} yazýyor...
+      {{ typingUser }} yazÄ±yor...
     </div>
 
     <!-- REPLY PREVIEW -->
@@ -214,7 +214,7 @@
         <b>{{ replyTo.username }}</b>
         <span>{{ replyTo.content.slice(0, 60) }}</span>
       </div>
-      <span class="reply-close" @click="replyTo = null">?</span>
+      <span class="reply-close" @click="replyTo = null">X</span>
     </div>
 
     <!-- INPUT -->
@@ -241,22 +241,22 @@
         </div>
       </div>
 
-      <span class="emoji" @click="text += '??'">??</span>
+      <span class="emoji" @click="text += ':)'">:)</span>
 
       <label class="file">
-        ??
+        Dosya
         <input type="file" hidden @change="uploadFile" />
       </label>
 
       <button @click="submit">
-        {{ editingId ? "Kaydet" : "Gönder" }}
+        {{ editingId ? "Kaydet" : "GÃ¶nder" }}
       </button>
     </div>
 
     <!-- LIGHTBOX -->
     <div v-if="lightbox.open" class="lightbox" @click.self="closeLightbox">
       <img :src="lightbox.src" />
-      <span class="close" @click="closeLightbox">?</span>
+      <span class="close" @click="closeLightbox">X</span>
     </div>
     <transition name="fade">
       <div v-if="serverModalOpen" class="server-modal" @click="closeCreateServer">
@@ -534,7 +534,7 @@ const onTouchEnd = () => {
 const inCall = ref(false);
 const muted = ref(false);
 const isCaller = ref(false);
-const callStatus = ref("hazýr");
+const callStatus = ref("hazÄ±r");
 const ringing = ref(false);
 const incomingFrom = ref("");
 const callAccepted = ref(false);
@@ -546,7 +546,7 @@ const startCall = async () => {
   logVoice("startCall click", { roomId, userId });
   isCaller.value = true;
   inCall.value = false;
-  callStatus.value = "aranýyor";
+  callStatus.value = "aranÄ±yor";
   callStartAt.value = Date.now();
   addCallEntry("outgoing");
 
@@ -578,7 +578,7 @@ const hangUp = () => {
   }
   inCall.value = false;
   muted.value = false;
-  callStatus.value = "hazýr";
+  callStatus.value = "hazÄ±r";
   isCaller.value = false;
   ringing.value = false;
   callAccepted.value = false;
@@ -607,11 +607,11 @@ const toggleMute = () => {
 
 const handlePcState = (state) => {
   logVoice("pc state", state);
-  if (["new", "connecting", "checking"].includes(state)) callStatus.value = "baðlanýyor";
-  else if (state === "connected" || state === "completed") callStatus.value = "baðlý";
+  if (["new", "connecting", "checking"].includes(state)) callStatus.value = "baÄŸlanÄ±yor";
+  else if (state === "connected" || state === "completed") callStatus.value = "baÄŸlÄ±";
   else if (state === "disconnected") callStatus.value = "koptu";
-  else if (state === "failed") callStatus.value = "baþarýsýz";
-  else if (state === "closed") callStatus.value = "hazýr";
+  else if (state === "failed") callStatus.value = "baÅŸarÄ±sÄ±z";
+  else if (state === "closed") callStatus.value = "hazÄ±r";
 };
 
 const reconnect = async () => {
@@ -724,7 +724,7 @@ const toggleSfuScreen = async () => {
 
 const createOffer = async () => {
   logVoice("createOffer start");
-  callStatus.value = "baðlanýyor";
+  callStatus.value = "baÄŸlanÄ±yor";
   inCall.value = true;
 
   const pc = await initVoice(roomId, {
@@ -748,7 +748,7 @@ const handleIncomingOffer = async (offer) => {
   logVoice("handleIncomingOffer", { hasOffer: !!offer });
   callAccepted.value = true;
   inCall.value = true;
-  callStatus.value = "baðlanýyor";
+  callStatus.value = "baÄŸlanÄ±yor";
 
   const pc = await initVoice(roomId, {
     onStateChange: (s) => handlePcState(s),
@@ -777,7 +777,7 @@ const acceptCall = async () => {
   logVoice("acceptCall");
   ringing.value = false;
   callAccepted.value = true;
-  callStatus.value = "baðlanýyor";
+  callStatus.value = "baÄŸlanÄ±yor";
 
   logVoice("call-accepted emit");
   socket.emit("call-accepted", { roomId });
@@ -800,7 +800,7 @@ const rejectCall = () => {
   logVoice("rejectCall");
   ringing.value = false;
   inCall.value = false;
-  callStatus.value = "hazýr";
+  callStatus.value = "hazÄ±r";
   callAccepted.value = false;
   pendingOffer.value = null;
   pendingRemoteCandidates.value = [];
@@ -971,10 +971,10 @@ const isImage = (content = "") =>
 const isFile = (content = "") => content.includes("/uploads/");
 
 const fileIcon = (url) => {
-  if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) return "???";
-  if (url.match(/\.pdf$/i)) return "??";
-  if (url.match(/\.(zip|rar)$/i)) return "???";
-  return "??";
+  if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) return "IMG";
+  if (url.match(/\.pdf$/i)) return "PDF";
+  if (url.match(/\.(zip|rar)$/i)) return "ZIP";
+  return "FILE";
 };
 
 const extractFileName = (content = "") => {
@@ -1244,13 +1244,13 @@ socket.on("online-users", (users) => {
 });
 
 const callStatusLabel = computed(() => {
-  if (callStatus.value === "baðlý") return "Arama baðlandý";
-  if (callStatus.value === "baðlanýyor") return "Baðlanýyor...";
-  if (callStatus.value === "aranýyor") return `${incomingFrom.value || "Arayan"} arýyor`;
-  if (callStatus.value === "koptu") return "Baðlantý koptu";
-  if (callStatus.value === "baþarýsýz") return "Baðlantý baþarýsýz";
+  if (callStatus.value === "baÄŸlÄ±") return "Arama baÄŸlandÄ±";
+  if (callStatus.value === "baÄŸlanÄ±yor") return "BaÄŸlanÄ±yor...";
+  if (callStatus.value === "aranÄ±yor") return `${incomingFrom.value || "Arayan"} arÄ±yor`;
+  if (callStatus.value === "koptu") return "BaÄŸlantÄ± koptu";
+  if (callStatus.value === "baÅŸarÄ±sÄ±z") return "BaÄŸlantÄ± baÅŸarÄ±sÄ±z";
   if (callStatus.value === "reddedildi") return "Arama reddedildi";
-  return "Arama hazýr";
+  return "Arama hazÄ±r";
 });
 
 const formatAgo = (ts) => {
@@ -1271,10 +1271,10 @@ const lastCallLabel = computed(() => {
 });
 
 const callStatusClass = computed(() => {
-  if (callStatus.value === "baðlý") return "ok";
-  if (callStatus.value === "baðlanýyor") return "warn";
-  if (callStatus.value === "aranýyor") return "warn";
-  if (callStatus.value === "koptu" || callStatus.value === "baþarýsýz" || callStatus.value === "reddedildi") return "bad";
+  if (callStatus.value === "baÄŸlÄ±") return "ok";
+  if (callStatus.value === "baÄŸlanÄ±yor") return "warn";
+  if (callStatus.value === "aranÄ±yor") return "warn";
+  if (callStatus.value === "koptu" || callStatus.value === "baÅŸarÄ±sÄ±z" || callStatus.value === "reddedildi") return "bad";
   return "idle";
 });
 
@@ -1341,7 +1341,7 @@ onMounted(async () => {
     if (!callAccepted.value) {
       pendingOffer.value = offer;
       logVoice("offer queued");
-      callStatus.value = "aranýyor";
+      callStatus.value = "aranÄ±yor";
       return;
     }
     await handleIncomingOffer(offer);
@@ -1387,7 +1387,7 @@ onMounted(async () => {
     logVoice("incoming-call recv", { from });
     ringing.value = true;
     inCall.value = false;
-    callStatus.value = "aranýyor";
+    callStatus.value = "aranÄ±yor";
     incomingFrom.value = from;
     callAccepted.value = false;
   });
@@ -1657,3 +1657,5 @@ onBeforeUnmount(() => {
   background: rgba(150, 78, 45, 0.2);
 }
 </style>
+
+
