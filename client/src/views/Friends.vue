@@ -110,63 +110,19 @@
         </div>
       </div>
 
-      <div v-if="profileCardOpen" class="profile-card" @click.stop>
-        <div class="profile-card-header">
-          <div
-            class="profile-banner"
-            :style="{
-              backgroundImage: userStore.user?.banner ? `url(${fullAvatar(userStore.user.banner)})` : ''
-            }"
-          ></div>
-          <div class="profile-avatar">
-            <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
-            <span v-else>{{ (userStore.user?.username || "U").slice(0,1).toUpperCase() }}</span>
-            <span
-              class="status-dot"
-              :class="isOnline ? 'online' : 'offline'"
-              :title="isOnline ? 'Online' : 'Offline'"
-            ></span>
-          </div>
-        </div>
-        <div class="profile-card-body">
-          <div class="profile-card-name">{{ userStore.user?.username }}</div>
-          <div class="profile-card-handle">@{{ userStore.user?.username?.toLowerCase() }}</div>
-          <div class="profile-card-note">
-            <div class="note-label">Not</div>
-            <div class="note-value">{{ profileNote || "Not ekle" }}</div>
-          </div>
-          <button class="note-edit" @click="editProfileNote">Notu duzenle</button>
-          <div class="profile-card-note">
-            <div class="note-label">Custom status</div>
-            <div class="note-value">
-              <span v-if="customStatusEmoji">{{ customStatusEmoji }}</span>
-              {{ displayStatus || "Durum ekle" }}
-            </div>
-          </div>
-          <button class="note-edit" @click="setCustomStatus">Status duzenle</button>
-          <div class="status-actions">
-            <button class="chip-btn" @click="setStatusDuration(30)">30 dk</button>
-            <button class="chip-btn" @click="setStatusDuration(60)">1 saat</button>
-            <button class="chip-btn" @click="setStatusDuration(240)">4 saat</button>
-            <button class="chip-btn" @click="setStatusDuration(1440)">24 saat</button>
-            <button class="chip-btn" @click="clearStatus">Temizle</button>
-          </div>
-          <div class="profile-card-row">
-            <span class="pill">Oyun Koleksiyonu</span>
-            <button class="ghost-btn" @click="goProfile">Go</button>
-          </div>
-          <div class="profile-card-section">
-            <button class="menu-row" @click="goProfile">Profili Duzenle</button>
-            <button class="menu-row" @click="toggleDnd">
-              {{ dndEnabled ? "Rahatsiz Etmeyin Kapat" : "Rahatsiz Etmeyin" }}
-            </button>
-          </div>
-          <div class="profile-card-section">
-            <button class="menu-row" @click="switchAccount">Hesap Degistir</button>
-            <button class="menu-row" @click="copyUserId">Kullanici ID'sini Kopyala</button>
-          </div>
-        </div>
-      </div>
+      <UserQuickCard
+        :open="profileCardOpen"
+        :username="userStore.user?.username || ''"
+        :avatar="userStore.user?.avatar ? fullAvatar(userStore.user.avatar) : ''"
+        :banner="userStore.user?.banner ? fullAvatar(userStore.user.banner) : ''"
+        :is-online="isOnline"
+        :dnd-enabled="dndEnabled"
+        @close="closeProfileCard"
+        @edit-profile="goProfile"
+        @toggle-dnd="toggleDnd"
+        @switch-account="switchAccount"
+        @copy-id="copyUserId"
+      />
 
       <div
         v-if="userMenuOpen"
@@ -488,6 +444,7 @@ import { useUserStore } from "../store/user";
 import socket from "../socket";
 import { setGlobalMute, setGlobalDeafen } from "../webrtc/voice";
 import { initPushNotifications } from "../push";
+import UserQuickCard from "../components/UserQuickCard.vue";
 
 const router = useRouter();
 const userStore = useUserStore();

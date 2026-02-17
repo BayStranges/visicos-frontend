@@ -160,7 +160,7 @@
             </div>
           </div>
 
-          <div class="server-userbar">
+          <div class="server-userbar" @click="toggleProfileCard">
             <div class="userbar-avatar">
               <img v-if="userStore.user?.avatar" :src="fullAsset(userStore.user.avatar)" />
               <span v-else>{{ (userStore.user?.username || "?").slice(0, 1).toUpperCase() }}</span>
@@ -171,13 +171,13 @@
               <div class="userbar-status">{{ isSelfOnline ? "Cevrimici" : "Cevrimdisi" }}</div>
             </div>
             <div class="userbar-actions">
-              <button class="userbar-icon" :class="{ off: selfMute }" @click="selfMute = !selfMute" title="Mikrofon">
+              <button class="userbar-icon" :class="{ off: selfMute }" @click.stop="selfMute = !selfMute" title="Mikrofon">
                 <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 0 1 0-2h2v-3.07A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 10 0Z" /></svg>
               </button>
-              <button class="userbar-icon" :class="{ off: selfDeaf }" @click="selfDeaf = !selfDeaf" title="Kulaklik">
+              <button class="userbar-icon" :class="{ off: selfDeaf }" @click.stop="selfDeaf = !selfDeaf" title="Kulaklik">
                 <svg viewBox="0 0 24 24"><path d="M12 3a7 7 0 0 0-7 7v3.5A2.5 2.5 0 0 0 7.5 16H9a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1H7V10a5 5 0 0 1 10 0v.5h-2a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1.5a2.5 2.5 0 0 0 2.5-2.5V10a7 7 0 0 0-7-7Z" /></svg>
               </button>
-              <button class="userbar-icon" @click="goProfile" title="Profil">
+              <button class="userbar-icon" @click.stop="goProfile" title="Profil">
                 <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.24-8 5a1 1 0 0 0 2 0c0-1.57 2.69-3 6-3s6 1.43 6 3a1 1 0 1 0 2 0c0-2.76-3.58-5-8-5Z" /></svg>
               </button>
             </div>
@@ -284,6 +284,20 @@
         </aside>
       </div>
     </div>
+
+    <UserQuickCard
+      :open="profileCardOpen"
+      :username="userStore.user?.username || ''"
+      :avatar="userStore.user?.avatar ? fullAsset(userStore.user.avatar) : ''"
+      :banner="userStore.user?.banner ? fullAsset(userStore.user.banner) : ''"
+      :is-online="isSelfOnline"
+      :dnd-enabled="dndEnabled"
+      @close="closeProfileCard"
+      @edit-profile="goProfile"
+      @toggle-dnd="toggleDnd"
+      @switch-account="switchAccount"
+      @copy-id="copyUserId"
+    />
 
     <div
       v-if="serverMenuOpen"
@@ -425,6 +439,7 @@ import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { ASSET_BASE_URL } from "../config";
 import { useUserStore } from "../store/user";
+import UserQuickCard from "../components/UserQuickCard.vue";
 import socket from "../socket";
 import { startSfuCall, stopSfuCall, startMic } from "../webrtc/sfu";
 
@@ -465,6 +480,8 @@ const inviteStatus = ref("");
 const hideMutedChannels = ref(false);
 const serverMenuOpen = ref(false);
 const serverMenuPos = ref({ x: 0, y: 0 });
+const profileCardOpen = ref(false);
+const dndEnabled = ref(localStorage.getItem("visicos_dnd") === "1");
 const channelCreateOpen = ref(false);
 const categoryCreateOpen = ref(false);
 const channelDraftName = ref("");
@@ -848,6 +865,28 @@ const createServer = async () => {
 const goServer = (id) => router.push(`/server/${id}`);
 const goFriends = () => router.push("/friends");
 const goProfile = () => router.push("/profile");
+const toggleProfileCard = () => {
+  profileCardOpen.value = !profileCardOpen.value;
+};
+const closeProfileCard = () => {
+  profileCardOpen.value = false;
+};
+const toggleDnd = () => {
+  dndEnabled.value = !dndEnabled.value;
+  localStorage.setItem("visicos_dnd", dndEnabled.value ? "1" : "0");
+};
+const switchAccount = () => {
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+  router.push("/login");
+};
+const copyUserId = async () => {
+  const id = userStore.user?._id || "";
+  if (!id) return;
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(id);
+  }
+};
 const isSelfOnline = computed(() => !!userStore.user?.isOnline);
 const isOwner = computed(() => {
   const ownerId = server.value?.owner?._id || server.value?.owner;

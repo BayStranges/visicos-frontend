@@ -49,7 +49,7 @@
           <div v-if="dm.unreadCount > 0" class="dm-sidebar-badge">{{ dm.unreadCount }}</div>
         </button>
       </div>
-      <div class="dm-sidebar-profile">
+      <div class="dm-sidebar-profile" @click="toggleProfileCard">
         <div class="dm-sidebar-me">
           <div class="dm-sidebar-avatar me">
             <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
@@ -61,18 +61,18 @@
           </div>
         </div>
         <div class="dm-sidebar-actions">
-          <button class="dm-icon-btn" @click="toggleMute" :disabled="!inCall" title="Mikrofon">
+          <button class="dm-icon-btn" @click.stop="toggleMute" :disabled="!inCall" title="Mikrofon">
             <svg class="dm-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
               <path d="M5 12a1 1 0 0 1 2 0 5 5 0 0 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V21a1 1 0 1 1-2 0v-2.08A7 7 0 0 1 5 12Z" />
             </svg>
           </button>
-          <button class="dm-icon-btn danger" @click="hangUp" :disabled="!inCall" title="Aramayi bitir">
+          <button class="dm-icon-btn danger" @click.stop="hangUp" :disabled="!inCall" title="Aramayi bitir">
             <svg class="dm-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M7.2 15.4a15.2 15.2 0 0 1 9.6 0l2-2a1 1 0 0 0-.2-1.56A12.6 12.6 0 0 0 12 10a12.6 12.6 0 0 0-6.6 1.84 1 1 0 0 0-.2 1.56l2 2Z" />
             </svg>
           </button>
-          <button class="dm-icon-btn" @click="goProfile" title="Profil">
+          <button class="dm-icon-btn" @click.stop="goProfile" title="Profil">
             <svg class="dm-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.5 3.5a6.7 6.7 0 0 0-.09-1l2.05-1.6-2-3.46-2.5 1a7.8 7.8 0 0 0-1.73-1l-.38-2.7H9.15l-.38 2.7c-.6.22-1.18.56-1.73 1l-2.5-1-2 3.46 2.05 1.6a6.7 6.7 0 0 0 0 2l-2.05 1.6 2 3.46 2.5-1c.55.44 1.13.78 1.73 1l.38 2.7h5.7l.38-2.7c.6-.22 1.18-.56 1.73-1l2.5 1 2-3.46-2.05-1.6c.06-.33.09-.66.09-1Z" />
             </svg>
@@ -80,6 +80,20 @@
         </div>
       </div>
     </aside>
+
+    <UserQuickCard
+      :open="profileCardOpen"
+      :username="userStore.user?.username || ''"
+      :avatar="userStore.user?.avatar ? fullAvatar(userStore.user.avatar) : ''"
+      :banner="userStore.user?.banner ? fullAvatar(userStore.user.banner) : ''"
+      :is-online="true"
+      :dnd-enabled="dndEnabled"
+      @close="closeProfileCard"
+      @edit-profile="goProfile"
+      @toggle-dnd="toggleDnd"
+      @switch-account="switchAccount"
+      @copy-id="copyUserId"
+    />
 
     <div class="dm-wrapper" :class="darkMode">
       <audio ref="ringtoneAudio" src="/zilsesi.mp3" preload="auto" loop></audio>
@@ -399,6 +413,7 @@ import axios from "axios";
 import { ASSET_BASE_URL } from "../config";
 import socket from "../socket";
 import { useUserStore } from "../store/user";
+import UserQuickCard from "../components/UserQuickCard.vue";
 import { initVoice, getPC, closeVoice } from "../webrtc/voice";
 import { tuneOpusSdp } from "../webrtc/opusSdp";
 import {
@@ -440,10 +455,39 @@ const userStore = useUserStore();
 const goFriends = () => router.push("/friends");
 const goServer = (id) => router.push(`/server/${id}`);
 const goProfile = () => router.push("/profile");
+const profileCardOpen = ref(false);
+const dndEnabled = ref(localStorage.getItem("visicos_dnd") === "1");
 const goDm = (id) => {
   if (!id || id === roomId.value) return;
   if (isCallOverlayVisible.value) return;
   router.push(`/dm/${id}`);
+};
+
+const toggleProfileCard = () => {
+  profileCardOpen.value = !profileCardOpen.value;
+};
+
+const closeProfileCard = () => {
+  profileCardOpen.value = false;
+};
+
+const toggleDnd = () => {
+  dndEnabled.value = !dndEnabled.value;
+  localStorage.setItem("visicos_dnd", dndEnabled.value ? "1" : "0");
+};
+
+const switchAccount = () => {
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+  router.push("/login");
+};
+
+const copyUserId = async () => {
+  const id = userStore.user?._id || "";
+  if (!id) return;
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(id);
+  }
 };
 
 const userId = userStore.user?._id;
