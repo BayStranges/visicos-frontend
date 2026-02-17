@@ -1991,6 +1991,8 @@ watch(
   overflow-y: auto;
   display: grid;
   gap: 6px;
+  align-content: start;
+  grid-auto-rows: max-content;
 }
 
 .dm-sidebar-search-wrap {
@@ -2025,6 +2027,7 @@ watch(
   grid-template-columns: 34px 1fr auto;
   gap: 8px;
   align-items: center;
+  align-self: start;
   cursor: pointer;
   text-align: left;
 }

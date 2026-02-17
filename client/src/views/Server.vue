@@ -1326,18 +1326,34 @@ const openServerSettings = async () => {
     closeServerMenu();
     return;
   }
-  const trimmed = nextName.trim();
-  if (!trimmed) {
+
+  const nextCover = window.prompt(
+    "Sunucu kapak URL (kaldirmak icin bos birak)",
+    server.value?.cover || ""
+  );
+  if (nextCover === null) {
     closeServerMenu();
     return;
   }
+
+  const trimmed = nextName.trim();
+  if (!trimmed) {
+    inviteStatus.value = "Sunucu adi bos olamaz";
+    closeServerMenu();
+    return;
+  }
+
+  const coverValue = nextCover.trim();
   try {
-    const res = await axios.patch(`/api/servers/${server.value._id}`, { name: trimmed });
+    const res = await axios.patch(`/api/servers/${server.value._id}`, {
+      name: trimmed,
+      cover: coverValue
+    });
     server.value = res.data;
     servers.value = (servers.value || []).map((srv) =>
       srv._id === res.data._id ? { ...srv, name: res.data.name, cover: res.data.cover } : srv
     );
-    inviteStatus.value = "Sunucu ayarlari guncellendi";
+    inviteStatus.value = "Sunucu adi ve kapagi guncellendi";
   } catch (err) {
     inviteStatus.value = err?.response?.data?.message || "Sunucu ayarlari guncellenemedi";
   } finally {
