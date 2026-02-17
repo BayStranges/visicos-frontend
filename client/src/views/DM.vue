@@ -88,9 +88,10 @@
       :banner="userStore.user?.banner ? fullAvatar(userStore.user.banner) : ''"
       :is-online="true"
       :dnd-enabled="dndEnabled"
+      :presence-status="presenceStatus"
       @close="closeProfileCard"
       @edit-profile="goProfile"
-      @toggle-dnd="toggleDnd"
+      @set-presence="setPresence"
       @switch-account="switchAccount"
       @copy-id="copyUserId"
     />
@@ -457,6 +458,7 @@ const goServer = (id) => router.push(`/server/${id}`);
 const goProfile = () => router.push("/profile");
 const profileCardOpen = ref(false);
 const dndEnabled = ref(localStorage.getItem("visicos_dnd") === "1");
+const presenceStatus = ref(localStorage.getItem("visicos_presence") || (dndEnabled.value ? "dnd" : "online"));
 const goDm = (id) => {
   if (!id || id === roomId.value) return;
   if (isCallOverlayVisible.value) return;
@@ -473,6 +475,15 @@ const closeProfileCard = () => {
 
 const toggleDnd = () => {
   dndEnabled.value = !dndEnabled.value;
+  localStorage.setItem("visicos_dnd", dndEnabled.value ? "1" : "0");
+};
+
+const setPresence = (status) => {
+  const allowed = ["online", "idle", "dnd", "invisible"];
+  const next = allowed.includes(status) ? status : "online";
+  presenceStatus.value = next;
+  dndEnabled.value = next === "dnd";
+  localStorage.setItem("visicos_presence", next);
   localStorage.setItem("visicos_dnd", dndEnabled.value ? "1" : "0");
 };
 

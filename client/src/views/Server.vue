@@ -30,33 +30,30 @@
 
           <div class="channel-section">
             <div class="section-header">
-              <button class="section-head-btn" type="button">
-                Metin Kanali <span class="section-caret">v</span>
-              </button>
-              <button v-if="isOwner" class="section-btn" @click="openChannelCreate('text')">+</button>
+              <button class="section-head-btn" type="button">Kanallar</button>
             </div>
             <div class="category-list">
               <div
                 v-for="cat in server?.categories || []"
                 :key="cat._id"
                 class="category-block"
-                :class="{ 'drop-target': isOwner && dragOverKey === `text-${cat._id}` }"
-                @dragover.prevent="onCategoryDragOver(`text-${cat._id}`)"
-                @dragleave="onCategoryDragLeave(`text-${cat._id}`)"
-                @drop.prevent="onCategoryDrop($event, cat._id, 'text')"
+                :class="{ 'drop-target': isOwner && dragOverKey === `${cat._id}` }"
+                @dragover.prevent="onCategoryDragOver(`${cat._id}`)"
+                @dragleave="onCategoryDragLeave(`${cat._id}`)"
+                @drop.prevent="onCategoryDrop($event, cat._id)"
               >
                 <button
                   class="category-title"
                   type="button"
-                  @click="toggleCategory(cat._id, 'text')"
-                  @contextmenu.prevent="openCategoryMenu($event, cat, 'text')"
+                  @click="toggleCategory(cat._id)"
+                  @contextmenu.prevent="openCategoryMenu($event, cat)"
                 >
-                  <span class="category-caret">{{ isCategoryCollapsed(cat._id, 'text') ? ">" : "v" }}</span>
+                  <span class="category-caret">{{ isCategoryCollapsed(cat._id) ? ">" : "v" }}</span>
                   <span>{{ cat.name }}</span>
                 </button>
                 <div class="channel-list">
                   <div
-                    v-for="ch in visibleChannelsByCategoryAndType(cat._id, 'text')"
+                    v-for="ch in visibleChannelsByCategory(cat._id)"
                     :key="ch._id"
                     class="channel-row"
                     :draggable="isOwner"
@@ -68,27 +65,39 @@
                       :class="{ active: selectedChannel?._id === ch._id }"
                       @click="selectChannel(ch)"
                     >
-                      <span class="channel-prefix">#</span>
+                      <span class="channel-prefix">{{ ch.type === "voice" ? "V" : "#" }}</span>
                       <span class="channel-name">{{ ch.name }}</span>
                     </button>
+                    <div
+                      v-for="vu in (ch.type === 'voice' ? voiceMemberUsers(ch._id) : [])"
+                      :key="`${ch._id}-${vu._id}`"
+                      class="voice-channel-member"
+                    >
+                      <div class="member-avatar mini">
+                        <img v-if="vu.avatar" :src="fullAsset(vu.avatar)" />
+                        <span v-else>{{ (vu.username || '?').slice(0,1).toUpperCase() }}</span>
+                      </div>
+                      <div class="voice-channel-name">{{ vu.username }}</div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div
+                v-if="channelsByCategory(null).length"
                 class="category-block"
-                :class="{ 'drop-target': isOwner && dragOverKey === 'text-uncat' }"
-                @dragover.prevent="onCategoryDragOver('text-uncat')"
-                @dragleave="onCategoryDragLeave('text-uncat')"
-                @drop.prevent="onCategoryDrop($event, null, 'text')"
+                :class="{ 'drop-target': isOwner && dragOverKey === 'uncat' }"
+                @dragover.prevent="onCategoryDragOver('uncat')"
+                @dragleave="onCategoryDragLeave('uncat')"
+                @drop.prevent="onCategoryDrop($event, null)"
               >
-                <button class="category-title" type="button" @click="toggleCategory('uncat', 'text')">
-                  <span class="category-caret">{{ isCategoryCollapsed('uncat', 'text') ? ">" : "v" }}</span>
+                <button class="category-title" type="button" @click="toggleCategory('uncat')">
+                  <span class="category-caret">{{ isCategoryCollapsed('uncat') ? ">" : "v" }}</span>
                   <span>Kategorisiz</span>
                 </button>
                 <div class="channel-list">
                   <div
-                    v-for="ch in visibleChannelsByCategoryAndType(null, 'text')"
+                    v-for="ch in visibleChannelsByCategory(null)"
                     :key="ch._id"
                     class="channel-row"
                     :draggable="isOwner"
@@ -100,98 +109,26 @@
                       :class="{ active: selectedChannel?._id === ch._id }"
                       @click="selectChannel(ch)"
                     >
-                      <span class="channel-prefix">#</span>
+                      <span class="channel-prefix">{{ ch.type === "voice" ? "V" : "#" }}</span>
                       <span class="channel-name">{{ ch.name }}</span>
                     </button>
-                  </div>
-                  <div
-                    v-if="!channelsByCategoryAndType(null, 'text').length && !channelsByCategoryAndType(null, 'voice').length && !(server?.channels || []).length"
-                    class="channel-empty"
-                  >
-                    Henuz kanal yok
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="channel-section">
-            <div class="section-header">
-              <button class="section-head-btn" type="button">
-                Ses Kanali <span class="section-caret">v</span>
-              </button>
-              <button v-if="isOwner" class="section-btn" @click="openChannelCreate('voice')">+</button>
-            </div>
-            <div class="category-list">
-              <div
-                v-for="cat in server?.categories || []"
-                :key="cat._id"
-                class="category-block"
-                :class="{ 'drop-target': isOwner && dragOverKey === `voice-${cat._id}` }"
-                @dragover.prevent="onCategoryDragOver(`voice-${cat._id}`)"
-                @dragleave="onCategoryDragLeave(`voice-${cat._id}`)"
-                @drop.prevent="onCategoryDrop($event, cat._id, 'voice')"
-              >
-                <button
-                  class="category-title"
-                  type="button"
-                  @click="toggleCategory(cat._id, 'voice')"
-                  @contextmenu.prevent="openCategoryMenu($event, cat, 'voice')"
-                >
-                  <span class="category-caret">{{ isCategoryCollapsed(cat._id, 'voice') ? ">" : "v" }}</span>
-                  <span>{{ cat.name }}</span>
-                </button>
-                <div class="channel-list">
-                  <div
-                    v-for="ch in visibleChannelsByCategoryAndType(cat._id, 'voice')"
-                    :key="ch._id"
-                    class="channel-row"
-                    :draggable="isOwner"
-                    @dragstart="onChannelDragStart($event, ch)"
-                    @dragend="onChannelDragEnd"
-                  >
-                    <button
-                      class="channel-item"
-                      :class="{ active: selectedChannel?._id === ch._id }"
-                      @click="selectChannel(ch)"
+                    <div
+                      v-for="vu in (ch.type === 'voice' ? voiceMemberUsers(ch._id) : [])"
+                      :key="`${ch._id}-${vu._id}`"
+                      class="voice-channel-member"
                     >
-                      <span class="channel-prefix">V</span>
-                      <span class="channel-name">{{ ch.name }}</span>
-                    </button>
+                      <div class="member-avatar mini">
+                        <img v-if="vu.avatar" :src="fullAsset(vu.avatar)" />
+                        <span v-else>{{ (vu.username || '?').slice(0,1).toUpperCase() }}</span>
+                      </div>
+                      <div class="voice-channel-name">{{ vu.username }}</div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div
-                class="category-block"
-                :class="{ 'drop-target': isOwner && dragOverKey === 'voice-uncat' }"
-                @dragover.prevent="onCategoryDragOver('voice-uncat')"
-                @dragleave="onCategoryDragLeave('voice-uncat')"
-                @drop.prevent="onCategoryDrop($event, null, 'voice')"
-              >
-                <button class="category-title" type="button" @click="toggleCategory('uncat', 'voice')">
-                  <span class="category-caret">{{ isCategoryCollapsed('uncat', 'voice') ? ">" : "v" }}</span>
-                  <span>Kategorisiz</span>
-                </button>
-                <div class="channel-list">
-                  <div
-                    v-for="ch in visibleChannelsByCategoryAndType(null, 'voice')"
-                    :key="ch._id"
-                    class="channel-row"
-                    :draggable="isOwner"
-                    @dragstart="onChannelDragStart($event, ch)"
-                    @dragend="onChannelDragEnd"
-                  >
-                    <button
-                      class="channel-item"
-                      :class="{ active: selectedChannel?._id === ch._id }"
-                      @click="selectChannel(ch)"
-                    >
-                      <span class="channel-prefix">V</span>
-                      <span class="channel-name">{{ ch.name }}</span>
-                    </button>
-                  </div>
-                </div>
+              <div v-if="!(server?.channels || []).length" class="channel-empty">
+                Henuz kanal yok
               </div>
             </div>
           </div>
@@ -309,8 +246,17 @@
 
         <aside class="members-panel">
           <div class="panel-title">Aktif Kullanicilar</div>
-          <div v-if="!server?.members?.length" class="channel-empty">Kimse yok</div>
-          <div v-for="u in server?.members || []" :key="u._id" class="member-row">
+          <div v-if="!activeMembers.length" class="channel-empty">Kimse yok</div>
+          <div v-for="u in activeMembers" :key="`on-${u._id}`" class="member-row">
+            <div class="member-avatar">
+              <img v-if="u.avatar" :src="fullAsset(u.avatar)" />
+              <span v-else>{{ (u.username || "?").slice(0, 1).toUpperCase() }}</span>
+            </div>
+            <div class="member-name">{{ u.username }}</div>
+          </div>
+          <div class="panel-title members-subtitle">Cevrimdisi Kullanicilar</div>
+          <div v-if="!offlineMembers.length" class="channel-empty">Kimse yok</div>
+          <div v-for="u in offlineMembers" :key="`off-${u._id}`" class="member-row offline">
             <div class="member-avatar">
               <img v-if="u.avatar" :src="fullAsset(u.avatar)" />
               <span v-else>{{ (u.username || "?").slice(0, 1).toUpperCase() }}</span>
@@ -328,9 +274,10 @@
       :banner="userStore.user?.banner ? fullAsset(userStore.user.banner) : ''"
       :is-online="isSelfOnline"
       :dnd-enabled="dndEnabled"
+      :presence-status="presenceStatus"
       @close="closeProfileCard"
       @edit-profile="goProfile"
-      @toggle-dnd="toggleDnd"
+      @set-presence="setPresence"
       @switch-account="switchAccount"
       @copy-id="copyUserId"
     />
@@ -545,6 +492,8 @@ const messagesLoading = ref(false);
 const currentChannelId = ref("");
 const voiceConnected = ref(false);
 const voiceChannelId = ref("");
+const voiceMembersByChannel = ref({});
+const onlineUsers = ref([]);
 const selfMute = ref(false);
 const selfDeaf = ref(false);
 const inviteStatus = ref("");
@@ -556,12 +505,12 @@ const mutedCategoryKeys = ref([]);
 const categoryMenuOpen = ref(false);
 const categoryMenuPos = ref({ x: 0, y: 0 });
 const categoryMenuCategory = ref(null);
-const categoryMenuType = ref("text");
 const draggingChannelId = ref("");
 const draggingChannelType = ref("");
 const dragOverKey = ref("");
 const profileCardOpen = ref(false);
 const dndEnabled = ref(localStorage.getItem("visicos_dnd") === "1");
+const presenceStatus = ref(localStorage.getItem("visicos_presence") || (dndEnabled.value ? "dnd" : "online"));
 const channelCreateOpen = ref(false);
 const categoryCreateOpen = ref(false);
 const channelDraftName = ref("");
@@ -625,29 +574,32 @@ const selectChannel = (ch) => {
   selectedChannel.value = ch;
   if (ch?.type === "text") {
     joinTextChannel(ch._id);
+    if (voiceConnected.value) leaveVoiceChannel();
   } else {
     leaveTextChannel();
+    if (typeof window !== "undefined" && window.innerWidth > 700) {
+      joinVoiceChannel(ch);
+    }
   }
 };
 
-const channelsByCategoryAndType = (categoryId, type) => {
+const channelsByCategory = (categoryId) => {
   const list = server.value?.channels || [];
   return list.filter((ch) => {
-    const sameType = ch.type === type;
     const sameCategory = categoryId
       ? ch.categoryId?.toString() === categoryId?.toString()
       : !ch.categoryId;
-    return sameType && sameCategory;
+    return sameCategory;
   });
 };
 
-const categoryKey = (categoryId, type) => `${type}:${categoryId || "uncat"}`;
+const categoryKey = (categoryId) => `${categoryId || "uncat"}`;
 
-const isCategoryCollapsed = (categoryId, type) =>
-  collapsedCategoryKeys.value.includes(categoryKey(categoryId, type));
+const isCategoryCollapsed = (categoryId) =>
+  collapsedCategoryKeys.value.includes(categoryKey(categoryId));
 
-const toggleCategory = (categoryId, type) => {
-  const key = categoryKey(categoryId, type);
+const toggleCategory = (categoryId) => {
+  const key = categoryKey(categoryId);
   if (collapsedCategoryKeys.value.includes(key)) {
     collapsedCategoryKeys.value = collapsedCategoryKeys.value.filter((k) => k !== key);
   } else {
@@ -655,18 +607,17 @@ const toggleCategory = (categoryId, type) => {
   }
 };
 
-const isCategoryMuted = (categoryId, type) =>
-  mutedCategoryKeys.value.includes(categoryKey(categoryId, type));
+const isCategoryMuted = (categoryId) =>
+  mutedCategoryKeys.value.includes(categoryKey(categoryId));
 
-const visibleChannelsByCategoryAndType = (categoryId, type) => {
-  if (isCategoryCollapsed(categoryId, type)) return [];
-  return channelsByCategoryAndType(categoryId, type);
+const visibleChannelsByCategory = (categoryId) => {
+  if (isCategoryCollapsed(categoryId)) return [];
+  return channelsByCategory(categoryId);
 };
 
-const openCategoryMenu = (event, category, type) => {
+const openCategoryMenu = (event, category) => {
   categoryMenuPos.value = { x: event.clientX, y: event.clientY };
   categoryMenuCategory.value = category || null;
-  categoryMenuType.value = type || "text";
   categoryMenuOpen.value = true;
 };
 
@@ -676,19 +627,17 @@ const closeCategoryMenu = () => {
 
 const currentCategoryId = computed(() => categoryMenuCategory.value?._id || "");
 const isCurrentCategoryCollapsed = computed(() =>
-  currentCategoryId.value ? isCategoryCollapsed(currentCategoryId.value, categoryMenuType.value) : false
+  currentCategoryId.value ? isCategoryCollapsed(currentCategoryId.value) : false
 );
 const areAllCategoriesCollapsed = computed(() => {
   const cats = server.value?.categories || [];
   if (!cats.length) return false;
-  return cats.every((cat) => (
-    isCategoryCollapsed(cat._id, "text") && isCategoryCollapsed(cat._id, "voice")
-  ));
+  return cats.every((cat) => isCategoryCollapsed(cat._id));
 });
 
 const toggleCurrentCategoryCollapse = () => {
   if (!currentCategoryId.value) return;
-  toggleCategory(currentCategoryId.value, categoryMenuType.value);
+  toggleCategory(currentCategoryId.value);
   closeCategoryMenu();
 };
 
@@ -698,17 +647,14 @@ const toggleAllCategoriesCollapse = () => {
   if (areAllCategoriesCollapsed.value) {
     collapsedCategoryKeys.value = [];
   } else {
-    collapsedCategoryKeys.value = cats.flatMap((cat) => [
-      categoryKey(cat._id, "text"),
-      categoryKey(cat._id, "voice")
-    ]);
+    collapsedCategoryKeys.value = cats.map((cat) => categoryKey(cat._id));
   }
   closeCategoryMenu();
 };
 
 const toggleCurrentCategoryMute = () => {
   if (!currentCategoryId.value) return;
-  const key = categoryKey(currentCategoryId.value, categoryMenuType.value);
+  const key = categoryKey(currentCategoryId.value);
   if (mutedCategoryKeys.value.includes(key)) {
     mutedCategoryKeys.value = mutedCategoryKeys.value.filter((k) => k !== key);
   } else {
@@ -877,14 +823,68 @@ const joinVoiceChannel = async (channel) => {
     onProducerClosed: () => {}
   });
   await startMic();
+  socket.emit("join-voice-channel", {
+    channelId: channel._id,
+    userId: userStore.user?._id
+  });
 };
 
 const leaveVoiceChannel = async () => {
   if (!voiceConnected.value) return;
+  const prevChannelId = voiceChannelId.value;
   voiceConnected.value = false;
   voiceChannelId.value = "";
   cleanupAudio();
   await stopSfuCall();
+  if (prevChannelId) {
+    socket.emit("leave-voice-channel", {
+      channelId: prevChannelId,
+      userId: userStore.user?._id
+    });
+  }
+};
+
+const handleVoiceMembers = ({ channelId, members }) => {
+  if (!channelId) return;
+  voiceMembersByChannel.value = {
+    ...voiceMembersByChannel.value,
+    [channelId]: Array.isArray(members) ? members : []
+  };
+};
+
+const loadVoicePresence = () => {
+  socket.emit(
+    "get-voice-channel-members",
+    { serverId: route.params.id, userId: userStore.user?._id },
+    (res) => {
+      if (!res || res.error) return;
+      voiceMembersByChannel.value = res.presence || {};
+    }
+  );
+};
+
+const voiceMemberUsers = (channelId) => {
+  const ids = voiceMembersByChannel.value?.[channelId] || [];
+  const members = server.value?.members || [];
+  return ids
+    .map((id) => members.find((u) => u._id?.toString?.() === id.toString()))
+    .filter(Boolean);
+};
+
+const activeMembers = computed(() => {
+  const members = server.value?.members || [];
+  const online = new Set((onlineUsers.value || []).map((id) => id?.toString?.() || String(id)));
+  return members.filter((u) => online.has(u?._id?.toString?.() || ""));
+});
+
+const offlineMembers = computed(() => {
+  const members = server.value?.members || [];
+  const online = new Set((onlineUsers.value || []).map((id) => id?.toString?.() || String(id)));
+  return members.filter((u) => !online.has(u?._id?.toString?.() || ""));
+});
+
+const handleOnlineUsers = (users) => {
+  onlineUsers.value = Array.isArray(users) ? users : [];
 };
 
 const createChannel = async () => {
@@ -986,11 +986,11 @@ const onCategoryDragLeave = (key) => {
   if (dragOverKey.value === key) dragOverKey.value = "";
 };
 
-const onCategoryDrop = async (evt, categoryId, type) => {
+const onCategoryDrop = async (evt, categoryId) => {
   evt?.preventDefault?.();
   if (!isOwner.value || !draggingChannelId.value) return;
   const channel = (server.value?.channels || []).find((ch) => ch._id === draggingChannelId.value);
-  if (!channel || channel.type !== type) {
+  if (!channel) {
     onChannelDragEnd();
     return;
   }
@@ -1129,6 +1129,14 @@ const toggleDnd = () => {
   dndEnabled.value = !dndEnabled.value;
   localStorage.setItem("visicos_dnd", dndEnabled.value ? "1" : "0");
 };
+const setPresence = (status) => {
+  const allowed = ["online", "idle", "dnd", "invisible"];
+  const next = allowed.includes(status) ? status : "online";
+  presenceStatus.value = next;
+  dndEnabled.value = next === "dnd";
+  localStorage.setItem("visicos_presence", next);
+  localStorage.setItem("visicos_dnd", dndEnabled.value ? "1" : "0");
+};
 const switchAccount = () => {
   localStorage.removeItem("user");
   localStorage.removeItem("token");
@@ -1173,14 +1181,19 @@ onMounted(() => {
   }
   ensureSocket();
   socket.on("channel-message", handleChannelMessage);
+  socket.on("voice-channel-members", handleVoiceMembers);
+  socket.on("online-users", handleOnlineUsers);
   document.addEventListener("click", closeServerMenu);
   document.addEventListener("click", closeCategoryMenu);
   loadServers();
   loadServer();
+  loadVoicePresence();
 });
 
 onBeforeUnmount(() => {
   socket.off("channel-message", handleChannelMessage);
+  socket.off("voice-channel-members", handleVoiceMembers);
+  socket.off("online-users", handleOnlineUsers);
   document.removeEventListener("click", closeServerMenu);
   document.removeEventListener("click", closeCategoryMenu);
   leaveTextChannel();
@@ -1193,8 +1206,10 @@ watch(
     leaveTextChannel();
     leaveVoiceChannel();
     selectedChannel.value = null;
+    voiceMembersByChannel.value = {};
     loadServer();
     loadServers();
+    loadVoicePresence();
   }
 );
 </script>
@@ -1491,9 +1506,7 @@ watch(
 
 .channel-row {
   display: grid;
-  grid-template-columns: 1fr auto;
   gap: 6px;
-  align-items: center;
 }
 
 .channel-row[draggable="true"] {
@@ -1515,6 +1528,21 @@ watch(
   padding: 6px 8px;
   cursor: pointer;
   text-align: left;
+}
+
+.voice-channel-member {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 14px;
+  color: #95b7da;
+  font-size: 12px;
+}
+
+.member-avatar.mini {
+  width: 22px;
+  height: 22px;
+  border-width: 1px;
 }
 
 .channel-item.active,
@@ -1897,6 +1925,15 @@ watch(
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
+}
+
+.members-subtitle {
+  margin-top: 12px;
+}
+
+.member-row.offline {
+  opacity: 0.52;
+  filter: grayscale(0.35);
 }
 
 .member-row:hover {

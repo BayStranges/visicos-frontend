@@ -13,16 +13,34 @@
       </div>
 
       <div class="quick-name">{{ username || "Kullanici" }}</div>
-      <div class="quick-handle">{{ handleText }}</div>
       <div class="quick-block">
         <button class="quick-row" @click="emit('editProfile')">Oyun Koleksiyonu</button>
       </div>
 
-      <div class="quick-block">
+      <div class="quick-block status-block">
         <button class="quick-row" @click="emit('editProfile')">Profili Duzenle</button>
-        <button class="quick-row split" @click="emit('toggleDnd')">
-          {{ dndEnabled ? "Rahatsiz Etmeyin Kapat" : "Rahatsiz Etmeyin" }}
+        <button class="quick-row split status-row" @click="showPresenceMenu = !showPresenceMenu">
+          {{ presenceLabel }}
+          <span class="status-arrow">></span>
         </button>
+        <div v-if="showPresenceMenu" class="presence-menu">
+          <button class="presence-item" @click="setPresence('online')">
+            <span class="presence-dot online"></span>
+            <span>Cevrim ici</span>
+          </button>
+          <button class="presence-item" @click="setPresence('idle')">
+            <span class="presence-dot idle"></span>
+            <span>Bosta</span>
+          </button>
+          <button class="presence-item" @click="setPresence('dnd')">
+            <span class="presence-dot dnd"></span>
+            <span>Rahatsiz Etmeyin</span>
+          </button>
+          <button class="presence-item" @click="setPresence('invisible')">
+            <span class="presence-dot invisible"></span>
+            <span>Gorunmez</span>
+          </button>
+        </div>
       </div>
 
       <div class="quick-block">
@@ -34,7 +52,7 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -42,17 +60,28 @@ const props = defineProps({
   avatar: { type: String, default: "" },
   banner: { type: String, default: "" },
   isOnline: { type: Boolean, default: false },
-  dndEnabled: { type: Boolean, default: false }
+  dndEnabled: { type: Boolean, default: false },
+  presenceStatus: { type: String, default: "online" }
 });
 
-const emit = defineEmits(["close", "editProfile", "toggleDnd", "switchAccount", "copyId"]);
-
-const handleText = computed(() => (props.username ? `${props.username.toLowerCase()}tenarilar` : ""));
+const emit = defineEmits(["close", "editProfile", "setPresence", "switchAccount", "copyId"]);
+const showPresenceMenu = ref(false);
 const bannerStyle = computed(() =>
   props.banner
     ? { backgroundImage: `url(${props.banner})` }
     : { background: "linear-gradient(145deg,#9e9be2,#a7a2eb)" }
 );
+const presenceLabel = computed(() => {
+  if (props.presenceStatus === "idle") return "Bosta";
+  if (props.presenceStatus === "dnd") return "Rahatsiz Etmeyin";
+  if (props.presenceStatus === "invisible") return "Gorunmez";
+  return "Cevrim ici";
+});
+
+const setPresence = (status) => {
+  emit("setPresence", status);
+  showPresenceMenu.value = false;
+};
 </script>
 
 <style scoped>
@@ -173,4 +202,62 @@ const bannerStyle = computed(() =>
 .quick-row:hover {
   background: #eceef2;
 }
+
+.status-block {
+  position: relative;
+}
+
+.status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.status-arrow {
+  color: #828792;
+}
+
+.presence-menu {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 34px;
+  min-width: 230px;
+  background: #f0f1f3;
+  border: 1px solid #d1d4da;
+  border-radius: 10px;
+  padding: 8px;
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+  z-index: 5;
+}
+
+.presence-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #32353c;
+  padding: 8px;
+  text-align: left;
+  border-radius: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.presence-item:hover {
+  background: #e7e9ee;
+}
+
+.presence-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.presence-dot.online { background: #2ea869; }
+.presence-dot.idle { background: #f0b34d; }
+.presence-dot.dnd { background: #d94b4b; }
+.presence-dot.invisible { background: #8b909b; }
 </style>

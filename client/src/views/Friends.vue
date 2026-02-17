@@ -117,9 +117,10 @@
         :banner="userStore.user?.banner ? fullAvatar(userStore.user.banner) : ''"
         :is-online="isOnline"
         :dnd-enabled="dndEnabled"
+        :presence-status="presenceStatus"
         @close="closeProfileCard"
         @edit-profile="goProfile"
-        @toggle-dnd="toggleDnd"
+        @set-presence="setPresence"
         @switch-account="switchAccount"
         @copy-id="copyUserId"
       />
@@ -495,6 +496,7 @@ const statusClock = ref(Date.now());
 let statusInterval;
 const profileCardOpen = ref(false);
 const dndEnabled = ref(false);
+const presenceStatus = ref("online");
 const profileNote = ref("");
 const profileModalOpen = ref(false);
 const profileTab = ref("overview");
@@ -965,6 +967,15 @@ const toggleDnd = () => {
   localStorage.setItem("visicos_dnd", dndEnabled.value ? "1" : "0");
 };
 
+const setPresence = (status) => {
+  const allowed = ["online", "idle", "dnd", "invisible"];
+  const next = allowed.includes(status) ? status : "online";
+  presenceStatus.value = next;
+  dndEnabled.value = next === "dnd";
+  localStorage.setItem("visicos_presence", next);
+  localStorage.setItem("visicos_dnd", dndEnabled.value ? "1" : "0");
+};
+
 const switchAccount = () => {
   localStorage.removeItem("user");
   router.push("/login");
@@ -980,6 +991,8 @@ const copyUserId = async () => {
 
 const loadProfilePrefs = () => {
   dndEnabled.value = localStorage.getItem("visicos_dnd") === "1";
+  const stored = localStorage.getItem("visicos_presence");
+  presenceStatus.value = stored || (dndEnabled.value ? "dnd" : "online");
 };
 
 const prefKey = (suffix, targetId) => {
