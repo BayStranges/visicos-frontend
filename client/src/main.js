@@ -27,8 +27,14 @@ router.isReady().then(() => {
   const dmStore = useDmStore();
 
   if (userStore.user?._id) {
+    const restorePresence = () => {
+      socket.emit("user-online", userStore.user._id);
+    };
+
+    socket.off("connect", restorePresence);
+    socket.on("connect", restorePresence);
     socket.connect();
-    socket.emit("user-online", userStore.user._id);
+    restorePresence();
 
     dmStore.initSocket(userStore.user._id);
     dmStore.loadDms(userStore.user._id);

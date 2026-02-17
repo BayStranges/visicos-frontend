@@ -77,65 +77,67 @@
 
     <!-- CALL BAR -->
     <div v-if="isCallOverlayVisible" class="call-bar">
-      <div class="call-stage-head">
-        <div class="call-stage-title">{{ otherUser }} ile sesli gorusme</div>
-        <div class="call-sub discord">
-          <span class="call-chip" :class="`chip-${callStatusClass}`">{{ callStatusLabel }}</span>
-          <span v-if="inCall" class="call-chip chip-time">{{ callDurationLabel }}</span>
-        </div>
-      </div>
-
-      <div class="call-stage-users">
-        <div class="stage-user">
-          <div class="call-avatar stage">
-            <img v-if="otherUserAvatar" :src="fullAvatar(otherUserAvatar)" />
-            <span v-else>{{ otherUser?.[0]?.toUpperCase() || "?" }}</span>
+      <div class="call-stage-center">
+        <div class="call-stage-head">
+          <div class="call-stage-title">{{ otherUser }} ile sesli gorusme</div>
+          <div class="call-sub discord">
+            <span class="call-chip" :class="`chip-${callStatusClass}`">{{ callStatusLabel }}</span>
+            <span v-if="inCall" class="call-chip chip-time">{{ callDurationLabel }}</span>
           </div>
-          <div class="stage-name">{{ otherUser }}</div>
         </div>
-        <div class="stage-user">
-          <div class="call-avatar stage me">
-            <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
-            <span v-else>{{ userStore.user?.username?.[0]?.toUpperCase() || "?" }}</span>
-          </div>
-          <div class="stage-name">{{ userStore.user?.username || "Sen" }}</div>
-        </div>
-      </div>
 
-      <div class="call-controls dock" v-if="ringing">
-        <button class="call-icon icon-accept" @click="acceptCall" title="Kabul Et" aria-label="Kabul Et">
-          <svg class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6.6 10.8a15.6 15.6 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24c1.1.36 2.3.56 3.6.56a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.6 21 3 13.4 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.26.2 2.46.56 3.6a1 1 0 0 1-.24 1Z" />
-          </svg>
-        </button>
-        <button class="call-icon end" @click="rejectCall" title="Reddet" aria-label="Reddet">
-          <svg class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M7.2 15.4a15.2 15.2 0 0 1 9.6 0l2-2a1 1 0 0 0-.2-1.56A12.6 12.6 0 0 0 12 10a12.6 12.6 0 0 0-6.6 1.84 1 1 0 0 0-.2 1.56l2 2Z" />
-          </svg>
-        </button>
-      </div>
-      <div class="call-controls dock" v-else>
-        <button class="call-icon" @click="toggleMute" :title="muted ? 'Mikrofonu ac' : 'Mikrofonu kapat'">
-          <svg v-if="!muted" class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 14a3 3 0 0 0 3-3V7a3 3 0 0 0-6 0v4a3 3 0 0 0 3 3Z" />
-            <path d="M5 11a1 1 0 1 1 2 0 5 5 0 1 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V21a1 1 0 1 1-2 0v-3.08A7 7 0 0 1 5 11Z" />
-          </svg>
-          <svg v-else class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M16 11V8a4 4 0 1 0-8 0v3a3.94 3.94 0 0 0 .65 2.19l1.45-1.45A2 2 0 0 1 10 11V8a2 2 0 1 1 4 0v1Z" />
-            <path d="M3.7 3.7a1 1 0 0 1 1.4 0L20.3 18.9a1 1 0 0 1-1.4 1.4L15.8 17.2A7 7 0 0 1 13 17.92V21a1 1 0 1 1-2 0v-3.08A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 5 5c.56 0 1.1-.09 1.6-.26L3.7 5.1a1 1 0 0 1 0-1.4Z" />
-          </svg>
-        </button>
-        <button class="call-icon end" @click="hangUp" title="Aramayi bitir">Bitir</button>
-        <button
-          class="call-icon icon-reconnect"
-          v-if="callStatus === 'koptu' || callStatus === 'başarısız'"
-          @click="reconnect"
-          title="Yeniden Baglan"
-        >
-          <svg class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 5a7 7 0 0 1 6.66 4.8 1 1 0 1 1-1.9.62A5 5 0 1 0 16 15h-2.4a1 1 0 1 1 0-2H18a1 1 0 0 1 1 1v4.4a1 1 0 1 1-2 0v-1.5A7 7 0 1 1 12 5Z" />
-          </svg>
-        </button>
+        <div class="call-stage-users">
+          <div class="stage-user">
+            <div class="call-avatar stage">
+              <img v-if="otherUserAvatar" :src="fullAvatar(otherUserAvatar)" />
+              <span v-else>{{ otherUser?.[0]?.toUpperCase() || "?" }}</span>
+            </div>
+            <div class="stage-name">{{ otherUser }}</div>
+          </div>
+          <div class="stage-user">
+            <div class="call-avatar stage me">
+              <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
+              <span v-else>{{ userStore.user?.username?.[0]?.toUpperCase() || "?" }}</span>
+            </div>
+            <div class="stage-name">{{ userStore.user?.username || "Sen" }}</div>
+          </div>
+        </div>
+
+        <div class="call-controls dock" v-if="ringing">
+          <button class="call-icon icon-accept" @click="acceptCall" title="Kabul Et" aria-label="Kabul Et">
+            <svg class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6.6 10.8a15.6 15.6 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.24c1.1.36 2.3.56 3.6.56a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1C10.6 21 3 13.4 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.26.2 2.46.56 3.6a1 1 0 0 1-.24 1Z" />
+            </svg>
+          </button>
+          <button class="call-icon end" @click="rejectCall" title="Reddet" aria-label="Reddet">
+            <svg class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7.2 15.4a15.2 15.2 0 0 1 9.6 0l2-2a1 1 0 0 0-.2-1.56A12.6 12.6 0 0 0 12 10a12.6 12.6 0 0 0-6.6 1.84 1 1 0 0 0-.2 1.56l2 2Z" />
+            </svg>
+          </button>
+        </div>
+        <div class="call-controls dock" v-else>
+          <button class="call-icon" @click="toggleMute" :title="muted ? 'Mikrofonu ac' : 'Mikrofonu kapat'">
+            <svg v-if="!muted" class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 14a3 3 0 0 0 3-3V7a3 3 0 0 0-6 0v4a3 3 0 0 0 3 3Z" />
+              <path d="M5 11a1 1 0 1 1 2 0 5 5 0 1 0 10 0 1 1 0 1 1 2 0 7 7 0 0 1-6 6.92V21a1 1 0 1 1-2 0v-3.08A7 7 0 0 1 5 11Z" />
+            </svg>
+            <svg v-else class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M16 11V8a4 4 0 1 0-8 0v3a3.94 3.94 0 0 0 .65 2.19l1.45-1.45A2 2 0 0 1 10 11V8a2 2 0 1 1 4 0v1Z" />
+              <path d="M3.7 3.7a1 1 0 0 1 1.4 0L20.3 18.9a1 1 0 0 1-1.4 1.4L15.8 17.2A7 7 0 0 1 13 17.92V21a1 1 0 1 1-2 0v-3.08A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 5 5c.56 0 1.1-.09 1.6-.26L3.7 5.1a1 1 0 0 1 0-1.4Z" />
+            </svg>
+          </button>
+          <button class="call-icon end" @click="hangUp" title="Aramayi bitir">Bitir</button>
+          <button
+            class="call-icon icon-reconnect"
+            v-if="callStatus === 'koptu' || callStatus === 'başarısız'"
+            @click="reconnect"
+            title="Yeniden Baglan"
+          >
+            <svg class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5a7 7 0 0 1 6.66 4.8 1 1 0 1 1-1.9.62A5 5 0 1 0 16 15h-2.4a1 1 0 1 1 0-2H18a1 1 0 0 1 1 1v4.4a1 1 0 1 1-2 0v-1.5A7 7 0 1 1 12 5Z" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1404,6 +1406,15 @@ const clearOverlayState = () => {
   window.dispatchEvent(new CustomEvent("visicos-overlay-update", { detail: payload }));
 };
 
+const onSocketConnected = async () => {
+  if (!userId) return;
+  socket.emit("user-online", userId);
+  if (roomId.value) {
+    socket.emit("join-dm", { roomId: roomId.value, userId });
+  }
+  await loadDms();
+};
+
 watch(
   [inCall, ringing, callAccepted, muted, otherUser, otherUserId, otherUserAvatar],
   () => updateOverlayState(),
@@ -1436,6 +1447,8 @@ onMounted(async () => {
   loadDms();
 
   if (!socket.connected) socket.connect();
+  socket.off("connect", onSocketConnected);
+  socket.on("connect", onSocketConnected);
   [
     "receive-message",
     "typing",
@@ -1606,6 +1619,7 @@ onBeforeUnmount(() => {
   socket.off("message-reacted");
   socket.off("messages-read");
   if (!shouldKeepCallAlive) {
+    socket.off("connect", onSocketConnected);
     socket.off("webrtc-offer");
     socket.off("webrtc-answer");
     socket.off("webrtc-ice");
@@ -1976,12 +1990,21 @@ watch(
   align-items: center;
 }
 
+.call-stage-center {
+  width: min(620px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  gap: 14px;
+}
+
 .call-stage-head {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  width: 100%;
+  width: auto;
   text-align: center;
 }
 
@@ -1997,7 +2020,7 @@ watch(
   align-items: center;
   justify-content: center;
   gap: 34px;
-  width: 100%;
+  width: auto;
 }
 
 .stage-user {
