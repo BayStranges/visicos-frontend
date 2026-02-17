@@ -381,7 +381,21 @@ const loadServer = async () => {
       }
     }
   } catch (err) {
-    error.value = err?.response?.data?.message || "Server not found";
+    const status = err?.response?.status;
+    const message = err?.response?.data?.message || "";
+
+    if (status === 403 || status === 404 || message.toLowerCase().includes("yetkisiz")) {
+      await loadServers();
+      const fallback = (servers.value || []).find((srv) => srv?._id);
+      if (fallback?._id && fallback._id !== route.params.id) {
+        router.replace(`/server/${fallback._id}`);
+      } else {
+        router.replace("/friends");
+      }
+      return;
+    }
+
+    error.value = message || "Server not found";
   } finally {
     loading.value = false;
   }
