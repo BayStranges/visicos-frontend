@@ -306,6 +306,7 @@
       <button v-if="isOwner" class="menu-item" @click="createChannelFromMenu">Kanal Olustur</button>
       <button v-if="isOwner" class="menu-item" @click="createCategoryFromMenu">Kategori Olustur</button>
       <button v-if="isOwner" class="menu-item" @click="createInviteCode">Sunucuya Davet Et</button>
+      <button v-if="isOwner" class="menu-item danger" @click="deleteServer">Sunucuyu Sil</button>
     </div>
 
     <div
@@ -1258,6 +1259,26 @@ const createInviteCode = async () => {
     inviteStatus.value = err?.response?.data?.message || "Davet olusturulamadi";
   }
   closeServerMenu();
+};
+
+const deleteServer = async () => {
+  if (!isOwner.value) return;
+  const ok = window.confirm("Sunucu silinsin mi? Bu islem geri alinamaz.");
+  if (!ok) return;
+  try {
+    await axios.delete(`/api/servers/${route.params.id}`);
+    await loadServers();
+    const fallback = (servers.value || []).find((srv) => srv?._id && srv._id !== route.params.id);
+    if (fallback?._id) {
+      router.replace(`/server/${fallback._id}`);
+    } else {
+      router.replace("/friends");
+    }
+  } catch (err) {
+    error.value = err?.response?.data?.message || "Sunucu silinemedi";
+  } finally {
+    closeServerMenu();
+  }
 };
 
 onMounted(() => {
@@ -2347,6 +2368,10 @@ watch(
 .menu-check:hover,
 .menu-item:hover {
   background: #2b2d32;
+}
+
+.menu-item.danger {
+  color: #ff7b7b;
 }
 
 .menu-check-box {
