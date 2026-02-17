@@ -1961,14 +1961,15 @@ watch(
 }
 
 .call-bar {
-  min-height: 220px;
-  padding: 16px 18px;
-  border-radius: 14px;
-  width: min(760px, calc(100% - 24px));
-  margin: 10px auto 0;
-  background: linear-gradient(180deg, rgba(8, 12, 18, 0.98), rgba(12, 17, 26, 0.95));
-  border: 1px solid rgba(91, 124, 164, 0.28);
-  box-shadow: 0 18px 34px rgba(5, 11, 20, 0.38);
+  min-height: 290px;
+  padding: 16px 22px 14px;
+  border-radius: 0;
+  width: 100%;
+  margin: 0;
+  background: linear-gradient(180deg, #06080c 0%, #080b11 100%);
+  border: none;
+  border-bottom: 1px solid rgba(72, 95, 125, 0.4);
+  box-shadow: inset 0 -30px 80px rgba(7, 11, 18, 0.45);
   display: grid;
   grid-template-rows: auto 1fr auto;
   gap: 12px;
@@ -1977,7 +1978,7 @@ watch(
 .call-stage-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
 }
 
@@ -1992,7 +1993,7 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 22px;
+  gap: 34px;
 }
 
 .stage-user {
@@ -2002,10 +2003,10 @@ watch(
 }
 
 .call-avatar.stage {
-  width: 86px;
-  height: 86px;
+  width: 92px;
+  height: 92px;
   border-radius: 50%;
-  border: 2px solid rgba(102, 146, 197, 0.45);
+  border: 2px solid rgba(77, 100, 130, 0.55);
   background: rgba(15, 22, 34, 0.95);
 }
 
@@ -2066,13 +2067,13 @@ watch(
 }
 
 .call-controls.dock {
-  background: rgba(11, 17, 26, 0.86);
-  border: 1px solid rgba(88, 124, 168, 0.3);
-  border-radius: 12px;
-  padding: 8px;
+  background: rgba(14, 19, 28, 0.88);
+  border: 1px solid rgba(83, 108, 143, 0.35);
+  border-radius: 14px;
+  padding: 8px 10px;
   justify-content: center;
   width: fit-content;
-  margin: 0 auto;
+  margin: 0 auto 2px;
 }
 
 .call-btn.ok {
@@ -2142,8 +2143,7 @@ watch(
   }
 
   .call-bar {
-    margin: 8px 8px 0;
-    min-height: 190px;
+    min-height: 230px;
     padding: 12px;
   }
 
@@ -2157,8 +2157,8 @@ watch(
   }
 
   .call-avatar.stage {
-    width: 70px;
-    height: 70px;
+    width: 74px;
+    height: 74px;
   }
 
   .call-controls {
