@@ -1988,11 +1988,16 @@ watch(
   grid-template-rows: auto 1fr auto;
   gap: 12px;
   align-items: center;
+  position: relative;
+  overflow: hidden;
 }
 
 .call-stage-center {
-  width: min(620px, 100%);
-  margin: 0 auto;
+  width: min(620px, calc(100% - 32px));
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   display: grid;
   grid-template-rows: auto 1fr auto;
   justify-items: center;
@@ -2173,6 +2178,10 @@ watch(
   .call-bar {
     min-height: 230px;
     padding: 12px;
+  }
+
+  .call-stage-center {
+    width: min(520px, calc(100% - 20px));
   }
 
   .call-stage-head {
