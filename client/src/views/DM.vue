@@ -21,11 +21,18 @@
         <div class="dm-sidebar-title">Direkt Mesajlar</div>
         <button class="dm-sidebar-home" @click="goFriends">Arkadaslar</button>
       </div>
+      <div class="dm-sidebar-search-wrap">
+        <input
+          v-model="dmQuery"
+          class="dm-sidebar-search"
+          placeholder="Sohbet bul ya da baslat"
+        />
+      </div>
       <div class="dm-sidebar-list">
         <div v-if="dmsLoading" class="dm-sidebar-empty">Yukleniyor...</div>
-        <div v-else-if="dms.length === 0" class="dm-sidebar-empty">DM yok</div>
+        <div v-else-if="filteredDms.length === 0" class="dm-sidebar-empty">DM yok</div>
         <button
-          v-for="dm in dms"
+          v-for="dm in filteredDms"
           :key="dm._id"
           class="dm-sidebar-row"
           :class="{ active: dm._id === roomId }"
@@ -41,6 +48,27 @@
           </div>
           <div v-if="dm.unreadCount > 0" class="dm-sidebar-badge">{{ dm.unreadCount }}</div>
         </button>
+      </div>
+      <div class="dm-sidebar-profile">
+        <div class="dm-sidebar-me">
+          <div class="dm-sidebar-avatar me">
+            <img v-if="userStore.user?.avatar" :src="fullAvatar(userStore.user.avatar)" />
+            <span v-else>{{ (userStore.user?.username || "?").slice(0, 1).toUpperCase() }}</span>
+          </div>
+          <div class="dm-sidebar-me-meta">
+            <div class="dm-sidebar-me-name">{{ userStore.user?.username || "Kullanici" }}</div>
+            <div class="dm-sidebar-me-status">{{ inCall ? "Bir aramada" : "Online" }}</div>
+          </div>
+        </div>
+        <div class="dm-sidebar-actions">
+          <button class="dm-mini-btn" @click="toggleMute" :disabled="!inCall" title="Mikrofon">
+            {{ muted ? "Mik Ac" : "Mik Kapat" }}
+          </button>
+          <button class="dm-mini-btn danger" @click="hangUp" :disabled="!inCall" title="Aramayi bitir">
+            Bitir
+          </button>
+          <button class="dm-mini-btn" @click="goProfile" title="Profil">Profil</button>
+        </div>
       </div>
     </aside>
 
@@ -402,6 +430,7 @@ const userStore = useUserStore();
 
 const goFriends = () => router.push("/friends");
 const goServer = (id) => router.push(`/server/${id}`);
+const goProfile = () => router.push("/profile");
 const goDm = (id) => {
   if (!id || id === roomId.value) return;
   if (isCallOverlayVisible.value) return;
@@ -563,6 +592,7 @@ const speakingTimers = new Map();
 const servers = ref([]);
 const dms = ref([]);
 const dmsLoading = ref(false);
+const dmQuery = ref("");
 const serverModalOpen = ref(false);
 const serverName = ref("");
 const serverCover = ref("");
@@ -987,6 +1017,16 @@ const getDisplayName = (dm) => {
   const other = getOtherUser(dm);
   return other?.username || "Bilinmeyen Kullanici";
 };
+
+const filteredDms = computed(() => {
+  const q = dmQuery.value.trim().toLowerCase();
+  if (!q) return dms.value;
+  return dms.value.filter((dm) => {
+    const name = getDisplayName(dm).toLowerCase();
+    const last = (dm?.lastMessage?.content || "").toLowerCase();
+    return name.includes(q) || last.includes(q);
+  });
+});
 
 const computeOtherUser = () => {
   const other = messages.value.find(m => m?.sender?._id && m.sender._id !== userId);
@@ -1851,7 +1891,7 @@ watch(
   background: rgba(14, 23, 35, 0.94);
   border-right: 1px solid rgba(106, 157, 218, 0.28);
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr auto;
   min-width: 0;
 }
 
@@ -1887,6 +1927,21 @@ watch(
   overflow-y: auto;
   display: grid;
   gap: 6px;
+}
+
+.dm-sidebar-search-wrap {
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid rgba(106, 157, 218, 0.16);
+}
+
+.dm-sidebar-search {
+  width: 100%;
+  border: 1px solid rgba(112, 160, 220, 0.3);
+  background: rgba(19, 33, 51, 0.8);
+  color: #d5e8ff;
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 12px;
 }
 
 .dm-sidebar-empty {
@@ -1972,6 +2027,71 @@ watch(
 
 .dm-wrapper {
   min-width: 0;
+}
+
+.dm-sidebar-profile {
+  border-top: 1px solid rgba(106, 157, 218, 0.2);
+  background: rgba(11, 18, 29, 0.95);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.dm-sidebar-me {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dm-sidebar-avatar.me {
+  width: 32px;
+  height: 32px;
+}
+
+.dm-sidebar-me-meta {
+  min-width: 0;
+}
+
+.dm-sidebar-me-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #ebf4ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dm-sidebar-me-status {
+  font-size: 11px;
+  color: #99b6d7;
+}
+
+.dm-sidebar-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 6px;
+}
+
+.dm-mini-btn {
+  border: 1px solid rgba(112, 160, 220, 0.28);
+  background: rgba(21, 37, 57, 0.78);
+  color: #d4e9ff;
+  border-radius: 9px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dm-mini-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.dm-mini-btn.danger {
+  border-color: rgba(201, 94, 101, 0.38);
+  background: rgba(72, 28, 32, 0.72);
+  color: #ffc5c8;
 }
 
 .call-bar {
