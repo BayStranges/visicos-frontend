@@ -188,6 +188,29 @@
               {{ creatingChannel ? "Olusturuluyor..." : "Olustur" }}
             </button>
           </div>
+
+          <div class="server-userbar">
+            <div class="userbar-avatar">
+              <img v-if="userStore.user?.avatar" :src="fullAsset(userStore.user.avatar)" />
+              <span v-else>{{ (userStore.user?.username || "?").slice(0, 1).toUpperCase() }}</span>
+              <span class="userbar-dot" :class="{ offline: !isSelfOnline }"></span>
+            </div>
+            <div class="userbar-meta">
+              <div class="userbar-name">{{ userStore.user?.username || "Kullanici" }}</div>
+              <div class="userbar-status">{{ isSelfOnline ? "Cevrimici" : "Cevrimdisi" }}</div>
+            </div>
+            <div class="userbar-actions">
+              <button class="userbar-icon" :class="{ off: selfMute }" @click="selfMute = !selfMute" title="Mikrofon">
+                <svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Zm5-3a1 1 0 1 1 2 0 7 7 0 0 1-6 6.93V21h2a1 1 0 1 1 0 2H9a1 1 0 0 1 0-2h2v-3.07A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 10 0Z" /></svg>
+              </button>
+              <button class="userbar-icon" :class="{ off: selfDeaf }" @click="selfDeaf = !selfDeaf" title="Kulaklik">
+                <svg viewBox="0 0 24 24"><path d="M12 3a7 7 0 0 0-7 7v3.5A2.5 2.5 0 0 0 7.5 16H9a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1H7V10a5 5 0 0 1 10 0v.5h-2a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h1.5a2.5 2.5 0 0 0 2.5-2.5V10a7 7 0 0 0-7-7Z" /></svg>
+              </button>
+              <button class="userbar-icon" @click="goProfile" title="Profil">
+                <svg viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.24-8 5a1 1 0 0 0 2 0c0-1.57 2.69-3 6-3s6 1.43 6 3a1 1 0 1 0 2 0c0-2.76-3.58-5-8-5Z" /></svg>
+              </button>
+            </div>
+          </div>
         </aside>
 
         <main class="channel-main">
@@ -196,8 +219,11 @@
               <span class="channel-prefix">{{ selectedChannel.type === "voice" ? "V" : "#" }}</span>
               {{ selectedChannel.name }}
             </div>
-            <div class="channel-type">
-              {{ selectedChannel.type === "voice" ? "Sesli Kanal" : "Metin Kanal" }}
+            <div class="channel-head-right">
+              <div class="channel-type">
+                {{ selectedChannel.type === "voice" ? "Sesli Kanal" : "Metin Kanal" }}
+              </div>
+              <input class="channel-search" :placeholder="`${server?.name || 'Sunucu'} sunucusunu ara`" />
             </div>
           </div>
           <div v-if="selectedChannel && selectedChannel.type === 'text'" class="channel-chat">
@@ -293,7 +319,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
+import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { ASSET_BASE_URL } from "../config";
@@ -333,6 +359,8 @@ const messagesLoading = ref(false);
 const currentChannelId = ref("");
 const voiceConnected = ref(false);
 const voiceChannelId = ref("");
+const selfMute = ref(false);
+const selfDeaf = ref(false);
 const audioEls = new Map();
 
 const fullAsset = (url = "") => {
@@ -639,6 +667,8 @@ const createServer = async () => {
 
 const goServer = (id) => router.push(`/server/${id}`);
 const goFriends = () => router.push("/friends");
+const goProfile = () => router.push("/profile");
+const isSelfOnline = computed(() => !!userStore.user?.isOnline);
 
 onMounted(() => {
   if (!userStore.user) {
@@ -1347,5 +1377,199 @@ watch(
 .primary-btn {
   background: linear-gradient(135deg, #76beff, #3a8eea) !important;
   color: #08203b !important;
+}
+
+.server-shell {
+  gap: 0;
+  padding: 0;
+  grid-template-columns: 300px 1fr 260px;
+}
+
+.channel-panel,
+.channel-main,
+.members-panel {
+  border-radius: 0;
+  border-top: none;
+  border-bottom: none;
+  box-shadow: none;
+}
+
+.channel-main {
+  border-left: none;
+  border-right: none;
+}
+
+.channel-panel {
+  position: relative;
+  padding: 0 0 82px;
+  overflow: hidden;
+}
+
+.server-header {
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  border-bottom: 1px solid rgba(99, 151, 216, 0.36) !important;
+  border-radius: 0;
+  background: #121b28;
+  padding: 14px 16px;
+}
+
+.channel-section,
+.channel-create {
+  padding: 0 12px;
+}
+
+.channel-section:first-of-type {
+  padding-top: 12px;
+}
+
+.channel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.channel-head-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.channel-search {
+  width: min(340px, 34vw);
+  background: #0b1420;
+  border: 1px solid rgba(99, 151, 216, 0.36);
+  border-radius: 10px;
+  padding: 9px 12px;
+  color: var(--text);
+}
+
+.channel-search:focus {
+  outline: none;
+  border-color: rgba(122, 194, 255, 0.72);
+}
+
+.server-userbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #121a26;
+  border-top: 1px solid rgba(99, 151, 216, 0.36);
+}
+
+.userbar-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #162132;
+  display: grid;
+  place-items: center;
+  color: #c8e4ff;
+  font-weight: 700;
+  position: relative;
+}
+
+.userbar-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.userbar-dot {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid #121a26;
+  background: #2ecc71;
+}
+
+.userbar-dot.offline {
+  background: #7b8796;
+}
+
+.userbar-meta {
+  min-width: 0;
+}
+
+.userbar-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #d5ebff;
+}
+
+.userbar-status {
+  font-size: 11px;
+  color: #9bb8d5;
+}
+
+.userbar-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.userbar-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 151, 216, 0.42);
+  background: #162234;
+  color: #cbe6ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.userbar-icon.off {
+  color: #8ea4bc;
+  background: #111b29;
+}
+
+.userbar-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+@media (max-width: 980px) {
+  .server-shell {
+    grid-template-columns: 280px 1fr;
+  }
+
+  .channel-search {
+    width: min(280px, 40vw);
+  }
+}
+
+@media (max-width: 720px) {
+  .server-shell {
+    display: flex;
+  }
+
+  .channel-search {
+    width: 100%;
+  }
+
+  .channel-head-right {
+    width: 100%;
+  }
+
+  .channel-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 </style>
