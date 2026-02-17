@@ -1605,15 +1605,15 @@ onBeforeUnmount(() => {
 <style scoped>
 .dm-layout,
 .dm-wrapper {
-  --accent: #ffc38f;
-  --accent-strong: #f2773e;
-  --accent-dark: #362016;
-  --border: #4a3227;
-  --border-strong: #6d4734;
-  --border-soft: #8a5c43;
+  --accent: #85ccff;
+  --accent-strong: #3d8fe9;
+  --accent-dark: #102743;
+  --border: #2d4663;
+  --border-strong: #406287;
+  --border-soft: #5479a5;
   background:
-    radial-gradient(760px 340px at 60% -22%, rgba(255, 182, 123, 0.16), transparent 60%),
-    #120f0d;
+    radial-gradient(760px 340px at 60% -22%, rgba(100, 177, 255, 0.16), transparent 60%),
+    #0c1118;
 }
 
 .servers,
@@ -1627,7 +1627,7 @@ onBeforeUnmount(() => {
 .file-card,
 .reply-preview,
 .reply-bubble {
-  border-color: rgba(231, 143, 88, 0.34) !important;
+  border-color: rgba(120, 176, 239, 0.34) !important;
 }
 
 .bubble,
@@ -1635,26 +1635,26 @@ onBeforeUnmount(() => {
 .context-menu,
 .server-card {
   border-radius: 14px;
-  box-shadow: 0 18px 38px rgba(30, 12, 5, 0.36);
+  box-shadow: 0 18px 38px rgba(6, 14, 27, 0.36);
 }
 
 .message.mine .bubble {
-  background: linear-gradient(145deg, rgba(90, 46, 27, 0.95), rgba(124, 58, 28, 0.95));
+  background: linear-gradient(145deg, rgba(30, 60, 92, 0.95), rgba(41, 90, 145, 0.95));
 }
 
 .call-btn,
 .dm-input button,
 .primary-btn,
 .new-message-btn {
-  background: linear-gradient(135deg, #ffbe83, #ef723c) !important;
-  color: #2c170d !important;
+  background: linear-gradient(135deg, #87ccff, #3c8fe8) !important;
+  color: #0b223e !important;
 }
 
 .dm-row:hover,
 .context-menu div:hover,
 .file-card:hover,
 .reply-bubble:hover {
-  background: rgba(150, 78, 45, 0.2);
+  background: rgba(51, 93, 146, 0.2);
 }
 </style>
 

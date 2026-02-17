@@ -1493,15 +1493,15 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .layout {
-  --accent: #6bd9b6;
-  --accent-strong: #25ab7d;
-  --accent-dark: #102a22;
-  --border: #25433b;
-  --border-strong: #346456;
-  --border-soft: #4d8a78;
+  --accent: #85ccff;
+  --accent-strong: #3d8fe9;
+  --accent-dark: #102743;
+  --border: #2d4663;
+  --border-strong: #406287;
+  --border-soft: #5479a5;
   background:
-    radial-gradient(900px 420px at 55% -20%, rgba(98, 203, 167, 0.16), transparent 60%),
-    #0b1112;
+    radial-gradient(900px 420px at 55% -20%, rgba(100, 177, 255, 0.16), transparent 60%),
+    #0b1118;
 }
 
 .servers,
@@ -1536,7 +1536,7 @@ onBeforeUnmount(() => {
 .note-input,
 .dm-search,
 .add-row input {
-  border-color: rgba(110, 201, 169, 0.34) !important;
+  border-color: rgba(120, 176, 239, 0.34) !important;
 }
 
 .panel,
@@ -1546,12 +1546,12 @@ onBeforeUnmount(() => {
 .profile-modal-card,
 .server-card,
 .info-card {
-  box-shadow: 0 20px 40px rgba(5, 19, 15, 0.35);
+  box-shadow: 0 20px 40px rgba(6, 14, 27, 0.35);
 }
 
 .filter-btn.active,
 .friends-filter-btn.active {
-  background: rgba(45, 123, 97, 0.26);
+  background: rgba(53, 103, 169, 0.28);
 }
 
 .link-btn,
@@ -1560,14 +1560,14 @@ onBeforeUnmount(() => {
 .dm-input button,
 .panel-btn,
 .app-gate-btn {
-  background: linear-gradient(135deg, #65d8b2, #30af80) !important;
-  color: #082118 !important;
+  background: linear-gradient(135deg, #87ccff, #3c8fe8) !important;
+  color: #0b223e !important;
 }
 
 .dm-row:hover,
 .notification-row:hover,
 .member-row:hover,
 .menu-row:hover {
-  background: rgba(51, 118, 94, 0.18);
+  background: rgba(51, 93, 146, 0.2);
 }
 </style>
