@@ -8,16 +8,16 @@
         <span class="quick-dot" :class="quickDotClass"></span>
       </div>
 
-      <div class="quick-class-row">
+      <div v-if="!viewOnly" class="quick-class-row">
         <button class="quick-class-btn">+ Karakter sinifini sec</button>
       </div>
 
       <div class="quick-name">{{ username || "Kullanici" }}</div>
-      <div class="quick-block">
+      <div v-if="!viewOnly" class="quick-block">
         <button class="quick-row" @click="emit('editProfile')">Oyun Koleksiyonu</button>
       </div>
 
-      <div class="quick-block status-block">
+      <div v-if="!viewOnly" class="quick-block status-block">
         <button class="quick-row" @click="emit('editProfile')">Profili Duzenle</button>
         <button class="quick-row split status-row" @click="showPresenceMenu = !showPresenceMenu">
           {{ presenceLabel }}
@@ -43,7 +43,7 @@
         </div>
       </div>
 
-      <div class="quick-block">
+      <div v-if="!viewOnly" class="quick-block">
         <button class="quick-row" @click="emit('switchAccount')">Hesap Degistir</button>
         <button class="quick-row split" @click="emit('copyId')">Kullanici ID'sini Kopyala</button>
       </div>
@@ -61,7 +61,8 @@ const props = defineProps({
   banner: { type: String, default: "" },
   isOnline: { type: Boolean, default: false },
   dndEnabled: { type: Boolean, default: false },
-  presenceStatus: { type: String, default: "online" }
+  presenceStatus: { type: String, default: "online" },
+  viewOnly: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(["close", "editProfile", "setPresence", "switchAccount", "copyId"]);

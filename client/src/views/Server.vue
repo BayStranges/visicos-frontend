@@ -26,17 +26,9 @@
             <div class="server-header-title">{{ server?.name }}</div>
             <button class="server-drop">v</button>
           </div>
-          <div class="server-hero">
-            <img v-if="server?.cover" :src="fullAsset(server.cover)" />
-            <div v-else class="server-hero-fallback">{{ (server?.name || "S").slice(0, 1).toUpperCase() }}</div>
-            <div class="server-hero-name">{{ server?.name }}</div>
-          </div>
           <div v-if="inviteStatus" class="invite-status">{{ inviteStatus }}</div>
 
           <div class="channel-section">
-            <div class="section-header">
-              <button class="section-head-btn" type="button">Kanallar</button>
-            </div>
             <div class="category-list">
               <div
                 v-for="cat in server?.categories || []"
@@ -51,7 +43,7 @@
                   class="category-title"
                   type="button"
                   @click="toggleCategory(cat._id)"
-                  @contextmenu.prevent="openCategoryMenu($event, cat)"
+                  @contextmenu.prevent.stop="openCategoryMenu($event, cat)"
                 >
                   <span class="category-caret">{{ isCategoryCollapsed(cat._id) ? ">" : "v" }}</span>
                   <span>{{ cat.name }}</span>
@@ -77,6 +69,7 @@
                       v-for="vu in (ch.type === 'voice' ? voiceMemberUsers(ch._id) : [])"
                       :key="`${ch._id}-${vu._id}`"
                       class="voice-channel-member"
+                      @click.stop="openProfileCardForUser(vu)"
                     >
                       <div class="member-avatar mini">
                         <img v-if="vu.avatar" :src="fullAsset(vu.avatar)" />
@@ -121,6 +114,7 @@
                       v-for="vu in (ch.type === 'voice' ? voiceMemberUsers(ch._id) : [])"
                       :key="`${ch._id}-${vu._id}`"
                       class="voice-channel-member"
+                      @click.stop="openProfileCardForUser(vu)"
                     >
                       <div class="member-avatar mini">
                         <img v-if="vu.avatar" :src="fullAsset(vu.avatar)" />
@@ -180,13 +174,13 @@
             <div v-else-if="!channelMessages.length" class="channel-empty">Henuz mesaj yok</div>
             <div v-else class="channel-messages">
               <div v-for="msg in channelMessages" :key="msg._id" class="channel-message">
-                <div class="message-avatar">
+                <div class="message-avatar" @click.stop="openProfileCardForUser(msg.sender)">
                   <img v-if="msg.sender?.avatar" :src="fullAsset(msg.sender.avatar)" />
                   <span v-else>{{ (msg.sender?.username || "?").slice(0, 1).toUpperCase() }}</span>
                 </div>
                 <div class="message-body">
                   <div class="message-meta">
-                    <span class="message-author">{{ msg.sender?.username || "User" }}</span>
+                    <span class="message-author" @click.stop="openProfileCardForUser(msg.sender)">{{ msg.sender?.username || "User" }}</span>
                     <span class="message-time">{{ formatMessageMetaTime(msg.createdAt) }}</span>
                   </div>
                   <div class="message-text">
@@ -262,7 +256,7 @@
         <aside class="members-panel">
           <div class="panel-title">Aktif Kullanicilar</div>
           <div v-if="!activeMembers.length" class="channel-empty">Kimse yok</div>
-          <div v-for="u in activeMembers" :key="`on-${u._id}`" class="member-row">
+          <div v-for="u in activeMembers" :key="`on-${u._id}`" class="member-row" @click="openProfileCardForUser(u)">
             <div class="member-avatar">
               <img v-if="u.avatar" :src="fullAsset(u.avatar)" />
               <span v-else>{{ (u.username || "?").slice(0, 1).toUpperCase() }}</span>
@@ -271,7 +265,7 @@
           </div>
           <div class="panel-title members-subtitle">Cevrimdisi Kullanicilar</div>
           <div v-if="!offlineMembers.length" class="channel-empty">Kimse yok</div>
-          <div v-for="u in offlineMembers" :key="`off-${u._id}`" class="member-row offline">
+          <div v-for="u in offlineMembers" :key="`off-${u._id}`" class="member-row offline" @click="openProfileCardForUser(u)">
             <div class="member-avatar">
               <img v-if="u.avatar" :src="fullAsset(u.avatar)" />
               <span v-else>{{ (u.username || "?").slice(0, 1).toUpperCase() }}</span>
@@ -284,12 +278,13 @@
 
     <UserQuickCard
       :open="profileCardOpen"
-      :username="userStore.user?.username || ''"
-      :avatar="userStore.user?.avatar ? fullAsset(userStore.user.avatar) : ''"
-      :banner="userStore.user?.banner ? fullAsset(userStore.user.banner) : ''"
-      :is-online="isSelfOnline"
+      :username="profileCardUser?.username || ''"
+      :avatar="profileCardUser?.avatar ? fullAsset(profileCardUser.avatar) : ''"
+      :banner="profileCardUser?.banner ? fullAsset(profileCardUser.banner) : ''"
+      :is-online="isProfileCardUserOnline"
       :dnd-enabled="dndEnabled"
-      :presence-status="presenceStatus"
+      :presence-status="profileCardPresenceStatus"
+      :view-only="isViewingOtherUser"
       @close="closeProfileCard"
       @edit-profile="goProfile"
       @set-presence="setPresence"
@@ -524,6 +519,7 @@ const draggingChannelId = ref("");
 const draggingChannelType = ref("");
 const dragOverKey = ref("");
 const profileCardOpen = ref(false);
+const profileCardTargetUser = ref(null);
 const dndEnabled = ref(localStorage.getItem("visicos_dnd") === "1");
 const presenceStatus = ref(localStorage.getItem("visicos_presence") || (dndEnabled.value ? "dnd" : "online"));
 const channelCreateOpen = ref(false);
@@ -759,6 +755,14 @@ const copyCurrentCategoryId = async () => {
 
 const openServerMenu = (event) => {
   if (!isOwner.value) return;
+  const target = event?.target;
+  if (
+    target?.closest?.(
+      ".server-header, .server-hero, .category-block, .category-title, .channel-row, .channel-item, .voice-channel-member, .server-userbar"
+    )
+  ) {
+    return;
+  }
   serverMenuPos.value = { x: event.clientX, y: event.clientY };
   serverMenuOpen.value = true;
 };
@@ -1167,16 +1171,19 @@ const goServer = (id) => router.push(`/server/${id}`);
 const goFriends = () => router.push("/friends");
 const goProfile = () => router.push("/profile");
 const toggleProfileCard = () => {
+  profileCardTargetUser.value = null;
   profileCardOpen.value = !profileCardOpen.value;
 };
 const closeProfileCard = () => {
   profileCardOpen.value = false;
+  profileCardTargetUser.value = null;
 };
 const toggleDnd = () => {
   dndEnabled.value = !dndEnabled.value;
   localStorage.setItem("visicos_dnd", dndEnabled.value ? "1" : "0");
 };
 const setPresence = (status) => {
+  if (isViewingOtherUser.value) return;
   const allowed = ["online", "idle", "dnd", "invisible"];
   const next = allowed.includes(status) ? status : "online";
   presenceStatus.value = next;
@@ -1185,22 +1192,54 @@ const setPresence = (status) => {
   localStorage.setItem("visicos_dnd", dndEnabled.value ? "1" : "0");
 };
 const switchAccount = () => {
+  if (isViewingOtherUser.value) return;
   localStorage.removeItem("user");
   localStorage.removeItem("token");
   router.push("/login");
 };
 const copyUserId = async () => {
-  const id = userStore.user?._id || "";
+  const id = profileCardUser.value?._id || userStore.user?._id || "";
   if (!id) return;
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(id);
   }
 };
 const isSelfOnline = computed(() => !!userStore.user?.isOnline);
+const onlineUserIdSet = computed(() =>
+  new Set((onlineUsers.value || []).map((id) => id?.toString?.() || String(id)))
+);
+const profileCardUser = computed(() => profileCardTargetUser.value || userStore.user || null);
+const isViewingOtherUser = computed(() => {
+  const targetId = profileCardTargetUser.value?._id?.toString?.() || "";
+  const selfId = userStore.user?._id?.toString?.() || "";
+  return !!targetId && !!selfId && targetId !== selfId;
+});
+const isProfileCardUserOnline = computed(() => {
+  if (!profileCardUser.value?._id) return false;
+  if (!isViewingOtherUser.value) return isSelfOnline.value;
+  return onlineUserIdSet.value.has(profileCardUser.value._id.toString());
+});
+const profileCardPresenceStatus = computed(() => {
+  if (isViewingOtherUser.value) {
+    return isProfileCardUserOnline.value ? "online" : "invisible";
+  }
+  return presenceStatus.value;
+});
 const isOwner = computed(() => {
   const ownerId = server.value?.owner?._id || server.value?.owner;
   return !!ownerId && ownerId.toString() === userStore.user?._id?.toString();
 });
+
+const openProfileCardForUser = (user) => {
+  if (!user?._id) return;
+  profileCardTargetUser.value = {
+    _id: user._id,
+    username: user.username || "Kullanici",
+    avatar: user.avatar || "",
+    banner: user.banner || ""
+  };
+  profileCardOpen.value = true;
+};
 
 const createInviteCode = async () => {
   if (!isOwner.value) return;
@@ -1584,6 +1623,7 @@ watch(
   margin-left: 14px;
   color: #95b7da;
   font-size: 12px;
+  cursor: pointer;
 }
 
 .member-avatar.mini {
@@ -1943,6 +1983,7 @@ watch(
   gap: 10px;
   padding: 6px 8px;
   border-radius: 10px;
+  cursor: pointer;
 }
 
 .member-row:last-child {
@@ -2833,6 +2874,7 @@ watch(
   font-size: 18px;
   font-weight: 700;
   line-height: 1.2;
+  cursor: pointer;
 }
 
 .message-time {
