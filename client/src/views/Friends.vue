@@ -1570,4 +1570,83 @@ onBeforeUnmount(() => {
 .menu-row:hover {
   background: rgba(51, 93, 146, 0.2);
 }
+
+.dm-list {
+  position: relative;
+  padding-bottom: 90px !important;
+}
+
+.dm-profile {
+  position: absolute !important;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  min-height: 62px;
+  background: rgba(11, 18, 29, 0.95) !important;
+  border: 1px solid rgba(106, 157, 218, 0.24) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 24px rgba(7, 13, 24, 0.35) !important;
+  padding: 10px 10px !important;
+}
+
+.dm-profile .dm-avatar {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 10px !important;
+}
+
+.dm-profile .status-dot {
+  border-color: rgba(11, 18, 29, 0.95) !important;
+}
+
+.dm-profile .dm-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ebf4ff;
+}
+
+.dm-profile .status-row {
+  margin-top: 2px;
+  gap: 0;
+}
+
+.dm-profile .status-pill {
+  font-size: 11px;
+  color: #99b6d7;
+}
+
+.dm-profile .custom-status {
+  color: #8ca9cb;
+  font-size: 10px;
+}
+
+.dm-profile .custom-status:hover {
+  color: #cfe4ff;
+}
+
+.dm-profile .profile-actions {
+  gap: 4px;
+}
+
+.dm-profile .icon-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: rgba(21, 37, 57, 0.78);
+  border: 1px solid rgba(112, 160, 220, 0.24);
+  color: #d4e9ff;
+}
+
+.dm-profile .icon-btn:hover {
+  border-color: rgba(144, 190, 245, 0.5);
+  background: rgba(31, 53, 80, 0.82);
+}
+
+@media (max-width: 700px) {
+  .dm-profile {
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+  }
+}
 </style>
