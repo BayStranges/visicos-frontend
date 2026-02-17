@@ -45,10 +45,18 @@
                 @dragleave="onCategoryDragLeave(`text-${cat._id}`)"
                 @drop.prevent="onCategoryDrop($event, cat._id, 'text')"
               >
-                <div class="category-title">{{ cat.name }}</div>
+                <button
+                  class="category-title"
+                  type="button"
+                  @click="toggleCategory(cat._id, 'text')"
+                  @contextmenu.prevent="openCategoryMenu($event, cat, 'text')"
+                >
+                  <span class="category-caret">{{ isCategoryCollapsed(cat._id, 'text') ? ">" : "v" }}</span>
+                  <span>{{ cat.name }}</span>
+                </button>
                 <div class="channel-list">
                   <div
-                    v-for="ch in channelsByCategoryAndType(cat._id, 'text')"
+                    v-for="ch in visibleChannelsByCategoryAndType(cat._id, 'text')"
                     :key="ch._id"
                     class="channel-row"
                     :draggable="isOwner"
@@ -74,10 +82,13 @@
                 @dragleave="onCategoryDragLeave('text-uncat')"
                 @drop.prevent="onCategoryDrop($event, null, 'text')"
               >
-                <div class="category-title">Kategorisiz</div>
+                <button class="category-title" type="button" @click="toggleCategory('uncat', 'text')">
+                  <span class="category-caret">{{ isCategoryCollapsed('uncat', 'text') ? ">" : "v" }}</span>
+                  <span>Kategorisiz</span>
+                </button>
                 <div class="channel-list">
                   <div
-                    v-for="ch in channelsByCategoryAndType(null, 'text')"
+                    v-for="ch in visibleChannelsByCategoryAndType(null, 'text')"
                     :key="ch._id"
                     class="channel-row"
                     :draggable="isOwner"
@@ -121,10 +132,18 @@
                 @dragleave="onCategoryDragLeave(`voice-${cat._id}`)"
                 @drop.prevent="onCategoryDrop($event, cat._id, 'voice')"
               >
-                <div class="category-title">{{ cat.name }}</div>
+                <button
+                  class="category-title"
+                  type="button"
+                  @click="toggleCategory(cat._id, 'voice')"
+                  @contextmenu.prevent="openCategoryMenu($event, cat, 'voice')"
+                >
+                  <span class="category-caret">{{ isCategoryCollapsed(cat._id, 'voice') ? ">" : "v" }}</span>
+                  <span>{{ cat.name }}</span>
+                </button>
                 <div class="channel-list">
                   <div
-                    v-for="ch in channelsByCategoryAndType(cat._id, 'voice')"
+                    v-for="ch in visibleChannelsByCategoryAndType(cat._id, 'voice')"
                     :key="ch._id"
                     class="channel-row"
                     :draggable="isOwner"
@@ -150,10 +169,13 @@
                 @dragleave="onCategoryDragLeave('voice-uncat')"
                 @drop.prevent="onCategoryDrop($event, null, 'voice')"
               >
-                <div class="category-title">Kategorisiz</div>
+                <button class="category-title" type="button" @click="toggleCategory('uncat', 'voice')">
+                  <span class="category-caret">{{ isCategoryCollapsed('uncat', 'voice') ? ">" : "v" }}</span>
+                  <span>Kategorisiz</span>
+                </button>
                 <div class="channel-list">
                   <div
-                    v-for="ch in channelsByCategoryAndType(null, 'voice')"
+                    v-for="ch in visibleChannelsByCategoryAndType(null, 'voice')"
                     :key="ch._id"
                     class="channel-row"
                     :draggable="isOwner"
@@ -329,6 +351,40 @@
       <button v-if="isOwner" class="menu-item" @click="createInviteCode">Sunucuya Davet Et</button>
     </div>
 
+    <div
+      v-if="categoryMenuOpen"
+      class="category-context-menu"
+      :style="{ left: `${categoryMenuPos.x}px`, top: `${categoryMenuPos.y}px` }"
+      @click.stop
+    >
+      <button class="cat-item muted">Okunmus Olarak Isaretle</button>
+      <div class="cat-divider"></div>
+
+      <button class="cat-item with-check" @click="toggleCurrentCategoryCollapse">
+        <span>Kategoriyi Daralt</span>
+        <span class="cat-check" :class="{ on: isCurrentCategoryCollapsed }"></span>
+      </button>
+      <button class="cat-item with-check" @click="toggleAllCategoriesCollapse">
+        <span>Tum Kategorileri Daralt</span>
+        <span class="cat-check" :class="{ on: areAllCategoriesCollapsed }"></span>
+      </button>
+
+      <div class="cat-divider"></div>
+      <button class="cat-item arrow" @click="toggleCurrentCategoryMute">Kategoriyi Sustur</button>
+      <button class="cat-item arrow">Bildirim Ayarlari</button>
+      <div class="cat-sub">Butun Mesajlar</div>
+
+      <div class="cat-divider"></div>
+      <button class="cat-item" :disabled="!isOwner" @click="renameCurrentCategory">Kategoriyi Duzenle</button>
+      <button class="cat-item danger" :disabled="!isOwner" @click="deleteCurrentCategory">Kategoriyi Sil</button>
+
+      <div class="cat-divider"></div>
+      <button class="cat-item with-id" @click="copyCurrentCategoryId">
+        <span>Kategori ID'sini kopyala</span>
+        <span class="id-chip">ID</span>
+      </button>
+    </div>
+
     <transition name="fade">
       <div v-if="channelCreateOpen" class="create-modal" @click="closeChannelModal">
         <div class="create-card" @click.stop>
@@ -495,6 +551,12 @@ const inviteStatus = ref("");
 const hideMutedChannels = ref(false);
 const serverMenuOpen = ref(false);
 const serverMenuPos = ref({ x: 0, y: 0 });
+const collapsedCategoryKeys = ref([]);
+const mutedCategoryKeys = ref([]);
+const categoryMenuOpen = ref(false);
+const categoryMenuPos = ref({ x: 0, y: 0 });
+const categoryMenuCategory = ref(null);
+const categoryMenuType = ref("text");
 const draggingChannelId = ref("");
 const draggingChannelType = ref("");
 const dragOverKey = ref("");
@@ -577,6 +639,129 @@ const channelsByCategoryAndType = (categoryId, type) => {
       : !ch.categoryId;
     return sameType && sameCategory;
   });
+};
+
+const categoryKey = (categoryId, type) => `${type}:${categoryId || "uncat"}`;
+
+const isCategoryCollapsed = (categoryId, type) =>
+  collapsedCategoryKeys.value.includes(categoryKey(categoryId, type));
+
+const toggleCategory = (categoryId, type) => {
+  const key = categoryKey(categoryId, type);
+  if (collapsedCategoryKeys.value.includes(key)) {
+    collapsedCategoryKeys.value = collapsedCategoryKeys.value.filter((k) => k !== key);
+  } else {
+    collapsedCategoryKeys.value = [...collapsedCategoryKeys.value, key];
+  }
+};
+
+const isCategoryMuted = (categoryId, type) =>
+  mutedCategoryKeys.value.includes(categoryKey(categoryId, type));
+
+const visibleChannelsByCategoryAndType = (categoryId, type) => {
+  if (isCategoryCollapsed(categoryId, type)) return [];
+  return channelsByCategoryAndType(categoryId, type);
+};
+
+const openCategoryMenu = (event, category, type) => {
+  categoryMenuPos.value = { x: event.clientX, y: event.clientY };
+  categoryMenuCategory.value = category || null;
+  categoryMenuType.value = type || "text";
+  categoryMenuOpen.value = true;
+};
+
+const closeCategoryMenu = () => {
+  categoryMenuOpen.value = false;
+};
+
+const currentCategoryId = computed(() => categoryMenuCategory.value?._id || "");
+const isCurrentCategoryCollapsed = computed(() =>
+  currentCategoryId.value ? isCategoryCollapsed(currentCategoryId.value, categoryMenuType.value) : false
+);
+const areAllCategoriesCollapsed = computed(() => {
+  const cats = server.value?.categories || [];
+  if (!cats.length) return false;
+  return cats.every((cat) => (
+    isCategoryCollapsed(cat._id, "text") && isCategoryCollapsed(cat._id, "voice")
+  ));
+});
+
+const toggleCurrentCategoryCollapse = () => {
+  if (!currentCategoryId.value) return;
+  toggleCategory(currentCategoryId.value, categoryMenuType.value);
+  closeCategoryMenu();
+};
+
+const toggleAllCategoriesCollapse = () => {
+  const cats = server.value?.categories || [];
+  if (!cats.length) return;
+  if (areAllCategoriesCollapsed.value) {
+    collapsedCategoryKeys.value = [];
+  } else {
+    collapsedCategoryKeys.value = cats.flatMap((cat) => [
+      categoryKey(cat._id, "text"),
+      categoryKey(cat._id, "voice")
+    ]);
+  }
+  closeCategoryMenu();
+};
+
+const toggleCurrentCategoryMute = () => {
+  if (!currentCategoryId.value) return;
+  const key = categoryKey(currentCategoryId.value, categoryMenuType.value);
+  if (mutedCategoryKeys.value.includes(key)) {
+    mutedCategoryKeys.value = mutedCategoryKeys.value.filter((k) => k !== key);
+  } else {
+    mutedCategoryKeys.value = [...mutedCategoryKeys.value, key];
+  }
+  closeCategoryMenu();
+};
+
+const renameCurrentCategory = async () => {
+  if (!isOwner.value || !currentCategoryId.value) return;
+  const next = window.prompt("Kategori adi", categoryMenuCategory.value?.name || "");
+  if (next === null) return;
+  const name = next.trim();
+  if (!name) return;
+  try {
+    const res = await axios.patch(`/api/servers/${route.params.id}/categories/${currentCategoryId.value}`, { name });
+    const idx = (server.value?.categories || []).findIndex((c) => c._id === currentCategoryId.value);
+    if (idx >= 0) server.value.categories[idx] = res.data;
+  } catch (err) {
+    categoryError.value = err?.response?.data?.message || "Kategori duzenlenemedi";
+  } finally {
+    closeCategoryMenu();
+  }
+};
+
+const deleteCurrentCategory = async () => {
+  if (!isOwner.value || !currentCategoryId.value) return;
+  const ok = window.confirm("Kategori silinsin mi?");
+  if (!ok) return;
+  try {
+    await axios.delete(`/api/servers/${route.params.id}/categories/${currentCategoryId.value}`);
+    if (server.value?.categories) {
+      server.value.categories = server.value.categories.filter((c) => c._id !== currentCategoryId.value);
+    }
+    if (server.value?.channels) {
+      server.value.channels = server.value.channels.map((ch) =>
+        ch.categoryId?.toString() === currentCategoryId.value ? { ...ch, categoryId: null } : ch
+      );
+    }
+  } catch (err) {
+    categoryError.value = err?.response?.data?.message || "Kategori silinemedi";
+  } finally {
+    closeCategoryMenu();
+  }
+};
+
+const copyCurrentCategoryId = async () => {
+  const id = currentCategoryId.value;
+  if (!id) return;
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(id);
+  }
+  closeCategoryMenu();
 };
 
 const openServerMenu = (event) => {
@@ -989,6 +1174,7 @@ onMounted(() => {
   ensureSocket();
   socket.on("channel-message", handleChannelMessage);
   document.addEventListener("click", closeServerMenu);
+  document.addEventListener("click", closeCategoryMenu);
   loadServers();
   loadServer();
 });
@@ -996,6 +1182,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   socket.off("channel-message", handleChannelMessage);
   document.removeEventListener("click", closeServerMenu);
+  document.removeEventListener("click", closeCategoryMenu);
   leaveTextChannel();
   leaveVoiceChannel();
 });
@@ -1271,9 +1458,30 @@ watch(
 }
 
 .category-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-strong);
+  width: 100%;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 2px 0;
+  text-align: left;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.35px;
+  text-transform: uppercase;
+  color: #8ea4bc;
+}
+
+.category-title:hover {
+  color: #cfe4ff;
+}
+
+.category-caret {
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.9;
 }
 
 .channel-list {
@@ -1982,6 +2190,98 @@ watch(
   height: 1px;
   margin: 6px 2px;
   background: #3a3b40;
+}
+
+.category-context-menu {
+  position: fixed;
+  min-width: 250px;
+  background: #f2f3f5;
+  border: 1px solid #d2d5db;
+  border-radius: 10px;
+  padding: 8px;
+  z-index: 140;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
+}
+
+.cat-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #2f3136;
+  text-align: left;
+  padding: 8px 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cat-item:hover {
+  background: #e6e8ec;
+}
+
+.cat-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cat-item.muted {
+  color: #8a8f99;
+}
+
+.cat-item.with-check {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cat-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1px solid #afb4bf;
+  background: #f8f9fb;
+}
+
+.cat-check.on {
+  background: #5a66ff;
+  border-color: #5a66ff;
+}
+
+.cat-item.arrow::after {
+  content: ">";
+  float: right;
+  color: #7a7f89;
+}
+
+.cat-sub {
+  padding: 0 8px 6px;
+  color: #8a8f99;
+  font-size: 12px;
+}
+
+.cat-divider {
+  height: 1px;
+  margin: 6px 2px;
+  background: #d6d9df;
+}
+
+.cat-item.danger {
+  color: #d23a3a;
+}
+
+.cat-item.with-id {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.id-chip {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6a6f79;
+  border: 1px solid #c2c7d1;
+  border-radius: 6px;
+  padding: 2px 6px;
 }
 
 .create-modal {
