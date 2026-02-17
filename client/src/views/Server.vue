@@ -24,8 +24,14 @@
         <aside class="channel-panel">
           <div class="server-header">
             <div class="server-header-title">{{ server?.name }}</div>
-            <button class="server-drop">v</button>
+            <div class="server-header-actions">
+              <button v-if="isOwner" class="server-invite-btn" @click="createInviteCode">
+                Davet
+              </button>
+              <button class="server-drop">v</button>
+            </div>
           </div>
+          <div v-if="inviteStatus" class="invite-status">{{ inviteStatus }}</div>
 
           <div class="channel-section">
             <div class="section-header">
@@ -361,6 +367,7 @@ const voiceConnected = ref(false);
 const voiceChannelId = ref("");
 const selfMute = ref(false);
 const selfDeaf = ref(false);
+const inviteStatus = ref("");
 const audioEls = new Map();
 
 const fullAsset = (url = "") => {
@@ -683,6 +690,28 @@ const goServer = (id) => router.push(`/server/${id}`);
 const goFriends = () => router.push("/friends");
 const goProfile = () => router.push("/profile");
 const isSelfOnline = computed(() => !!userStore.user?.isOnline);
+const isOwner = computed(() => {
+  const ownerId = server.value?.owner?._id || server.value?.owner;
+  return !!ownerId && ownerId.toString() === userStore.user?._id?.toString();
+});
+
+const createInviteCode = async () => {
+  if (!isOwner.value) return;
+  inviteStatus.value = "";
+  try {
+    const res = await axios.post(`/api/servers/${route.params.id}/invite`);
+    const code = res.data?.code || "";
+    if (!code) {
+      inviteStatus.value = "Davet kodu olusturulamadi";
+      return;
+    }
+    const text = `${window.location.origin}/invite/${code}`;
+    await navigator.clipboard.writeText(text);
+    inviteStatus.value = `Davet hazir: ${code} (kopyalandi)`;
+  } catch (err) {
+    inviteStatus.value = err?.response?.data?.message || "Davet olusturulamadi";
+  }
+};
 
 onMounted(() => {
   if (!userStore.user) {
@@ -1427,6 +1456,28 @@ watch(
   border-radius: 0;
   background: #121b28;
   padding: 14px 16px;
+}
+
+.server-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.server-invite-btn {
+  border: 1px solid rgba(99, 151, 216, 0.42);
+  background: #162234;
+  color: #d4ebff;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.invite-status {
+  margin: 8px 12px 0;
+  font-size: 12px;
+  color: #9fc6ec;
 }
 
 .channel-section,

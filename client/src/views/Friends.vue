@@ -434,6 +434,17 @@
       </div>
 
       <div class="panel">
+        <div class="panel-title">Sunucuya Katil</div>
+        <div class="add-row">
+          <input v-model="serverInviteInput" placeholder="Davet kodu veya /invite/ linki" />
+          <button :disabled="joiningServer" @click="joinServerWithInvite">
+            {{ joiningServer ? "Katiliniyor..." : "Katil" }}
+          </button>
+        </div>
+        <div v-if="serverInviteError" class="join-server-error">{{ serverInviteError }}</div>
+      </div>
+
+      <div class="panel">
         <div class="panel-title">Bekleyen Istekler</div>
         <div v-if="requests.length === 0" class="empty">Istek yok</div>
         <div v-for="req in requests" :key="req._id" class="request-row">
@@ -544,6 +555,9 @@ const serverCoverFile = ref(null);
 const serverCoverPreview = ref("");
 const serverError = ref("");
 const creatingServer = ref(false);
+const serverInviteInput = ref("");
+const serverInviteError = ref("");
+const joiningServer = ref(false);
 let coverObjectUrl = "";
 
 const onNotificationsDocumentClick = (event) => {
@@ -658,6 +672,42 @@ const createServer = async () => {
     serverError.value = err?.response?.data?.message || "Sunucu olusturulamadi";
   } finally {
     creatingServer.value = false;
+  }
+};
+
+const normalizeInviteCode = (value = "") => {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const lower = raw.toLowerCase();
+  if (lower.includes("/invite/")) {
+    const idx = lower.lastIndexOf("/invite/");
+    return raw.slice(idx + 8).split(/[/?#]/)[0].trim().toUpperCase();
+  }
+  return raw.toUpperCase();
+};
+
+const joinServerWithInvite = async () => {
+  const code = normalizeInviteCode(serverInviteInput.value);
+  if (!code) {
+    serverInviteError.value = "Davet kodu gerekli";
+    return;
+  }
+  serverInviteError.value = "";
+  joiningServer.value = true;
+  try {
+    const res = await axios.post(`/api/servers/invite/${code}/join`);
+    const serverId = res.data?.serverId;
+    if (!serverId) {
+      serverInviteError.value = "Sunucuya katilinamadi";
+      return;
+    }
+    serverInviteInput.value = "";
+    await loadServers();
+    router.push(`/server/${serverId}`);
+  } catch (err) {
+    serverInviteError.value = err?.response?.data?.message || "Davet gecersiz";
+  } finally {
+    joiningServer.value = false;
   }
 };
 
@@ -1650,5 +1700,13 @@ onBeforeUnmount(() => {
     right: 0;
     bottom: 0;
   }
+}
+</style>
+
+<style scoped>
+.join-server-error {
+  margin-top: 10px;
+  color: #ff9b9b;
+  font-size: 12px;
 }
 </style>
