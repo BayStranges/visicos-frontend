@@ -1346,6 +1346,22 @@ onMounted(async () => {
   loadServers();
 
   if (!socket.connected) socket.connect();
+  [
+    "receive-message",
+    "typing",
+    "stop-typing",
+    "message-deleted",
+    "message-edited",
+    "message-reacted",
+    "webrtc-offer",
+    "webrtc-answer",
+    "webrtc-ice",
+    "call-ended",
+    "incoming-call",
+    "call-rejected",
+    "call-accepted",
+    "online-users"
+  ].forEach((eventName) => socket.off(eventName));
 
   requestNotifications();
 
@@ -1473,10 +1489,15 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  const shouldKeepCallAlive = inCall.value || ringing.value || callAccepted.value;
   if (callTicker) clearInterval(callTicker);
-  clearOverlayState();
-  closeVoice();
-  if (ringtoneAudio.value) {
+  if (!shouldKeepCallAlive) {
+    clearOverlayState();
+    closeVoice();
+  } else {
+    updateOverlayState();
+  }
+  if (ringtoneAudio.value && !ringing.value) {
     ringtoneAudio.value.pause();
     ringtoneAudio.value.currentTime = 0;
   }
@@ -1487,10 +1508,15 @@ onBeforeUnmount(() => {
   socket.off("message-deleted");
   socket.off("message-edited");
   socket.off("message-reacted");
-  socket.off("webrtc-offer");
-  socket.off("webrtc-answer");
-  socket.off("webrtc-ice");
-  socket.off("call-ended");
+  if (!shouldKeepCallAlive) {
+    socket.off("webrtc-offer");
+    socket.off("webrtc-answer");
+    socket.off("webrtc-ice");
+    socket.off("call-ended");
+    socket.off("incoming-call");
+    socket.off("call-rejected");
+    socket.off("call-accepted");
+  }
   socket.off("online-users");
 
   window.removeEventListener("click", closeMenu);
