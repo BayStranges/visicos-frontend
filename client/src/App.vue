@@ -233,3 +233,33 @@ onBeforeUnmount(() => {
 }
 </style>
 
+
+<style scoped>
+.app-gate {
+  background:
+    radial-gradient(820px 420px at 50% -20%, rgba(115, 174, 255, 0.35), transparent 62%),
+    linear-gradient(180deg, #0b111a, #090d13);
+}
+
+.app-gate-card {
+  background: rgba(18, 28, 40, 0.92);
+  border: 1px solid rgba(120, 168, 233, 0.32);
+  box-shadow: 0 30px 64px rgba(7, 13, 24, 0.5);
+}
+
+.app-gate-step {
+  background: rgba(14, 23, 34, 0.9);
+  border: 1px solid rgba(95, 134, 184, 0.35);
+}
+
+.app-gate-btn,
+.push-banner-btn {
+  background: linear-gradient(135deg, #65b8ff, #2f82ff);
+  color: #f7fbff;
+}
+
+.push-banner {
+  background: rgba(16, 26, 38, 0.95);
+  border: 1px solid rgba(119, 168, 232, 0.3);
+}
+</style>

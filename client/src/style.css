@@ -1,23 +1,29 @@
-:root {
-  --bg: #0b0b0b;
-  --bg-elev: #0f0f0f;
-  --bg-elev-2: #141414;
-  --panel: #121212;
-  --input-bg: #0d0d0d;
-  --chip: #221111;
-  --border: #1b0b0b;
-  --border-strong: #2b1313;
-  --border-soft: #3d1a1a;
-  --text: #f6f0d5;
-  --text-strong: #fff7d6;
-  --text-muted: #c7bfa4;
-  --accent: #f7c948;
-  --accent-strong: #c31432;
-  --accent-dark: #1a0d0d;
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 
-  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+:root {
+  --bg: #0b0f14;
+  --bg-elev: #101822;
+  --bg-elev-2: #172231;
+  --panel: #131f2d;
+  --input-bg: #0f1824;
+  --chip: #1e2d40;
+  --border: #22334a;
+  --border-strong: #314764;
+  --border-soft: #3f5d81;
+  --text: #e8eef9;
+  --text-strong: #ffffff;
+  --text-muted: #9fb2cb;
+  --accent: #60b6ff;
+  --accent-strong: #2e80ff;
+  --accent-dark: #0b1b33;
+  --danger: #ff6767;
+  --ok: #5cd69d;
+  --shadow-lg: 0 24px 52px rgba(5, 11, 20, 0.45);
+  --shadow-md: 0 14px 32px rgba(5, 11, 20, 0.32);
+
+  font-family: "Manrope", "Segoe UI", sans-serif;
   line-height: 1.5;
-  font-weight: 400;
+  font-weight: 500;
   color: var(--text);
   background-color: var(--bg);
   font-synthesis: none;
@@ -30,11 +36,18 @@
   box-sizing: border-box;
 }
 
+*::selection {
+  background: rgba(96, 182, 255, 0.32);
+}
+
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background: var(--bg);
+  background:
+    radial-gradient(1200px 580px at -10% -5%, rgba(87, 166, 255, 0.18), transparent 55%),
+    radial-gradient(920px 460px at 110% 0%, rgba(37, 129, 255, 0.12), transparent 56%),
+    linear-gradient(180deg, #0b0f14 0%, #0a0d12 100%);
   color: var(--text);
 }
 
@@ -45,6 +58,47 @@ a {
 
 a:hover {
   color: var(--text-strong);
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+button {
+  transition: transform 0.16s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(96, 182, 255, 0.2);
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(19, 31, 45, 0.8);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #36557a, #2a4360);
+  border-radius: 999px;
 }
 
 #app {

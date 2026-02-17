@@ -1512,3 +1512,68 @@ const toggleGameDetected = (game) => {
 
 
 
+
+<style scoped>
+.settings {
+  --accent: #9fd36d;
+  --accent-strong: #5fa128;
+  --accent-dark: #1c3010;
+  --border: #35502a;
+  --border-strong: #496f39;
+  --border-soft: #5f8e4a;
+  background:
+    radial-gradient(900px 400px at 56% -20%, rgba(140, 205, 93, 0.15), transparent 58%),
+    #0f140c;
+}
+
+.settings-nav,
+.panel-card,
+.account-info,
+privacy-item,
+device-row,
+connection-card,
+games-detect,
+.game-card,
+.overlay-row,
+.overlay-control,
+.overlay-preview,
+.audio-row,
+.audio-profile-option,
+.audio-select,
+.control-select,
+.edit-card,
+.banner-wrap,
+.avatar-wrap,
+input,
+select,
+textarea {
+  border-color: rgba(120, 171, 92, 0.36) !important;
+}
+
+.panel-card,
+.settings-nav,
+.edit-card,
+.overlay-preview,
+.game-card,
+.connection-card {
+  box-shadow: 0 20px 42px rgba(17, 30, 11, 0.34);
+}
+
+.nav-btn.active,
+.nav-btn:hover,
+.audio-profile-option.active {
+  background: rgba(90, 138, 61, 0.24);
+}
+
+.primary-btn,
+.mini-btn {
+  background: linear-gradient(135deg, #9ed46b, #5ea026) !important;
+  color: #12200b !important;
+}
+
+.ghost-btn:hover,
+.platform-btn:hover,
+.game-icon:hover {
+  border-color: rgba(150, 210, 114, 0.65) !important;
+}
+</style>

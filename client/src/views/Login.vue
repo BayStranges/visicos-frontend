@@ -2,6 +2,7 @@
   <div class="auth-page">
     <div class="auth-card">
       <h2>Giris</h2>
+      <p class="subtitle">Nexora hesabinla devam et.</p>
 
       <input v-model="email" placeholder="Email" />
       <input v-model="password" type="password" placeholder="Sifre" />
@@ -11,11 +12,9 @@
       <p v-if="error" class="error">{{ error }}</p>
 
       <p class="helper">
-Hesabin yok mu?
-<span @click="router.push('/register')" class="link">
-Kayit ol
-</span>
-</p>
+        Hesabin yok mu?
+        <span @click="router.push('/register')" class="link">Kayit ol</span>
+      </p>
     </div>
   </div>
 </template>
@@ -43,25 +42,92 @@ const login = async () => {
       password: password.value
     });
 
-    // 🔐 kullanıcıyı kaydet
-    userStore.setUser(user, token);
-
-    // 🔌 socket bağla (autoConnect:false olduğu için)
+    userStore.setUser(res.data, res.data?.token);
     socket.connect();
     socket.emit("user-online", res.data._id);
 
     router.push("/friends");
-
   } catch (err) {
     console.error(err);
 
     if (err.response) {
-      error.value = "Email veya şifre hatalı";
+      error.value = "Email veya sifre hatali";
     } else {
-      error.value = "Sunucuya bağlanılamıyor";
+      error.value = "Sunucuya baglanilamiyor";
     }
   }
 };
 </script>
-<style scoped> .auth-page {   min-height: 100vh;   display: grid;   place-items: center;   padding: 40px 16px;   background: var(--bg);   color: var(--text); }  .auth-card {   width: min(420px, 92vw);   background: var(--bg-elev);   border: 1px solid var(--border);   border-radius: 16px;   padding: 22px;   box-shadow: 0 18px 30px rgba(0,0,0,0.4);   display: grid;   gap: 12px; }  h2 {   margin: 0 0 6px 0;   color: var(--accent);   font-weight: 700; }  input {   background: var(--input-bg);   border: 1px solid var(--border-strong);   border-radius: 10px;   padding: 10px 12px;   color: var(--text); }  button {   background: linear-gradient(145deg, var(--accent-strong), var(--accent));   color: var(--accent-dark);   border: none;   border-radius: 10px;   padding: 10px 14px;   cursor: pointer;   font-weight: 700; }  .error {   color: var(--accent-strong);   margin: 0; }  .helper {   margin: 0;   color: var(--text-muted);   font-size: 13px; }  .helper .link {   cursor: pointer;   color: var(--accent);   font-weight: 600; } </style>
 
+<style scoped>
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 40px 16px;
+  color: var(--text);
+}
+
+.auth-card {
+  width: min(430px, 92vw);
+  background: linear-gradient(160deg, rgba(20, 32, 47, 0.95), rgba(16, 25, 37, 0.92));
+  border: 1px solid rgba(106, 152, 214, 0.3);
+  border-radius: 22px;
+  padding: 26px;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(14px);
+  display: grid;
+  gap: 12px;
+}
+
+h2 {
+  margin: 0;
+  color: var(--text-strong);
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: -0.02em;
+}
+
+.subtitle {
+  margin: -4px 0 8px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+input {
+  background: rgba(12, 20, 31, 0.92);
+  border: 1px solid rgba(98, 135, 185, 0.5);
+  border-radius: 12px;
+  padding: 11px 12px;
+  color: var(--text);
+}
+
+button {
+  background: linear-gradient(135deg, #60b6ff, #2e80ff);
+  color: #f8fbff;
+  border: none;
+  border-radius: 12px;
+  padding: 11px 14px;
+  cursor: pointer;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.error {
+  color: #ff8d8d;
+  margin: 2px 0;
+  font-size: 13px;
+}
+
+.helper {
+  margin: 2px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.helper .link {
+  cursor: pointer;
+  color: #8cc8ff;
+  font-weight: 700;
+}
+</style>

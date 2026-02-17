@@ -1601,3 +1601,59 @@ onBeforeUnmount(() => {
 
 
 
+
+<style scoped>
+.dm-layout,
+.dm-wrapper {
+  --accent: #ffc38f;
+  --accent-strong: #f2773e;
+  --accent-dark: #362016;
+  --border: #4a3227;
+  --border-strong: #6d4734;
+  --border-soft: #8a5c43;
+  background:
+    radial-gradient(760px 340px at 60% -22%, rgba(255, 182, 123, 0.16), transparent 60%),
+    #120f0d;
+}
+
+.servers,
+.dm-header,
+.call-bar,
+.dm-input,
+.context-menu,
+.server-card,
+.server-field input,
+.bubble,
+.file-card,
+.reply-preview,
+.reply-bubble {
+  border-color: rgba(231, 143, 88, 0.34) !important;
+}
+
+.bubble,
+.file-card,
+.context-menu,
+.server-card {
+  border-radius: 14px;
+  box-shadow: 0 18px 38px rgba(30, 12, 5, 0.36);
+}
+
+.message.mine .bubble {
+  background: linear-gradient(145deg, rgba(90, 46, 27, 0.95), rgba(124, 58, 28, 0.95));
+}
+
+.call-btn,
+.dm-input button,
+.primary-btn,
+.new-message-btn {
+  background: linear-gradient(135deg, #ffbe83, #ef723c) !important;
+  color: #2c170d !important;
+}
+
+.dm-row:hover,
+.context-menu div:hover,
+.file-card:hover,
+.reply-bubble:hover {
+  background: rgba(150, 78, 45, 0.2);
+}
+</style>

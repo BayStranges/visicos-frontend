@@ -1490,3 +1490,84 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
 }
 </style>
+
+<style scoped>
+.layout {
+  --accent: #6bd9b6;
+  --accent-strong: #25ab7d;
+  --accent-dark: #102a22;
+  --border: #25433b;
+  --border-strong: #346456;
+  --border-soft: #4d8a78;
+  background:
+    radial-gradient(900px 420px at 55% -20%, rgba(98, 203, 167, 0.16), transparent 60%),
+    #0b1112;
+}
+
+.servers,
+.dm-list,
+.friends,
+.panel,
+.dm-tools,
+.dm-profile,
+.profile-card,
+.user-menu,
+.nickname-card,
+.profile-modal-card,
+.server-card,
+.info-card {
+  border-radius: 16px;
+}
+
+.servers,
+.dm-list,
+.friends,
+.panel,
+.dm-tools,
+.dm-profile,
+.profile-card,
+.user-menu,
+.nickname-card,
+.profile-modal-card,
+.server-card,
+.info-card,
+.server-field input,
+.nickname-field input,
+.note-input,
+.dm-search,
+.add-row input {
+  border-color: rgba(110, 201, 169, 0.34) !important;
+}
+
+.panel,
+.profile-card,
+.user-menu,
+.nickname-card,
+.profile-modal-card,
+.server-card,
+.info-card {
+  box-shadow: 0 20px 40px rgba(5, 19, 15, 0.35);
+}
+
+.filter-btn.active,
+.friends-filter-btn.active {
+  background: rgba(45, 123, 97, 0.26);
+}
+
+.link-btn,
+.primary-btn,
+.add-row button,
+.dm-input button,
+.panel-btn,
+.app-gate-btn {
+  background: linear-gradient(135deg, #65d8b2, #30af80) !important;
+  color: #082118 !important;
+}
+
+.dm-row:hover,
+.notification-row:hover,
+.member-row:hover,
+.menu-row:hover {
+  background: rgba(51, 118, 94, 0.18);
+}
+</style>

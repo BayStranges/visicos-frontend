@@ -1302,3 +1302,50 @@ watch(
   }
 }
 </style>
+
+<style scoped>
+.server-page,
+.server-layout {
+  --accent: #7ac2ff;
+  --accent-strong: #3b8de8;
+  --accent-dark: #102841;
+  --border: #2d4764;
+  --border-strong: #416289;
+  --border-soft: #5078a6;
+  background:
+    radial-gradient(780px 360px at 58% -20%, rgba(82, 157, 255, 0.16), transparent 62%),
+    #0c131c;
+}
+
+.channel-panel,
+.members-panel,
+.channel-main,
+.server-header,
+.channel-item,
+.channel-move,
+.channel-create input,
+.channel-create select,
+.channel-input input,
+.server-card,
+.server-field input {
+  border-color: rgba(99, 151, 216, 0.36) !important;
+}
+
+.channel-panel,
+.members-panel,
+.channel-main,
+.server-card {
+  box-shadow: 0 20px 44px rgba(7, 14, 27, 0.34);
+}
+
+.channel-item.active,
+.channel-item:hover,
+.member-row:hover {
+  background: rgba(76, 130, 197, 0.2);
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #76beff, #3a8eea) !important;
+  color: #08203b !important;
+}
+</style>
