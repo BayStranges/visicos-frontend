@@ -30,7 +30,10 @@
 
           <div class="channel-section">
             <div class="section-header">
-              <span>Metin Kanallari</span>
+              <button class="section-head-btn" type="button">
+                Metin Kanali <span class="section-caret">v</span>
+              </button>
+              <button v-if="isOwner" class="section-btn" @click="openChannelCreate('text')">+</button>
             </div>
             <div class="category-list">
               <div
@@ -40,7 +43,7 @@
                 :class="{ 'drop-target': isOwner && dragOverKey === `text-${cat._id}` }"
                 @dragover.prevent="onCategoryDragOver(`text-${cat._id}`)"
                 @dragleave="onCategoryDragLeave(`text-${cat._id}`)"
-                @drop.prevent="onCategoryDrop(cat._id, 'text')"
+                @drop.prevent="onCategoryDrop($event, cat._id, 'text')"
               >
                 <div class="category-title">{{ cat.name }}</div>
                 <div class="channel-list">
@@ -49,7 +52,7 @@
                     :key="ch._id"
                     class="channel-row"
                     :draggable="isOwner"
-                    @dragstart="onChannelDragStart(ch)"
+                    @dragstart="onChannelDragStart($event, ch)"
                     @dragend="onChannelDragEnd"
                   >
                     <button
@@ -69,7 +72,7 @@
                 :class="{ 'drop-target': isOwner && dragOverKey === 'text-uncat' }"
                 @dragover.prevent="onCategoryDragOver('text-uncat')"
                 @dragleave="onCategoryDragLeave('text-uncat')"
-                @drop.prevent="onCategoryDrop(null, 'text')"
+                @drop.prevent="onCategoryDrop($event, null, 'text')"
               >
                 <div class="category-title">Kategorisiz</div>
                 <div class="channel-list">
@@ -78,7 +81,7 @@
                     :key="ch._id"
                     class="channel-row"
                     :draggable="isOwner"
-                    @dragstart="onChannelDragStart(ch)"
+                    @dragstart="onChannelDragStart($event, ch)"
                     @dragend="onChannelDragEnd"
                   >
                     <button
@@ -103,7 +106,10 @@
 
           <div class="channel-section">
             <div class="section-header">
-              <span>Ses Kanallari</span>
+              <button class="section-head-btn" type="button">
+                Ses Kanali <span class="section-caret">v</span>
+              </button>
+              <button v-if="isOwner" class="section-btn" @click="openChannelCreate('voice')">+</button>
             </div>
             <div class="category-list">
               <div
@@ -113,7 +119,7 @@
                 :class="{ 'drop-target': isOwner && dragOverKey === `voice-${cat._id}` }"
                 @dragover.prevent="onCategoryDragOver(`voice-${cat._id}`)"
                 @dragleave="onCategoryDragLeave(`voice-${cat._id}`)"
-                @drop.prevent="onCategoryDrop(cat._id, 'voice')"
+                @drop.prevent="onCategoryDrop($event, cat._id, 'voice')"
               >
                 <div class="category-title">{{ cat.name }}</div>
                 <div class="channel-list">
@@ -122,7 +128,7 @@
                     :key="ch._id"
                     class="channel-row"
                     :draggable="isOwner"
-                    @dragstart="onChannelDragStart(ch)"
+                    @dragstart="onChannelDragStart($event, ch)"
                     @dragend="onChannelDragEnd"
                   >
                     <button
@@ -142,7 +148,7 @@
                 :class="{ 'drop-target': isOwner && dragOverKey === 'voice-uncat' }"
                 @dragover.prevent="onCategoryDragOver('voice-uncat')"
                 @dragleave="onCategoryDragLeave('voice-uncat')"
-                @drop.prevent="onCategoryDrop(null, 'voice')"
+                @drop.prevent="onCategoryDrop($event, null, 'voice')"
               >
                 <div class="category-title">Kategorisiz</div>
                 <div class="channel-list">
@@ -151,7 +157,7 @@
                     :key="ch._id"
                     class="channel-row"
                     :draggable="isOwner"
-                    @dragstart="onChannelDragStart(ch)"
+                    @dragstart="onChannelDragStart($event, ch)"
                     @dragend="onChannelDragEnd"
                   >
                     <button
@@ -330,6 +336,7 @@
             <div class="create-title">Kanal Olustur</div>
             <button class="create-close" @click="closeChannelModal">X</button>
           </div>
+          <div class="create-subtitle">{{ channelDraftContextLabel }}</div>
 
           <div class="create-section">
             <label class="create-label">Kanal Turu</label>
@@ -498,6 +505,7 @@ const categoryCreateOpen = ref(false);
 const channelDraftName = ref("");
 const channelDraftType = ref("text");
 const channelDraftPrivate = ref(false);
+const channelDraftContextLabel = ref("Kategorisiz kategorisinde");
 const categoryDraftName = ref("");
 const categoryDraftPrivate = ref(false);
 const audioEls = new Map();
@@ -725,8 +733,21 @@ const createChannelFromMenu = async () => {
   channelDraftName.value = "";
   channelDraftType.value = "text";
   channelDraftPrivate.value = false;
+  channelDraftContextLabel.value = "Kategorisiz kategorisinde";
   channelCreateOpen.value = true;
   closeServerMenu();
+};
+
+const openChannelCreate = (type) => {
+  if (!isOwner.value) return;
+  channelDraftName.value = "";
+  channelDraftType.value = type === "voice" ? "voice" : "text";
+  channelDraftPrivate.value = false;
+  channelDraftContextLabel.value =
+    channelDraftType.value === "voice"
+      ? "Ses Kanali kategorisinde"
+      : "Metin Kanali kategorisinde";
+  channelCreateOpen.value = true;
 };
 
 const submitChannelModal = async () => {
@@ -754,10 +775,15 @@ const updateChannelCategory = async (channel, value) => {
   }
 };
 
-const onChannelDragStart = (channel) => {
+const onChannelDragStart = (event, channel) => {
   if (!isOwner.value) return;
   draggingChannelId.value = channel?._id || "";
   draggingChannelType.value = channel?.type || "";
+  if (event?.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.dropEffect = "move";
+    event.dataTransfer.setData("text/plain", draggingChannelId.value);
+  }
 };
 
 const onChannelDragEnd = () => {
@@ -775,7 +801,8 @@ const onCategoryDragLeave = (key) => {
   if (dragOverKey.value === key) dragOverKey.value = "";
 };
 
-const onCategoryDrop = async (categoryId, type) => {
+const onCategoryDrop = async (evt, categoryId, type) => {
+  evt?.preventDefault?.();
   if (!isOwner.value || !draggingChannelId.value) return;
   const channel = (server.value?.channels || []).find((ch) => ch._id === draggingChannelId.value);
   if (!channel || channel.type !== type) {
@@ -1190,6 +1217,22 @@ watch(
   text-transform: uppercase;
   letter-spacing: 0.4px;
   color: var(--text-muted);
+}
+
+.section-head-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 20px;
+  font-weight: 700;
+  padding: 0;
+  cursor: default;
+}
+
+.section-caret {
+  font-size: 12px;
+  color: #8ea4bc;
+  vertical-align: middle;
 }
 
 .section-btn {
@@ -1967,6 +2010,12 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.create-subtitle {
+  margin-top: -6px;
+  font-size: 13px;
+  color: #717784;
 }
 
 .create-title {
