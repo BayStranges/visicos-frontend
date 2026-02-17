@@ -2,16 +2,25 @@ import { defineStore } from "pinia";
 import axios from "axios";
 import { setSocketAuthToken } from "../socket";
 
+const normalizeUser = (user) => {
+  if (!user) return null;
+  if (user.user && typeof user.user === "object") return user.user;
+  return user;
+};
+
+const bootUser = normalizeUser(JSON.parse(localStorage.getItem("user")) || null);
+
 export const useUserStore = defineStore("user", {
   state: () => ({
-    user: JSON.parse(localStorage.getItem("user")) || null,
+    user: bootUser,
     token: localStorage.getItem("token") || null
   }),
 
   actions: {
     setUser(user, token) {
-      this.user = user;
-      localStorage.setItem("user", JSON.stringify(user));
+      const normalized = normalizeUser(user);
+      this.user = normalized;
+      localStorage.setItem("user", JSON.stringify(normalized));
       if (token) {
         this.token = token;
         localStorage.setItem("token", token);

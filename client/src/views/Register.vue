@@ -45,9 +45,13 @@ const register = async () => {
       password: password.value
     });
 
-    userStore.setUser(res.data, res.data?.token);
+    const user = res.data?.user || res.data;
+    const token = res.data?.token;
+    const userId = user?._id || user?.id;
+
+    userStore.setUser(user, token);
     socket.connect();
-    socket.emit("user-online", res.data._id);
+    if (userId) socket.emit("user-online", userId);
 
     router.push("/friends");
   } catch (err) {
