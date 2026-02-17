@@ -39,11 +39,11 @@
 
       <div class="header-actions">
         <button class="theme-btn" @click="toggleTheme">Tema</button>
-        <button class="call-btn" @click="startCall" :disabled="inCall">Sesli Ara</button>
-        <button class="call-btn danger" @click="hangUp" v-if="inCall">Bitir</button>
+        <button class="call-btn" @click="startCall" :disabled="inCall || ringing">Sesli Ara</button>
         <button class="call-btn" @click="toggleMute" v-if="inCall">
           {{ muted ? "Unmute" : "Mute" }}
         </button>
+        <button class="call-btn danger" @click="hangUp" v-if="inCall">Bitir</button>
       </div>
     </div>
 
@@ -56,9 +56,11 @@
         </div>
         <div class="call-meta">
           <div class="call-title">{{ otherUser }} ile arama</div>
-          <div class="call-sub">
-            <span class="call-dot" :class="callStatusClass"></span>
-            <span class="call-text">{{ callStatusLabel }}</span>
+          <div class="call-sub discord">
+            <span class="call-chip" :class="`chip-${callStatusClass}`">
+              {{ callStatusLabel }}
+            </span>
+            <span v-if="inCall" class="call-chip chip-time">{{ callDurationLabel }}</span>
           </div>
         </div>
       </div>
@@ -67,12 +69,12 @@
         <button class="call-btn danger" @click="rejectCall">Reddet</button>
       </div>
       <div class="call-controls" v-else>
-        <button class="call-icon" @click="toggleMute" :title="muted ? 'Unmute' : 'Mute'">
-          {{ muted ? "Unmute" : "Mute" }}
+        <button class="call-icon" @click="toggleMute" :title="muted ? 'Mikrofonu ac' : 'Mikrofonu kapat'">
+          {{ muted ? "Mik Ac" : "Mik Kapat" }}
         </button>
-        <button class="call-icon end" @click="hangUp" title="Aramayi bitir">X</button>
+        <button class="call-icon end" @click="hangUp" title="Aramayi bitir">Bitir</button>
         <button
-          class="call-btn"
+          class="call-btn reconnect"
           v-if="callStatus === 'koptu' || callStatus === 'başarısız'"
           @click="reconnect"
         >
@@ -485,6 +487,7 @@ const replyTo = ref(null);
 const editingId = ref(null);
 const callHistory = ref([]);
 const callStartAt = ref(0);
+const callNow = ref(Date.now());
 const sfuActive = ref(false);
 const sfuMuted = ref(false);
 const sfuDeafened = ref(false);
@@ -1278,6 +1281,32 @@ const callStatusClass = computed(() => {
   return "idle";
 });
 
+const callDurationLabel = computed(() => {
+  if (!inCall.value || !callStartAt.value) return "00:00";
+  const totalSec = Math.max(0, Math.floor((callNow.value - callStartAt.value) / 1000));
+  const mins = String(Math.floor(totalSec / 60)).padStart(2, "0");
+  const secs = String(totalSec % 60).padStart(2, "0");
+  return `${mins}:${secs}`;
+});
+
+let callTicker = null;
+watch(
+  inCall,
+  (active) => {
+    if (callTicker) {
+      clearInterval(callTicker);
+      callTicker = null;
+    }
+    if (active) {
+      callNow.value = Date.now();
+      callTicker = setInterval(() => {
+        callNow.value = Date.now();
+      }, 1000);
+    }
+  },
+  { immediate: true }
+);
+
 const clearOverlayState = () => {
   const payload = buildOverlayPayload();
   payload.active = false;
@@ -1444,6 +1473,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  if (callTicker) clearInterval(callTicker);
   clearOverlayState();
   closeVoice();
   if (ringtoneAudio.value) {
@@ -1655,6 +1685,110 @@ onBeforeUnmount(() => {
 .file-card:hover,
 .reply-bubble:hover {
   background: rgba(51, 93, 146, 0.2);
+}
+
+.call-bar {
+  padding: 10px 14px;
+  border-radius: 12px;
+  margin: 8px 12px 0;
+  background: linear-gradient(160deg, rgba(20, 35, 56, 0.9), rgba(15, 28, 46, 0.92));
+  border: 1px solid rgba(105, 160, 225, 0.35);
+  box-shadow: 0 14px 28px rgba(6, 14, 27, 0.28);
+}
+
+.call-sub.discord {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.call-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(95, 140, 194, 0.45);
+  background: rgba(18, 31, 49, 0.7);
+  color: #bdd9ff;
+}
+
+.call-chip.chip-ok {
+  color: #b8ffd6;
+  border-color: rgba(101, 201, 150, 0.6);
+  background: rgba(27, 65, 44, 0.6);
+}
+
+.call-chip.chip-warn {
+  color: #ffe3a8;
+  border-color: rgba(214, 170, 98, 0.6);
+  background: rgba(71, 53, 23, 0.62);
+}
+
+.call-chip.chip-bad {
+  color: #ffc1c1;
+  border-color: rgba(212, 108, 108, 0.6);
+  background: rgba(77, 29, 33, 0.6);
+}
+
+.call-chip.chip-time {
+  color: #d4e7ff;
+}
+
+.call-controls {
+  gap: 10px;
+}
+
+.call-btn.ok {
+  background: linear-gradient(135deg, #57d990, #32ad70) !important;
+  color: #0f2e1e !important;
+}
+
+.call-btn.danger {
+  background: linear-gradient(135deg, #f07676, #ca4a4a) !important;
+  color: #ffe5e5 !important;
+}
+
+.call-btn.reconnect {
+  background: linear-gradient(135deg, #9cc8ff, #5b9ff1) !important;
+  color: #0f2f56 !important;
+}
+
+.call-icon {
+  border-radius: 999px;
+  min-width: 94px;
+  height: 34px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(95, 140, 194, 0.5);
+  background: rgba(18, 33, 51, 0.82);
+  color: #c9e1ff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.call-icon.end {
+  border-color: rgba(212, 108, 108, 0.6);
+  background: rgba(77, 29, 33, 0.8);
+  color: #ffc7c7;
+}
+
+@media (max-width: 700px) {
+  .call-bar {
+    margin: 8px 8px 0;
+    padding: 10px;
+  }
+
+  .call-controls {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+  }
 }
 </style>
 
