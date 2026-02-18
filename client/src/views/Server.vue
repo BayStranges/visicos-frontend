@@ -212,15 +212,24 @@
             </div>
 
             <div class="voice-stage">
-              <div
-                class="voice-card me"
-                :class="{ speaking: speakingUsers[userStore.user?._id] }"
-              >
-                <div class="voice-avatar">
-                  <img v-if="userStore.user?.avatar" :src="fullAsset(userStore.user.avatar)" />
-                  <span v-else>{{ (userStore.user?.username || "?").slice(0, 1).toUpperCase() }}</span>
+              <div class="voice-card roster">
+                <div class="voice-roster-grid" :style="voiceRosterGridStyle">
+                  <div
+                    v-for="vu in voiceStageUsers"
+                    :key="`roster-${vu._id}`"
+                    class="voice-roster-tile"
+                    :class="{
+                      speaking: speakingUsers[vu._id],
+                      me: vu._id?.toString?.() === userStore.user?._id?.toString?.()
+                    }"
+                  >
+                    <div class="voice-avatar">
+                      <img v-if="vu.avatar" :src="fullAsset(vu.avatar)" />
+                      <span v-else>{{ (vu.username || "?").slice(0, 1).toUpperCase() }}</span>
+                    </div>
+                    <div class="voice-name">{{ vu.username }}</div>
+                  </div>
                 </div>
-                <div class="voice-name">{{ userStore.user?.username || "Sen" }}</div>
               </div>
               <div class="voice-card activity" :class="{ 'screen-live': isScreenSharing || remoteScreenItems.length }">
                 <template v-if="remoteScreenItems.length">
@@ -238,20 +247,6 @@
                 <template v-else>
                   <div class="voice-activity-title">Aktivite alani</div>
                   <div class="voice-activity-sub">Sesli sohbete davet et veya aktivite sec</div>
-                  <div v-if="voiceStageUsers.length" class="voice-stage-users">
-                    <div
-                      v-for="vu in voiceStageUsers"
-                      :key="`stage-user-${vu._id}`"
-                      class="voice-stage-user"
-                      :class="{ speaking: speakingUsers[vu._id] }"
-                    >
-                      <div class="voice-stage-user-avatar">
-                        <img v-if="vu.avatar" :src="fullAsset(vu.avatar)" />
-                        <span v-else>{{ (vu.username || "?").slice(0, 1).toUpperCase() }}</span>
-                      </div>
-                      <div class="voice-stage-user-name">{{ vu.username }}</div>
-                    </div>
-                  </div>
                   <div class="voice-activity-actions">
                     <button class="voice-ghost-btn">Sesli Sohbete Davet Et</button>
                     <button class="voice-ghost-btn">Aktivite Sec</button>
@@ -1026,7 +1021,24 @@ const voiceStageUsers = computed(() => {
   const channelId =
     selectedChannel.value?.type === "voice" ? selectedChannel.value?._id : voiceChannelId.value;
   if (!channelId) return [];
-  return voiceMemberUsers(channelId);
+  const members = voiceMemberUsers(channelId);
+  const self = userStore.user;
+  if (self?._id && !members.some((u) => u?._id?.toString?.() === self._id?.toString?.())) {
+    members.push(self);
+  }
+  const uniq = new Map();
+  members.forEach((u) => {
+    if (u?._id) uniq.set(u._id.toString(), u);
+  });
+  return [...uniq.values()];
+});
+
+const voiceRosterGridStyle = computed(() => {
+  const count = Math.max(1, voiceStageUsers.value.length);
+  const cols = count <= 1 ? 1 : count <= 4 ? 2 : count <= 9 ? 3 : 4;
+  return {
+    gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`
+  };
 });
 
 const syncWatchVideos = () => {
@@ -2356,21 +2368,43 @@ watch(
   overflow: hidden;
 }
 
-.voice-card.me {
+.voice-card.roster {
+  background: #121a27;
+  padding: 10px;
+}
+
+.voice-roster-grid {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  gap: 10px;
+  grid-auto-rows: minmax(0, 1fr);
+}
+
+.voice-roster-tile {
+  position: relative;
+  border: 1px solid rgba(97, 147, 210, 0.42);
+  border-radius: 10px;
+  background: #8795d7;
   display: grid;
   place-items: center;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.voice-roster-tile.me {
   background: #a4a1de;
 }
 
-.voice-card.speaking .voice-avatar {
+.voice-roster-tile.speaking .voice-avatar {
   box-shadow:
     0 0 0 3px rgba(121, 255, 190, 0.45),
     0 0 24px rgba(82, 236, 164, 0.55);
 }
 
 .voice-avatar {
-  width: 96px;
-  height: 96px;
+  width: clamp(44px, 34%, 96px);
+  height: clamp(44px, 34%, 96px);
   border-radius: 50%;
   overflow: hidden;
   background: #1e2330;
@@ -2637,56 +2671,6 @@ watch(
   gap: 10px;
 }
 
-.voice-stage-users {
-  width: 100%;
-  max-height: 160px;
-  overflow-y: auto;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 6px;
-}
-
-.voice-stage-user {
-  display: grid;
-  grid-template-columns: 32px 1fr;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid rgba(91, 132, 179, 0.42);
-  background: rgba(18, 29, 43, 0.68);
-  border-radius: 9px;
-  padding: 6px 8px;
-}
-
-.voice-stage-user.speaking {
-  border-color: rgba(101, 232, 165, 0.85);
-  box-shadow: 0 0 14px rgba(68, 212, 146, 0.4);
-}
-
-.voice-stage-user-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: #1c293a;
-  display: grid;
-  place-items: center;
-  color: #d5e8ff;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.voice-stage-user-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.voice-stage-user-name {
-  color: #d8ebff;
-  font-size: 12px;
-  font-weight: 700;
-  text-align: left;
-}
 
 .voice-ghost-btn {
   border: 1px solid #3f4f68;
