@@ -219,8 +219,16 @@
                 </div>
                 <div class="voice-name">{{ userStore.user?.username || "Sen" }}</div>
               </div>
-              <div class="voice-card activity" :class="{ 'screen-live': isScreenSharing }">
-                <template v-if="isScreenSharing">
+              <div class="voice-card activity" :class="{ 'screen-live': isScreenSharing || remoteScreenItems.length }">
+                <template v-if="remoteScreenItems.length">
+                  <video ref="remoteScreenPreviewEl" class="screen-preview" autoplay playsinline muted></video>
+                  <div class="watch-overlay-layer">
+                    <button class="watch-stream-btn" @click="openWatchOverlay(remoteScreenItems[0].id)">
+                      Yayini izle
+                    </button>
+                  </div>
+                </template>
+                <template v-else-if="isScreenSharing">
                   <video ref="screenPreviewEl" class="screen-preview" autoplay playsinline muted></video>
                   <div class="screen-preview-label">Ekran paylasimi acik</div>
                 </template>
@@ -286,6 +294,49 @@
           </div>
         </aside>
       </div>
+    </div>
+
+    <div
+      v-if="watchOverlayOpen"
+      ref="watchOverlayEl"
+      class="watch-viewer"
+    >
+      <div class="watch-viewer-head">
+        <div class="watch-viewer-title">Yayin izleme</div>
+        <button class="watch-close-btn" @click="closeWatchOverlay">Kapat</button>
+      </div>
+      <div class="watch-viewer-body" :class="{ split: watchSplitView }">
+        <div class="watch-main-stage" @click.left="toggleWatchSplitView">
+          <video ref="watchMainVideoEl" class="watch-main-video" autoplay playsinline></video>
+          <div class="watch-main-name">
+            {{ getMemberById(selectedWatchScreen?.userId)?.username || "Yayin" }}
+          </div>
+        </div>
+        <div v-if="watchSplitView" class="watch-side-grid">
+          <div v-for="u in watchSideUsers" :key="`watch-${u._id}`" class="watch-side-card">
+            <div class="watch-side-avatar">
+              <img v-if="u.avatar" :src="fullAsset(u.avatar)" />
+              <span v-else>{{ (u.username || "?").slice(0, 1).toUpperCase() }}</span>
+            </div>
+            <div class="watch-side-name">{{ u.username }}</div>
+          </div>
+        </div>
+      </div>
+      <div class="watch-viewer-foot">
+        <button
+          v-for="item in remoteScreenItems"
+          :key="`watch-thumb-${item.id}`"
+          class="watch-thumb"
+          :class="{ active: watchSelectedScreenId === item.id }"
+          @click="selectWatchScreen(item.id)"
+        >
+          <video :ref="(el) => setWatchThumbEl(item.id, el)" autoplay playsinline muted></video>
+          <span>{{ getMemberById(item.userId)?.username || "Yayin" }}</span>
+        </button>
+      </div>
+      <button class="watch-fullscreen-btn" @click="toggleWatchFullscreen">
+        {{ watchFullscreen ? "Cik" : "Tam Ekran" }}
+      </button>
     </div>
 
     <UserQuickCard
@@ -512,7 +563,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onBeforeUnmount, watch } from "vue";
+import { computed, ref, onMounted, onBeforeUnmount, watch, watchEffect } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { ASSET_BASE_URL } from "../config";
@@ -559,6 +610,15 @@ const selfDeaf = ref(false);
 const isScreenSharing = ref(false);
 const screenPreviewEl = ref(null);
 const screenPreviewStream = ref(null);
+const remoteScreenItems = ref([]);
+const remoteScreenPreviewEl = ref(null);
+const watchOverlayOpen = ref(false);
+const watchOverlayEl = ref(null);
+const watchMainVideoEl = ref(null);
+const watchSelectedScreenId = ref("");
+const watchSplitView = ref(false);
+const watchFullscreen = ref(false);
+const watchThumbEls = new Map();
 const inviteStatus = ref("");
 const hideMutedChannels = ref(false);
 const serverMenuOpen = ref(false);
@@ -870,6 +930,126 @@ const cleanupAudio = () => {
   audioEls.clear();
 };
 
+const getMemberById = (id) =>
+  (server.value?.members || []).find((u) => u?._id?.toString?.() === id?.toString?.()) || null;
+
+const selectedWatchScreen = computed(() => {
+  const list = remoteScreenItems.value || [];
+  if (!list.length) return null;
+  return list.find((item) => item.id === watchSelectedScreenId.value) || list[0];
+});
+
+const watchSideUsers = computed(() => {
+  const memberIds = voiceMembersByChannel.value?.[voiceChannelId.value] || [];
+  const users = memberIds.map((id) => getMemberById(id)).filter(Boolean);
+  const self = userStore.user;
+  if (self?._id && !users.some((u) => u._id?.toString?.() === self._id?.toString?.())) {
+    users.push(self);
+  }
+  return users.slice(0, 4);
+});
+
+const syncWatchVideos = () => {
+  if (remoteScreenPreviewEl.value) {
+    remoteScreenPreviewEl.value.srcObject = remoteScreenItems.value?.[0]?.stream || null;
+  }
+  if (watchMainVideoEl.value) {
+    watchMainVideoEl.value.srcObject = selectedWatchScreen.value?.stream || null;
+  }
+  for (const item of remoteScreenItems.value || []) {
+    const el = watchThumbEls.get(item.id);
+    if (el) el.srcObject = item.stream || null;
+  }
+};
+
+const setWatchThumbEl = (id, el) => {
+  if (el) watchThumbEls.set(id, el);
+  else watchThumbEls.delete(id);
+  syncWatchVideos();
+};
+
+const clearWatchState = async () => {
+  watchOverlayOpen.value = false;
+  watchSelectedScreenId.value = "";
+  watchSplitView.value = false;
+  remoteScreenItems.value = [];
+  watchThumbEls.clear();
+  if (document.fullscreenElement) {
+    try {
+      await document.exitFullscreen();
+    } catch {}
+  }
+};
+
+const addRemoteScreen = ({ userId, stream }) => {
+  if (!stream?.id) return;
+  if (remoteScreenItems.value.some((item) => item.id === stream.id)) return;
+  const item = {
+    id: stream.id,
+    userId,
+    stream
+  };
+  remoteScreenItems.value = [...remoteScreenItems.value, item];
+  if (!watchSelectedScreenId.value) {
+    watchSelectedScreenId.value = stream.id;
+  }
+  const [track] = stream.getVideoTracks?.() || [];
+  if (track) {
+    track.onended = () => {
+      remoteScreenItems.value = remoteScreenItems.value.filter((s) => s.id !== item.id);
+      watchThumbEls.delete(item.id);
+      if (!remoteScreenItems.value.length) {
+        clearWatchState();
+        return;
+      }
+      if (watchSelectedScreenId.value === item.id) {
+        watchSelectedScreenId.value = remoteScreenItems.value[0].id;
+      }
+    };
+  }
+};
+
+const openWatchOverlay = (screenId = "") => {
+  if (!remoteScreenItems.value.length) return;
+  watchOverlayOpen.value = true;
+  watchSplitView.value = false;
+  watchSelectedScreenId.value = screenId || remoteScreenItems.value[0].id;
+  syncWatchVideos();
+};
+
+const closeWatchOverlay = async () => {
+  watchOverlayOpen.value = false;
+  watchSplitView.value = false;
+  if (document.fullscreenElement) {
+    try {
+      await document.exitFullscreen();
+    } catch {}
+  }
+};
+
+const toggleWatchSplitView = () => {
+  if (!watchOverlayOpen.value) return;
+  watchSplitView.value = !watchSplitView.value;
+};
+
+const selectWatchScreen = (screenId) => {
+  watchSelectedScreenId.value = screenId;
+};
+
+const toggleWatchFullscreen = async () => {
+  const el = watchOverlayEl.value;
+  if (!el) return;
+  if (document.fullscreenElement) {
+    await document.exitFullscreen();
+  } else {
+    await el.requestFullscreen();
+  }
+};
+
+const handleFullscreenChange = () => {
+  watchFullscreen.value = !!document.fullscreenElement;
+};
+
 const ensureSocket = () => {
   if (!socket.connected) socket.connect();
 };
@@ -937,7 +1117,11 @@ const joinVoiceChannel = async (channel) => {
   await startSfuCall({
     room: channel._id,
     user: userStore.user?._id,
-    onTrack: ({ userId, stream }) => {
+    onTrack: ({ userId, stream, kind }) => {
+      if (kind === "video") {
+        addRemoteScreen({ userId, stream });
+        return;
+      }
       const key = `${userId}-${channel._id}-${stream.id}`;
       if (audioEls.has(key)) return;
       const audio = document.createElement("audio");
@@ -990,6 +1174,7 @@ const leaveVoiceChannel = async () => {
   voiceChannelId.value = "";
   isScreenSharing.value = false;
   screenPreviewStream.value = null;
+  await clearWatchState();
   cleanupAudio();
   await stopSfuCall();
   if (prevChannelId) {
@@ -1491,6 +1676,7 @@ onMounted(() => {
   socket.on("online-users", handleOnlineUsers);
   document.addEventListener("click", closeServerMenu);
   document.addEventListener("click", closeCategoryMenu);
+  document.addEventListener("fullscreenchange", handleFullscreenChange);
   loadServers();
   loadServer();
   loadVoicePresence();
@@ -1502,6 +1688,7 @@ onBeforeUnmount(() => {
   socket.off("online-users", handleOnlineUsers);
   document.removeEventListener("click", closeServerMenu);
   document.removeEventListener("click", closeCategoryMenu);
+  document.removeEventListener("fullscreenchange", handleFullscreenChange);
   leaveTextChannel();
   leaveVoiceChannel();
 });
@@ -1514,6 +1701,10 @@ watch(
   },
   { immediate: true }
 );
+
+watchEffect(() => {
+  syncWatchVideos();
+});
 
 watch(
   () => route.params.id,
@@ -2141,6 +2332,196 @@ watch(
   font-weight: 700;
   padding: 5px 9px;
   border-radius: 8px;
+}
+
+.watch-overlay-layer {
+  position: absolute;
+  inset: 0;
+  background: rgba(7, 10, 17, 0.58);
+  display: grid;
+  place-items: center;
+}
+
+.watch-stream-btn {
+  border: 1px solid rgba(180, 215, 255, 0.5);
+  background: rgba(26, 41, 63, 0.78);
+  color: #e6f2ff;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.watch-stream-btn:hover {
+  background: rgba(35, 58, 89, 0.84);
+}
+
+.watch-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  background: rgba(0, 0, 0, 0.96);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: 14px;
+  gap: 10px;
+}
+
+.watch-viewer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #d8ebff;
+}
+
+.watch-viewer-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.watch-close-btn {
+  border: 1px solid #3a516f;
+  background: #1a2738;
+  color: #d8ebff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.watch-viewer-body {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.watch-viewer-body.split {
+  grid-template-columns: 1.4fr 1fr;
+}
+
+.watch-main-stage {
+  position: relative;
+  background: #020406;
+  border: 1px solid #26374d;
+  border-radius: 12px;
+  overflow: hidden;
+  min-height: 0;
+  cursor: pointer;
+}
+
+.watch-main-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.watch-main-name {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  background: rgba(8, 10, 15, 0.65);
+  color: #e9f2ff;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+}
+
+.watch-side-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  min-height: 0;
+}
+
+.watch-side-card {
+  border: 1px solid #25364d;
+  border-radius: 10px;
+  background: #0d141f;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+}
+
+.watch-side-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #1e2b3d;
+  display: grid;
+  place-items: center;
+  color: #d7e9ff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.watch-side-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.watch-side-name {
+  color: #d7e9ff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.watch-viewer-foot {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.watch-thumb {
+  width: 180px;
+  border: 1px solid #2f4663;
+  background: #101a29;
+  border-radius: 10px;
+  padding: 6px;
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.watch-thumb.active {
+  border-color: #6bb7ff;
+  box-shadow: 0 0 0 1px rgba(107, 183, 255, 0.45);
+}
+
+.watch-thumb video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #000;
+}
+
+.watch-thumb span {
+  color: #cce4ff;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.watch-fullscreen-btn {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  border: 1px solid #3d5575;
+  background: rgba(14, 22, 34, 0.85);
+  color: #deefff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .voice-activity-title {
