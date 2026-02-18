@@ -366,6 +366,7 @@
       @switch-account="switchAccount"
       @copy-id="copyUserId"
     />
+    <audio ref="voiceRemoteAudioEl" autoplay playsinline style="display:none"></audio>
 
     <div
       v-if="serverMenuOpen"
@@ -582,7 +583,7 @@ import { ASSET_BASE_URL } from "../config";
 import { useUserStore } from "../store/user";
 import UserQuickCard from "../components/UserQuickCard.vue";
 import socket from "../socket";
-import { startSfuCall, stopSfuCall, startMic, startScreen, stopScreen, getScreenStream } from "../webrtc/sfu";
+import { startSfuCall, stopSfuCall, startMic, enableMic, startScreen, stopScreen, getScreenStream } from "../webrtc/sfu";
 
 const route = useRoute();
 const router = useRouter();
@@ -662,6 +663,8 @@ const serverNotificationsMuted = ref(false);
 const serverPrivacyTight = ref(false);
 const serverProfileNick = ref("");
 const audioEls = new Map();
+const voiceRemoteAudioEl = ref(null);
+const remoteMixStream = new MediaStream();
 
 const fullAsset = (url = "") => {
   if (!url) return "";
@@ -941,14 +944,22 @@ const cleanupAudio = () => {
   }
   speakingIntervals.clear();
   speakingUsers.value = {};
-  for (const el of audioEls.values()) {
+  if (speakingAudioContext) {
     try {
-      el.pause();
-      el.srcObject = null;
-      el.remove();
+      speakingAudioContext.close();
     } catch {}
+    speakingAudioContext = null;
+  }
+  for (const el of audioEls.values()) {
+    if (!el || typeof el !== "object") continue;
   }
   audioEls.clear();
+  for (const t of remoteMixStream.getTracks()) {
+    remoteMixStream.removeTrack(t);
+  }
+  if (voiceRemoteAudioEl.value) {
+    voiceRemoteAudioEl.value.srcObject = null;
+  }
 };
 
 const setSpeaking = (userId, value) => {
@@ -1221,19 +1232,32 @@ const joinVoiceChannel = async (channel) => {
       }
       const key = `${userId}-${channel._id}-${stream.id}`;
       if (audioEls.has(key)) return;
-      const audio = document.createElement("audio");
-      audio.autoplay = true;
-      audio.playsInline = true;
-      audio.srcObject = stream;
-      audio.style.display = "none";
-      document.body.appendChild(audio);
-      audio.play?.().catch(() => {});
-      audioEls.set(key, audio);
+      const [track] = stream.getAudioTracks?.() || [];
+      if (track) {
+        remoteMixStream.addTrack(track);
+        track.onended = () => {
+          try {
+            remoteMixStream.removeTrack(track);
+          } catch {}
+        };
+      }
+      audioEls.set(key, { streamId: stream.id });
+      if (voiceRemoteAudioEl.value) {
+        voiceRemoteAudioEl.value.srcObject = remoteMixStream;
+        voiceRemoteAudioEl.value.muted = selfDeaf.value;
+        voiceRemoteAudioEl.value.play?.().catch(() => {});
+      }
       startSpeakingMeter(userId, stream);
     },
     onProducerClosed: () => {}
   });
   await startMic();
+  await enableMic(!selfMute.value);
+  if (voiceRemoteAudioEl.value) {
+    voiceRemoteAudioEl.value.muted = selfDeaf.value;
+    voiceRemoteAudioEl.value.srcObject = remoteMixStream;
+    voiceRemoteAudioEl.value.play?.().catch(() => {});
+  }
   isScreenSharing.value = false;
   screenPreviewStream.value = null;
   socket.emit("join-voice-channel", {
@@ -1808,6 +1832,34 @@ watch(
 watchEffect(() => {
   syncWatchVideos();
 });
+
+watch(
+  selfMute,
+  (value) => {
+    enableMic(!value);
+  },
+  { immediate: true }
+);
+
+watch(
+  selfDeaf,
+  (value) => {
+    if (!voiceRemoteAudioEl.value) return;
+    voiceRemoteAudioEl.value.muted = !!value;
+  },
+  { immediate: true }
+);
+
+watch(
+  voiceRemoteAudioEl,
+  (el) => {
+    if (!el) return;
+    el.srcObject = remoteMixStream;
+    el.muted = selfDeaf.value;
+    el.play?.().catch(() => {});
+  },
+  { immediate: true }
+);
 
 watch(
   () => route.params.id,
