@@ -212,7 +212,10 @@
             </div>
 
             <div class="voice-stage">
-              <div class="voice-card me">
+              <div
+                class="voice-card me"
+                :class="{ speaking: speakingUsers[userStore.user?._id] }"
+              >
                 <div class="voice-avatar">
                   <img v-if="userStore.user?.avatar" :src="fullAsset(userStore.user.avatar)" />
                   <span v-else>{{ (userStore.user?.username || "?").slice(0, 1).toUpperCase() }}</span>
@@ -235,6 +238,20 @@
                 <template v-else>
                   <div class="voice-activity-title">Aktivite alani</div>
                   <div class="voice-activity-sub">Sesli sohbete davet et veya aktivite sec</div>
+                  <div v-if="voiceStageUsers.length" class="voice-stage-users">
+                    <div
+                      v-for="vu in voiceStageUsers"
+                      :key="`stage-user-${vu._id}`"
+                      class="voice-stage-user"
+                      :class="{ speaking: speakingUsers[vu._id] }"
+                    >
+                      <div class="voice-stage-user-avatar">
+                        <img v-if="vu.avatar" :src="fullAsset(vu.avatar)" />
+                        <span v-else>{{ (vu.username || "?").slice(0, 1).toUpperCase() }}</span>
+                      </div>
+                      <div class="voice-stage-user-name">{{ vu.username }}</div>
+                    </div>
+                  </div>
                   <div class="voice-activity-actions">
                     <button class="voice-ghost-btn">Sesli Sohbete Davet Et</button>
                     <button class="voice-ghost-btn">Aktivite Sec</button>
@@ -619,6 +636,9 @@ const watchSelectedScreenId = ref("");
 const watchSplitView = ref(false);
 const watchFullscreen = ref(false);
 const watchThumbEls = new Map();
+const speakingUsers = ref({});
+const speakingIntervals = new Map();
+let speakingAudioContext = null;
 const inviteStatus = ref("");
 const hideMutedChannels = ref(false);
 const serverMenuOpen = ref(false);
@@ -921,13 +941,66 @@ const closeCategoryModal = () => {
 };
 
 const cleanupAudio = () => {
+  for (const timer of speakingIntervals.values()) {
+    clearInterval(timer);
+  }
+  speakingIntervals.clear();
+  speakingUsers.value = {};
   for (const el of audioEls.values()) {
     try {
       el.pause();
       el.srcObject = null;
+      el.remove();
     } catch {}
   }
   audioEls.clear();
+};
+
+const setSpeaking = (userId, value) => {
+  if (!userId) return;
+  speakingUsers.value = {
+    ...speakingUsers.value,
+    [userId]: !!value
+  };
+};
+
+const startSpeakingMeter = (userId, stream) => {
+  if (!userId || !stream) return;
+  const [track] = stream.getAudioTracks?.() || [];
+  if (!track) return;
+
+  if (!speakingAudioContext) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    speakingAudioContext = new Ctx();
+  }
+
+  if (speakingIntervals.has(userId)) {
+    clearInterval(speakingIntervals.get(userId));
+    speakingIntervals.delete(userId);
+  }
+
+  const source = speakingAudioContext.createMediaStreamSource(stream);
+  const analyser = speakingAudioContext.createAnalyser();
+  analyser.fftSize = 512;
+  source.connect(analyser);
+  const data = new Float32Array(analyser.fftSize);
+
+  const timer = setInterval(() => {
+    analyser.getFloatTimeDomainData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i += 1) sum += data[i] * data[i];
+    const rms = Math.sqrt(sum / data.length);
+    setSpeaking(userId, rms > 0.02);
+  }, 80);
+
+  speakingIntervals.set(userId, timer);
+  track.onended = () => {
+    const t = speakingIntervals.get(userId);
+    if (t) clearInterval(t);
+    speakingIntervals.delete(userId);
+    setSpeaking(userId, false);
+  };
 };
 
 const getMemberById = (id) =>
@@ -949,16 +1022,28 @@ const watchSideUsers = computed(() => {
   return users.slice(0, 4);
 });
 
+const voiceStageUsers = computed(() => {
+  const channelId =
+    selectedChannel.value?.type === "voice" ? selectedChannel.value?._id : voiceChannelId.value;
+  if (!channelId) return [];
+  return voiceMemberUsers(channelId);
+});
+
 const syncWatchVideos = () => {
   if (remoteScreenPreviewEl.value) {
     remoteScreenPreviewEl.value.srcObject = remoteScreenItems.value?.[0]?.stream || null;
+    remoteScreenPreviewEl.value.play?.().catch(() => {});
   }
   if (watchMainVideoEl.value) {
     watchMainVideoEl.value.srcObject = selectedWatchScreen.value?.stream || null;
+    watchMainVideoEl.value.play?.().catch(() => {});
   }
   for (const item of remoteScreenItems.value || []) {
     const el = watchThumbEls.get(item.id);
-    if (el) el.srcObject = item.stream || null;
+    if (el) {
+      el.srcObject = item.stream || null;
+      el.play?.().catch(() => {});
+    }
   }
 };
 
@@ -1126,8 +1211,13 @@ const joinVoiceChannel = async (channel) => {
       if (audioEls.has(key)) return;
       const audio = document.createElement("audio");
       audio.autoplay = true;
+      audio.playsInline = true;
       audio.srcObject = stream;
+      audio.style.display = "none";
+      document.body.appendChild(audio);
+      audio.play?.().catch(() => {});
       audioEls.set(key, audio);
+      startSpeakingMeter(userId, stream);
     },
     onProducerClosed: () => {}
   });
@@ -1698,6 +1788,7 @@ watch(
   ([el, stream]) => {
     if (!el) return;
     el.srcObject = stream || null;
+    el.play?.().catch(() => {});
   },
   { immediate: true }
 );
@@ -2271,6 +2362,12 @@ watch(
   background: #a4a1de;
 }
 
+.voice-card.speaking .voice-avatar {
+  box-shadow:
+    0 0 0 3px rgba(121, 255, 190, 0.45),
+    0 0 24px rgba(82, 236, 164, 0.55);
+}
+
 .voice-avatar {
   width: 96px;
   height: 96px;
@@ -2538,6 +2635,57 @@ watch(
 .voice-activity-actions {
   display: flex;
   gap: 10px;
+}
+
+.voice-stage-users {
+  width: 100%;
+  max-height: 160px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.voice-stage-user {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(91, 132, 179, 0.42);
+  background: rgba(18, 29, 43, 0.68);
+  border-radius: 9px;
+  padding: 6px 8px;
+}
+
+.voice-stage-user.speaking {
+  border-color: rgba(101, 232, 165, 0.85);
+  box-shadow: 0 0 14px rgba(68, 212, 146, 0.4);
+}
+
+.voice-stage-user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #1c293a;
+  display: grid;
+  place-items: center;
+  color: #d5e8ff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.voice-stage-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.voice-stage-user-name {
+  color: #d8ebff;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
 }
 
 .voice-ghost-btn {
