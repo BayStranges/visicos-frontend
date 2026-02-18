@@ -11,6 +11,17 @@ let userId = null;
 let localAudioTrack = null;
 let localVideoTrack = null;
 let screenTrack = null;
+let screenEndedCallback = null;
+
+const closeProducerBySource = (source) => {
+  for (const [id, producer] of producers.entries()) {
+    if (producer?.appData?.source !== source) continue;
+    try {
+      producer.close();
+    } catch {}
+    producers.delete(id);
+  }
+};
 
 const ensureDevice = async (rtpCapabilities) => {
   if (!device) device = new Device();
@@ -157,27 +168,38 @@ export const startCamera = async () => {
 };
 
 export const stopCamera = async () => {
+  closeProducerBySource("cam");
   if (localVideoTrack) {
     localVideoTrack.stop();
     localVideoTrack = null;
   }
 };
 
-export const startScreen = async () => {
-  if (!sendTransport) return;
-  if (!screenTrack) {
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
-      audio: false
-    });
-    screenTrack = stream.getVideoTracks()[0];
-    const producer = await produceTrack(screenTrack, { source: "screen" });
-    producers.set(producer.id, producer);
-  }
+export const startScreen = async ({ onEnded } = {}) => {
+  if (!sendTransport) return false;
+  if (screenTrack) return true;
+
+  const stream = await navigator.mediaDevices.getDisplayMedia({
+    video: true,
+    audio: false
+  });
+  screenTrack = stream.getVideoTracks()[0];
+  screenEndedCallback = typeof onEnded === "function" ? onEnded : null;
+  screenTrack.onended = async () => {
+    const cb = screenEndedCallback;
+    await stopScreen();
+    cb?.();
+  };
+  const producer = await produceTrack(screenTrack, { source: "screen" });
+  producers.set(producer.id, producer);
+  return true;
 };
 
 export const stopScreen = async () => {
+  closeProducerBySource("screen");
+  screenEndedCallback = null;
   if (screenTrack) {
+    screenTrack.onended = null;
     screenTrack.stop();
     screenTrack = null;
   }
@@ -207,14 +229,19 @@ export const stopSfuCall = async () => {
   }
 
   if (localAudioTrack) {
+    closeProducerBySource("mic");
     localAudioTrack.stop();
     localAudioTrack = null;
   }
   if (localVideoTrack) {
+    closeProducerBySource("cam");
     localVideoTrack.stop();
     localVideoTrack = null;
   }
   if (screenTrack) {
+    closeProducerBySource("screen");
+    screenEndedCallback = null;
+    screenTrack.onended = null;
     screenTrack.stop();
     screenTrack = null;
   }

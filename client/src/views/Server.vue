@@ -236,7 +236,13 @@
               <button class="voice-ctrl-btn" title="Video">
                 <svg viewBox="0 0 24 24"><path d="M17 10.5V7a2 2 0 0 0-2-2H5A2 2 0 0 0 3 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3.5l4 3V7.5l-4 3Z" /></svg>
               </button>
-              <button class="voice-ctrl-btn" title="Ekran">
+              <button
+                class="voice-ctrl-btn"
+                :class="{ off: !isScreenSharing, live: isScreenSharing }"
+                :disabled="!(voiceConnected && voiceChannelId === selectedChannel._id)"
+                :title="isScreenSharing ? 'Paylasimi durdur' : 'Ekran paylas'"
+                @click="toggleScreenShare"
+              >
                 <svg viewBox="0 0 24 24"><path d="M3 5h18v12H3V5Zm7 14h4v2h-4v-2Z" /></svg>
               </button>
               <button
@@ -507,7 +513,7 @@ import { ASSET_BASE_URL } from "../config";
 import { useUserStore } from "../store/user";
 import UserQuickCard from "../components/UserQuickCard.vue";
 import socket from "../socket";
-import { startSfuCall, stopSfuCall, startMic } from "../webrtc/sfu";
+import { startSfuCall, stopSfuCall, startMic, startScreen, stopScreen } from "../webrtc/sfu";
 
 const route = useRoute();
 const router = useRouter();
@@ -544,6 +550,7 @@ const voiceMembersByChannel = ref({});
 const onlineUsers = ref([]);
 const selfMute = ref(false);
 const selfDeaf = ref(false);
+const isScreenSharing = ref(false);
 const inviteStatus = ref("");
 const hideMutedChannels = ref(false);
 const serverMenuOpen = ref(false);
@@ -933,10 +940,34 @@ const joinVoiceChannel = async (channel) => {
     onProducerClosed: () => {}
   });
   await startMic();
+  isScreenSharing.value = false;
   socket.emit("join-voice-channel", {
     channelId: channel._id,
     userId: userStore.user?._id
   });
+};
+
+const toggleScreenShare = async () => {
+  if (!selectedChannel.value?._id) return;
+  if (!voiceConnected.value || voiceChannelId.value !== selectedChannel.value._id) return;
+
+  try {
+    if (isScreenSharing.value) {
+      await stopScreen();
+      isScreenSharing.value = false;
+      return;
+    }
+
+    const started = await startScreen({
+      onEnded: () => {
+        isScreenSharing.value = false;
+      }
+    });
+    isScreenSharing.value = !!started;
+  } catch (err) {
+    isScreenSharing.value = false;
+    inviteStatus.value = err?.message || "Ekran paylasimi baslatilamadi";
+  }
 };
 
 const leaveVoiceChannel = async () => {
@@ -944,6 +975,7 @@ const leaveVoiceChannel = async () => {
   const prevChannelId = voiceChannelId.value;
   voiceConnected.value = false;
   voiceChannelId.value = "";
+  isScreenSharing.value = false;
   cleanupAudio();
   await stopSfuCall();
   if (prevChannelId) {
@@ -2113,6 +2145,17 @@ watch(
 .voice-ctrl-btn.off {
   color: #8ea4bc;
   background: #182030;
+}
+
+.voice-ctrl-btn.live {
+  color: #b8efc0;
+  background: #2a3e2d;
+  border-color: #4f9a5c;
+}
+
+.voice-ctrl-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .voice-ctrl-btn.danger {
