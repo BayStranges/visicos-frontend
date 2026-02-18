@@ -219,13 +219,19 @@
                 </div>
                 <div class="voice-name">{{ userStore.user?.username || "Sen" }}</div>
               </div>
-              <div class="voice-card activity">
-                <div class="voice-activity-title">Aktivite alani</div>
-                <div class="voice-activity-sub">Sesli sohbete davet et veya aktivite sec</div>
-                <div class="voice-activity-actions">
-                  <button class="voice-ghost-btn">Sesli Sohbete Davet Et</button>
-                  <button class="voice-ghost-btn">Aktivite Sec</button>
-                </div>
+              <div class="voice-card activity" :class="{ 'screen-live': isScreenSharing }">
+                <template v-if="isScreenSharing">
+                  <video ref="screenPreviewEl" class="screen-preview" autoplay playsinline muted></video>
+                  <div class="screen-preview-label">Ekran paylasimi acik</div>
+                </template>
+                <template v-else>
+                  <div class="voice-activity-title">Aktivite alani</div>
+                  <div class="voice-activity-sub">Sesli sohbete davet et veya aktivite sec</div>
+                  <div class="voice-activity-actions">
+                    <button class="voice-ghost-btn">Sesli Sohbete Davet Et</button>
+                    <button class="voice-ghost-btn">Aktivite Sec</button>
+                  </div>
+                </template>
               </div>
             </div>
 
@@ -513,7 +519,7 @@ import { ASSET_BASE_URL } from "../config";
 import { useUserStore } from "../store/user";
 import UserQuickCard from "../components/UserQuickCard.vue";
 import socket from "../socket";
-import { startSfuCall, stopSfuCall, startMic, startScreen, stopScreen } from "../webrtc/sfu";
+import { startSfuCall, stopSfuCall, startMic, startScreen, stopScreen, getScreenStream } from "../webrtc/sfu";
 
 const route = useRoute();
 const router = useRouter();
@@ -551,6 +557,8 @@ const onlineUsers = ref([]);
 const selfMute = ref(false);
 const selfDeaf = ref(false);
 const isScreenSharing = ref(false);
+const screenPreviewEl = ref(null);
+const screenPreviewStream = ref(null);
 const inviteStatus = ref("");
 const hideMutedChannels = ref(false);
 const serverMenuOpen = ref(false);
@@ -941,6 +949,7 @@ const joinVoiceChannel = async (channel) => {
   });
   await startMic();
   isScreenSharing.value = false;
+  screenPreviewStream.value = null;
   socket.emit("join-voice-channel", {
     channelId: channel._id,
     userId: userStore.user?._id
@@ -955,17 +964,21 @@ const toggleScreenShare = async () => {
     if (isScreenSharing.value) {
       await stopScreen();
       isScreenSharing.value = false;
+      screenPreviewStream.value = null;
       return;
     }
 
     const started = await startScreen({
       onEnded: () => {
         isScreenSharing.value = false;
+        screenPreviewStream.value = null;
       }
     });
     isScreenSharing.value = !!started;
+    screenPreviewStream.value = started ? getScreenStream() : null;
   } catch (err) {
     isScreenSharing.value = false;
+    screenPreviewStream.value = null;
     inviteStatus.value = err?.message || "Ekran paylasimi baslatilamadi";
   }
 };
@@ -976,6 +989,7 @@ const leaveVoiceChannel = async () => {
   voiceConnected.value = false;
   voiceChannelId.value = "";
   isScreenSharing.value = false;
+  screenPreviewStream.value = null;
   cleanupAudio();
   await stopSfuCall();
   if (prevChannelId) {
@@ -1491,6 +1505,15 @@ onBeforeUnmount(() => {
   leaveTextChannel();
   leaveVoiceChannel();
 });
+
+watch(
+  [screenPreviewEl, screenPreviewStream],
+  ([el, stream]) => {
+    if (!el) return;
+    el.srcObject = stream || null;
+  },
+  { immediate: true }
+);
 
 watch(
   () => route.params.id,
@@ -2094,6 +2117,30 @@ watch(
   justify-items: center;
   gap: 10px;
   background: radial-gradient(120% 120% at 50% 0%, #402457 0%, #090f17 62%);
+}
+
+.voice-card.activity.screen-live {
+  display: block;
+  background: #070b12;
+}
+
+.screen-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.screen-preview-label {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  background: rgba(0, 0, 0, 0.52);
+  color: #e4efff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: 8px;
 }
 
 .voice-activity-title {

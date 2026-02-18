@@ -205,6 +205,11 @@ export const stopScreen = async () => {
   }
 };
 
+export const getScreenStream = () => {
+  if (!screenTrack) return null;
+  return new MediaStream([screenTrack]);
+};
+
 export const stopSfuCall = async () => {
   socket.off("sfu-new-producer");
   socket.off("sfu-producer-closed");

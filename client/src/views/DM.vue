@@ -154,6 +154,16 @@
             <div class="stage-name">{{ userStore.user?.username || "Sen" }}</div>
           </div>
         </div>
+        <div v-if="localScreenOn || remoteScreenOn" class="call-screen-grid">
+          <div v-if="remoteScreenOn" class="call-screen-card remote">
+            <video ref="remoteScreenEl" class="call-screen-video" autoplay playsinline></video>
+            <div class="call-screen-label">{{ otherUser || "Kullanici" }} ekran paylasiyor</div>
+          </div>
+          <div v-if="localScreenOn" class="call-screen-card me">
+            <video ref="localScreenEl" class="call-screen-video" autoplay playsinline muted></video>
+            <div class="call-screen-label">Ekran paylasimin</div>
+          </div>
+        </div>
 
         <div class="call-controls dock" v-if="ringing">
           <button class="call-icon icon-accept" @click="acceptCall" title="Kabul Et" aria-label="Kabul Et">
@@ -176,6 +186,11 @@
             <svg v-else class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M16 11V8a4 4 0 1 0-8 0v3a3.94 3.94 0 0 0 .65 2.19l1.45-1.45A2 2 0 0 1 10 11V8a2 2 0 1 1 4 0v1Z" />
               <path d="M3.7 3.7a1 1 0 0 1 1.4 0L20.3 18.9a1 1 0 0 1-1.4 1.4L15.8 17.2A7 7 0 0 1 13 17.92V21a1 1 0 1 1-2 0v-3.08A7 7 0 0 1 5 11a1 1 0 1 1 2 0 5 5 0 0 0 5 5c.56 0 1.1-.09 1.6-.26L3.7 5.1a1 1 0 0 1 0-1.4Z" />
+            </svg>
+          </button>
+          <button class="call-icon" :class="{ 'icon-active': localScreenOn }" @click="toggleDmScreenShare" title="Ekran paylas">
+            <svg class="icon-glyph" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 5h18v12H3V5Zm7 14h4v2h-4v-2Z" />
             </svg>
           </button>
           <button class="call-icon end" @click="hangUp" title="Aramayi bitir">Bitir</button>
@@ -415,7 +430,14 @@ import { ASSET_BASE_URL } from "../config";
 import socket from "../socket";
 import { useUserStore } from "../store/user";
 import UserQuickCard from "../components/UserQuickCard.vue";
-import { initVoice, getPC, closeVoice } from "../webrtc/voice";
+import {
+  initVoice,
+  getPC,
+  closeVoice,
+  startScreenShare,
+  stopScreenShare,
+  getLocalScreenStream
+} from "../webrtc/voice";
 import { tuneOpusSdp } from "../webrtc/opusSdp";
 import {
   startSfuCall,
@@ -702,7 +724,75 @@ const incomingFrom = ref("");
 const callAccepted = ref(false);
 const pendingOffer = ref(null);
 const pendingRemoteCandidates = ref([]);
+const localScreenOn = ref(false);
+const remoteScreenOn = ref(false);
+const localScreenStream = ref(null);
+const remoteScreenStream = ref(null);
+const localScreenEl = ref(null);
+const remoteScreenEl = ref(null);
 const overlayStorageKey = "visicos_voice_overlay";
+
+const clearDmScreenState = () => {
+  if (localScreenOn.value) {
+    stopScreenShare().catch(() => {});
+  }
+  localScreenOn.value = false;
+  remoteScreenOn.value = false;
+  localScreenStream.value = null;
+  remoteScreenStream.value = null;
+};
+
+const handleRemoteTrack = ({ kind, stream, track } = {}) => {
+  handlePcState("connected");
+  if (kind !== "video" || !stream) return;
+  remoteScreenOn.value = true;
+  remoteScreenStream.value = stream;
+  if (track) {
+    track.onended = () => {
+      remoteScreenOn.value = false;
+      remoteScreenStream.value = null;
+    };
+  }
+};
+
+const renegotiateVoice = async () => {
+  const pc = getPC();
+  if (!pc) return;
+  if (pc.signalingState !== "stable") return;
+
+  const offer = await pc.createOffer();
+  offer.sdp = tuneOpusSdp(offer.sdp);
+  await pc.setLocalDescription(offer);
+  socket.emit("webrtc-offer", { roomId: roomId.value, offer });
+};
+
+const toggleDmScreenShare = async () => {
+  if (!inCall.value) return;
+
+  try {
+    if (localScreenOn.value) {
+      await stopScreenShare();
+      localScreenOn.value = false;
+      localScreenStream.value = null;
+      await renegotiateVoice();
+      return;
+    }
+
+    const started = await startScreenShare({
+      onEnded: async () => {
+        localScreenOn.value = false;
+        localScreenStream.value = null;
+        await renegotiateVoice();
+      }
+    });
+    localScreenOn.value = !!started;
+    localScreenStream.value = started ? getLocalScreenStream() : null;
+    if (started) await renegotiateVoice();
+  } catch (err) {
+    localScreenOn.value = false;
+    localScreenStream.value = null;
+  }
+};
 
 const startCall = async () => {
   logVoice("startCall click", { roomId: roomId.value, userId });
@@ -714,7 +804,7 @@ const startCall = async () => {
 
   await initVoice(roomId.value, {
     onStateChange: (s) => handlePcState(s),
-    onRemoteTrack: () => handlePcState("connected")
+    onRemoteTrack: handleRemoteTrack
   });
 
   logVoice("start-call emit");
@@ -733,6 +823,7 @@ const hangUp = () => {
   }
   callStartAt.value = 0;
   logVoice("hangUp");
+  clearDmScreenState();
   closeVoice();
   if (ringtoneAudio.value) {
     ringtoneAudio.value.pause();
@@ -904,7 +995,7 @@ const createOffer = async () => {
 
   const pc = await initVoice(roomId.value, {
     onStateChange: (s) => handlePcState(s),
-    onRemoteTrack: () => handlePcState("connected")
+    onRemoteTrack: handleRemoteTrack
   });
   if (!pc) {
     logVoice("createOffer failed: no pc");
@@ -927,7 +1018,7 @@ const handleIncomingOffer = async (offer) => {
 
   const pc = await initVoice(roomId.value, {
     onStateChange: (s) => handlePcState(s),
-    onRemoteTrack: () => handlePcState("connected")
+    onRemoteTrack: handleRemoteTrack
   });
   await pc.setRemoteDescription(new RTCSessionDescription(offer));
   logVoice("remote description set (offer)");
@@ -959,7 +1050,7 @@ const acceptCall = async () => {
 
   await initVoice(roomId.value, {
     onStateChange: (s) => handlePcState(s),
-    onRemoteTrack: () => handlePcState("connected")
+    onRemoteTrack: handleRemoteTrack
   });
 
   if (pendingOffer.value) {
@@ -977,6 +1068,7 @@ const rejectCall = () => {
   inCall.value = false;
   callStatus.value = "hazır";
   callAccepted.value = false;
+  clearDmScreenState();
   pendingOffer.value = null;
   pendingRemoteCandidates.value = [];
   logVoice("call-rejected emit");
@@ -1539,6 +1631,24 @@ watch(
   }
 );
 
+watch(
+  [localScreenEl, localScreenStream],
+  ([el, stream]) => {
+    if (!el) return;
+    el.srcObject = stream || null;
+  },
+  { immediate: true }
+);
+
+watch(
+  [remoteScreenEl, remoteScreenStream],
+  ([el, stream]) => {
+    if (!el) return;
+    el.srcObject = stream || null;
+  },
+  { immediate: true }
+);
+
 
 /* ================= MOUNT ================= */
 onMounted(async () => {
@@ -1653,6 +1763,7 @@ onMounted(async () => {
     inCall.value = false;
     ringing.value = false;
     callAccepted.value = false;
+    clearDmScreenState();
     pendingOffer.value = null;
     pendingRemoteCandidates.value = [];
   });
@@ -1705,6 +1816,7 @@ onBeforeUnmount(() => {
   const shouldKeepCallAlive = inCall.value || ringing.value || callAccepted.value;
   if (callTicker) clearInterval(callTicker);
   if (!shouldKeepCallAlive) {
+    clearDmScreenState();
     clearOverlayState();
     closeVoice();
   } else {
@@ -1750,6 +1862,9 @@ watch(
     editingId.value = null;
     hasNewMessage.value = false;
     isAtBottom.value = true;
+    if (!inCall.value && !ringing.value && !callAccepted.value) {
+      clearDmScreenState();
+    }
     socket.emit("join-dm", { roomId: roomId.value, userId });
     await loadMessages();
     loadCallHistory();
@@ -2252,6 +2367,42 @@ watch(
   font-weight: 600;
 }
 
+.call-screen-grid {
+  width: min(760px, calc(100vw - 120px));
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.call-screen-card {
+  min-height: 180px;
+  border: 1px solid rgba(94, 135, 188, 0.46);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #05080d;
+  position: relative;
+}
+
+.call-screen-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.call-screen-label {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #d3e8ff;
+  background: rgba(0, 0, 0, 0.48);
+  border: 1px solid rgba(129, 164, 211, 0.35);
+  border-radius: 999px;
+  padding: 4px 8px;
+}
+
 .call-sub.discord {
   display: flex;
   align-items: center;
@@ -2366,6 +2517,12 @@ watch(
   color: #ffc7c7;
 }
 
+.call-icon.icon-active {
+  border-color: rgba(106, 205, 142, 0.7);
+  background: rgba(28, 67, 46, 0.82);
+  color: #b7ffd4;
+}
+
 @media (max-width: 700px) {
   .dm-layout {
     grid-template-columns: 56px 1fr !important;
@@ -2391,6 +2548,11 @@ watch(
 
   .call-stage-users {
     gap: 14px;
+  }
+
+  .call-screen-grid {
+    width: 100%;
+    grid-template-columns: 1fr;
   }
 
   .call-avatar.stage {

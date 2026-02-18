@@ -16,6 +16,9 @@ let outputVolume = Number(localStorage.getItem("visicos_out_volume") || "1");
 let currentRoomId = null;
 let globalMute = false;
 let globalDeafen = false;
+let screenTrack = null;
+let screenSender = null;
+let screenEndedCallback = null;
 
 const log = (...args) => {
   const room = currentRoomId ? ` room=${currentRoomId}` : "";
@@ -300,9 +303,15 @@ export const initVoice = async (roomId, { onStateChange, onRemoteTrack } = {}) =
       });
       const [stream] = e.streams;
       if (!stream) return;
-      const audio = ensureRemoteAudioElement();
-      audio.srcObject = stream;
-      onRemoteTrack?.(stream);
+      if (e.track?.kind === "audio") {
+        const audio = ensureRemoteAudioElement();
+        audio.srcObject = stream;
+      }
+      onRemoteTrack?.({
+        stream,
+        kind: e.track?.kind || "",
+        track: e.track || null
+      });
     };
   }
 
@@ -323,6 +332,50 @@ export const initVoice = async (roomId, { onStateChange, onRemoteTrack } = {}) =
 };
 
 export const getPC = () => pc;
+
+export const startScreenShare = async ({ onEnded } = {}) => {
+  if (!pc) return false;
+  if (screenTrack) return true;
+
+  const stream = await navigator.mediaDevices.getDisplayMedia({
+    video: true,
+    audio: false
+  });
+  const [track] = stream.getVideoTracks();
+  if (!track) return false;
+
+  screenTrack = track;
+  screenEndedCallback = typeof onEnded === "function" ? onEnded : null;
+  screenTrack.onended = async () => {
+    const cb = screenEndedCallback;
+    await stopScreenShare();
+    cb?.();
+  };
+
+  screenSender = pc.addTrack(screenTrack, stream);
+  return true;
+};
+
+export const stopScreenShare = async () => {
+  if (screenSender && pc) {
+    try {
+      pc.removeTrack(screenSender);
+    } catch {}
+  }
+  screenSender = null;
+  screenEndedCallback = null;
+
+  if (screenTrack) {
+    screenTrack.onended = null;
+    screenTrack.stop();
+    screenTrack = null;
+  }
+};
+
+export const getLocalScreenStream = () => {
+  if (!screenTrack) return null;
+  return new MediaStream([screenTrack]);
+};
 
 export const setGlobalMute = (value) => {
   globalMute = !!value;
@@ -407,6 +460,13 @@ export const closeVoice = () => {
     localStream.getTracks().forEach((t) => t.stop());
     localStream = null;
   }
+  if (screenTrack) {
+    screenTrack.onended = null;
+    screenTrack.stop();
+    screenTrack = null;
+  }
+  screenSender = null;
+  screenEndedCallback = null;
   if (rawStream) {
     rawStream.getTracks().forEach((t) => t.stop());
     rawStream = null;
